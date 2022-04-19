@@ -1,0 +1,382 @@
+import { Core } from "sc-game-base";
+import { UserInfo, UserSession, GameConfig } from "jest-auto-fixture/src/models";
+import { stub } from "jest-micro-auto-stub";
+import Chance from "chance";
+import { PlaceBetConsumer } from "../index";
+import { helpers } from "sc-common";
+
+describe("PlaceBetConsumer", () => {
+    const chance = new Chance();
+    const baseEventPublisher = stub(Core.BaseEventPublisher);
+    const durations = {
+        wholeRound: 61,
+        placingBets: 50,
+        lockingBet: 5,
+    };
+
+    let definition;
+    let consumer;
+    let player;
+    let payload;
+    let gameData;
+
+    function initGameData() {
+        const defaultGameData = new Core.GameData();
+        defaultGameData.remainingTime = 20;
+        defaultGameData.gameConfigs = GameConfig();
+        defaultGameData.currencyGroupGames = [
+            {
+                groupId: "1",
+                betLevels: [1, 5, 10],
+                coinValues: [1, 10, 100],
+            },
+            {
+                groupId: "2",
+                betLevels: [],
+                coinValues: [],
+            },
+        ];
+
+        return defaultGameData;
+    }
+
+    function mockPlayer() {
+        const userInfo = UserInfo();
+        const userSession = UserSession();
+
+        return {
+            UID: userInfo.UID,
+            profile: { ...userInfo },
+            session: { ...userSession, currencyGroupId: "1" },
+        };
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        gameData = initGameData();
+        definition = new Core.GameDefinition({ id: 1, name: "game name", durations }, jest.fn(), jest.fn());
+
+        consumer = new PlaceBetConsumer(definition, gameData, baseEventPublisher);
+
+        player = mockPlayer();
+        payload = {
+            betLevel: chance.natural(),
+            coinValue: chance.natural(),
+            freeBet: chance.bool(),
+            roundId: chance.natural(),
+        };
+    });
+
+    it("inherit Core.BaseEventConsumers.PlaceBetConsumer", () => {
+        //assert
+        expect(consumer instanceof Core.BaseEventConsumers.PlaceBetConsumer);
+    });
+
+    describe("consume", () => {
+        describe("when validateBetRequest failed", () => {
+            it("should not add bet to queue", () => {
+                // Arrange
+                jest.spyOn(consumer, "validateBetRequest").mockReturnValueOnce(false);
+                payload.roundId = undefined;
+                const expectedValue = {};
+
+                // Act
+                consumer.consume(player, payload);
+
+                // Assert
+                expect(gameData.ingame).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when validateBetRequest pass", () => {
+            describe("when not ingame yet", () => {
+                it("should add bet to queue", () => {
+                    // Arrange
+                    jest.spyOn(consumer, "validateBetRequest").mockReturnValueOnce(true);
+                    payload.roundId = 1;
+                    const expectedValue = [{ player, payload }];
+
+                    // Act
+                    consumer.consume(player, payload);
+
+                    // Assert
+                    expect(gameData.ingame[player.profile.name].betQueue).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when already ingame", () => {
+                it("should add bet to queue", () => {
+                    // Arrange
+                    jest.spyOn(consumer, "validateBetRequest").mockReturnValueOnce(true);
+                    gameData.ingame = { [player.profile.name]: { betQueue: [] } };
+                    const expectedValue = [{ player, payload }];
+
+                    // Act
+                    consumer.consume(player, payload);
+
+                    // Assert
+                    expect(gameData.ingame[player.profile.name].betQueue).toStrictEqual(expectedValue);
+                });
+            });
+        });
+    });
+
+    describe("validateBetRequest", () => {
+        describe("when payload not have bet level", () => {
+            it("should return false", () => {
+                // Arrange
+                payload.betLevel = null;
+
+                // Act
+                const actualValue = consumer.validateBetRequest(player, payload);
+
+                // Assert
+                expect(actualValue).toBeFalse();
+            });
+        });
+
+        describe("when payload not have coin value", () => {
+            it("should return false", () => {
+                // Arrange
+                payload.betLevel = 10;
+                payload.coinValue = null;
+
+                // Act
+                const actualValue = consumer.validateBetRequest(player, payload);
+
+                // Assert
+                expect(actualValue).toBeFalse();
+            });
+        });
+
+        describe("when have failed validation", () => {
+            beforeEach(() => {
+                // Arrange
+                payload.betLevel = 10;
+                payload.coinValue = 2;
+                jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: true, notice: "SB1935" }]);
+            });
+
+            it("should return false", () => {
+                // Act
+                const actualValue = consumer.validateBetRequest(player, payload);
+
+                // Assert
+                expect(actualValue).toBeFalse();
+            });
+
+            it("should publish failed event", () => {
+                // Act
+                consumer.validateBetRequest(player, payload);
+
+                // Assert
+                expect(baseEventPublisher.publishToUser).toHaveBeenCalledWith(player.UID, { endBet: -1, notice: "SB1935" });
+            });
+        });
+
+        describe("when not have failed validation", () => {
+            it("should return true", () => {
+                // Arrange
+                payload.betLevel = 10;
+                payload.coinValue = 2;
+                jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: false, notice: "SB1935" }]);
+
+                // Act
+                const actualValue = consumer.validateBetRequest(player, payload);
+
+                // Assert
+                expect(actualValue).toBeTrue();
+            });
+        });
+    });
+
+    describe("composeValidationCriteria", () => {
+        it("should return combination of composeBettingTimeValidationCriteria and composeBetAmountValidationCriteria", () => {
+            // Arrange
+            jest.spyOn(consumer, "composeBettingTimeValidationCriteria").mockReturnValueOnce([{ failure: false, notice: "SB1935" }]);
+            jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValueOnce([{ failure: true, notice: "SB1936" }]);
+            const expectedValue = [
+                { failure: false, notice: "SB1935" },
+                { failure: true, notice: "SB1936" },
+            ];
+
+            // Act
+            const actualValue = consumer.composeValidationCriteria(player, payload);
+
+            // Assert
+            expect(actualValue).toStrictEqual(expectedValue);
+        });
+    });
+
+    describe("composeBettingTimeValidationCriteria", () => {
+        describe("when game disabled", () => {
+            it("should return result with failure", () => {
+                // Arrange
+                gameData.gameConfigs.enabled = false;
+                const expectedValue = [{ failure: true, notice: { errorCode: "SB1935" } }];
+
+                // Act
+                const actualValue = consumer.composeBettingTimeValidationCriteria();
+
+                // Assert
+                expect(actualValue).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when game enabled", () => {
+            it("should return result with not failure", () => {
+                // Arrange
+                gameData.gameConfigs.enabled = true;
+                const expectedValue = [{ failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } }];
+
+                // Act
+                const actualValue = consumer.composeBettingTimeValidationCriteria();
+
+                // Assert
+                expect(actualValue).toStrictEqual(expectedValue);
+            });
+        });
+    });
+
+    describe("composeBetAmountValidationCriteria", () => {
+        describe("when free bet", () => {
+            describe("when config not enableFreeBet", () => {
+                it("should return result with failure", () => {
+                    // Arrange
+                    player.session.currencyGroupId = "3";
+                    gameData.gameConfigs.enableFreeBet = false;
+                    const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.freeBet = true;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when config enableFreeBet", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    gameData.gameConfigs.enableFreeBet = true;
+                    player.session.currencyGroupId = "1";
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.freeBet = true;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                });
+            });
+        });
+
+        describe("when not free bet", () => {
+            describe("when config not enableFreeBet", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    gameData.gameConfigs.enableFreeBet = false;
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.freeBet = false;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when config enableFreeBet", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    gameData.gameConfigs.enableFreeBet = true;
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.freeBet = false;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                });
+            });
+        });
+
+        describe("when bet level is invalid", () => {
+            it("should return result with failure", () => {
+                // Arrange
+                gameData.gameConfigs.enableFreeBet = true;
+                const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.betLevel = 2;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[1]).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when bet level is valid", () => {
+            it("should return result with not failure", () => {
+                // Arrange
+                gameData.gameConfigs.enableFreeBet = true;
+                const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.betLevel = 5;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[1]).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when coin value is invalid", () => {
+            it("should return result with failure", () => {
+                // Arrange
+                gameData.gameConfigs.enableFreeBet = true;
+                const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.coinValue = 2;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[2]).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when coin value is valid", () => {
+            it("should return result with not failure", () => {
+                // Arrange
+                gameData.gameConfigs.enableFreeBet = true;
+                const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.coinValue = 10;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[2]).toStrictEqual(expectedValue);
+            });
+        });
+    });
+
+    describe("adjustBetTracks", () => {
+        it("should not change betTracks", () => {
+            // Arrange
+            const betTrack = {};
+            gameData.ingame[player.profile.name] = { betTracks: betTrack };
+
+            // Act
+            consumer.adjustBetTracks();
+
+            // Assert
+            expect(gameData.ingame[player.profile.name].betTracks).toStrictEqual(betTrack);
+        });
+    });
+});
