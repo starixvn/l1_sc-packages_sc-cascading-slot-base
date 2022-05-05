@@ -85,7 +85,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             win = this.settleTumble(round, nextTumble);
         }
 
-        this.updateRoundData(round, currencyGroupSettings);
+        await this.updateRoundData(round, currencyGroupSettings);
     }
 
     async processFreeSpins(player, round) {
@@ -95,7 +95,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         }
     }
 
-    updateRoundData(round, currencyGroupSettings) {
+    async updateRoundData(round, currencyGroupSettings) {
         const { tumbles } = round.settlementResult;
         const lastTumble = tumbles[tumbles.length - 1];
 
@@ -111,6 +111,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 round.totalMultiplier > 0 ? round.totalTumbleWin * round.totalMultiplier : round.totalTumbleWin,
                 currencyGroupSettings.maxWinPerRound
             );
+
+            await this.updateTotalMultiplier(round);
         } else {
             round.betwin = Math.min(
                 round.multiplier > 0 ? round.totalTumbleWin * round.multiplier : round.totalTumbleWin,
@@ -119,6 +121,23 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         }
 
         this.countFreeSpin(round);
+    }
+
+    async updateTotalMultiplier(round) {
+        await this.totalMultiplersRepository.updateOne(
+            { ended: false, playerId: round.playerId },
+            {
+                $push: {
+                    rounds: {
+                        time: new Date(),
+                        roundId: round.id,
+                        prevTotalMultiplier: round.totalMultiplier - round.multiplier,
+                        totalMultiplier: round.totalMultiplier,
+                        multiplier: round.multiplier,
+                    },
+                },
+            }
+        );
     }
 
     countFreeSpin(round) {
