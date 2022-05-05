@@ -13,6 +13,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         endGame,
         roundsRepository,
         betsRepository,
+        totalMultiplersRepository,
     }) {
         super({
             definition,
@@ -27,6 +28,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         this.freeSpinsConumer = freeSpinsConsumer;
         this.boardGenerator = boardGenerator;
         this.tumbleCalculator = tumbleCalculator;
+        this.totalMultiplersRepository = totalMultiplersRepository;
     }
 
     async settleRound(player, roundId) {
@@ -34,53 +36,89 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         if (round) {
             this.processSpinning(round);
+
+            round.paid = true;
+            round.endTime = new Date();
+
             const betResult = this.calculateBetResult(round);
 
-            const { id, endTime } = round;
             await round.save();
-            await this.callEndGame(bet, id, endTime, betResult);
+            await this.callEndGame(bet, roundId, round.endTime, betResult);
             await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(round, betResult));
         }
     }
 
-    processSpinning(round) {
+    async processSpinning(round) {
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
 
         const generatedResult = this.boardGenerator.generate();
         round.result = generatedResult.newBoard.join(",");
+
         const firstTumble = {
             originalBoard: round.result,
+            newBoard: round.result,
             multipliers: generatedResult.multipliers,
         };
 
         const tumbles = [firstTumble];
-        round.settlementResult = {
-            tumbles,
-        };
+        round.settlementResult = { tumbles };
 
         let win = this.settleTumble(round, firstTumble);
 
         while (win && round.betwin < currencyGroupSettings.maxWinPerRound) {
             const lastTumble = tumbles[tumbles.length - 1];
-            const refillResult = this.boardGenerator.explodeAndRefill(lastTumble.originalBoard.split(","), Object.keys(lastTumble.icons));
+            const refilledResult = this.boardGenerator.explodeAndRefill(lastTumble.originalBoard.split(","), Object.keys(lastTumble.icons));
 
-            lastTumble.newBoard = refillResult.newBoard.join(",");
+            lastTumble.newBoard = refilledResult.newBoard.join(",");
+            lastTumble.explodedSymbols = refilledResult.explodedSymbols;
+            lastTumble.newSymbols = refilledResult.newSymbols;
+
             const nextTumble = {
                 originalBoard: lastTumble.newBoard,
-                multipliers: refillResult.multipliers,
-                explodedSymbols: refillResult.explodedSymbols,
-                newSymbols: refillResult.newSymbols,
+                newBoard: lastTumble.newBoard,
+                multipliers: refilledResult.multipliers,
+                win: 0,
             };
 
             tumbles.push(nextTumble);
 
-            win = this.settleTumble(round, nextTumble, currencyGroupSettings);
+            win = this.settleTumble(round, nextTumble);
+        }
+
+        this.updateRoundData(round, currencyGroupSettings);
+    }
+
+    async processFreeSpins(player, round) {
+        const { id, settlementResult } = round;
+        if (settlementResult.freeSpins?.odds > 0) {
+            await this.freeSpinsConumer.gainFreeSpin(player, { roundId: id, numberOfFreeSpins: settlementResult.freeSpins.odds });
+        }
+    }
+
+    updateRoundData(round, currencyGroupSettings) {
+        const { tumbles } = round.settlementResult;
+        const lastTumble = tumbles[tumbles.length - 1];
+
+        round.totalTumbleWin = tumbles.reduce((total, current) => total + current.win, 0);
+        round.multiplier = lastTumble.multipliers.reduce((total, current) => total + current, 0);
+
+        if (round.freeSpin) {
+            const ingameData = this.gameData.ingame[player.profile.name];
+            ingameData.freeSpinsTotalMultiplier = ingameData.freeSpinsTotalMultiplier ?? 0 + round.multiplier;
+
+            round.totalMultiplier = ingameData.freeSpinsTotalMultiplier;
+            round.betwin = Math.min(
+                round.totalMultiplier > 0 ? round.totalTumbleWin * round.totalMultiplier : round.totalTumbleWin,
+                currencyGroupSettings.maxWinPerRound
+            );
+        } else {
+            round.betwin = Math.min(
+                round.multiplier > 0 ? round.totalTumbleWin * round.multiplier : round.totalTumbleWin,
+                currencyGroupSettings.maxWinPerRound
+            );
         }
 
         this.countFreeSpin(round);
-
-        round.paid = true;
-        round.endTime = new Date();
     }
 
     countFreeSpin(round) {
@@ -89,23 +127,18 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const lastBoard = tumbles[tumbles.length - 1].originalBoard.split(",").map((x) => parseInt(x));
         const freeSpinCount = lastBoard.filter((x) => x === defaultDefinition.specialSymbols.freeSpins).length;
 
-        const { oddsByCounts } = this.gameData.gameConfigs.cascadingSlotsConfig;
-        const freeSpinOdds = oddsByCounts.freeSpins.initialOdds.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
+        const { freeSpins } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const freeSpinOddsConfig = round.freeSpin ? freeSpins.additionalOdds : freeSpins.initialOdds;
+        const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
 
-        if (freeSpinOdds.length > 0) {
-            settlementResult.freeSpins = {
-                count: freeSpinCount,
-                odds: Math.max(...freeSpinOdds),
-            };
-        }
+        settlementResult.freeSpins = {
+            count: freeSpinCount,
+            odds: Math.max(0, ...freeSpinOdds),
+        };
     }
 
-    settleTumble(round, tumble, currencyGroupSettings) {
+    settleTumble(round, tumble) {
         this.tumbleCalculator.calculate(tumble, round.coinValue * round.betLevel);
-
-        round.totalTumbleWin += tumble.win;
-        round.totalMultiplier = tumble.multipliers.reduce((total, current) => total + current, 0);
-        round.betwin = Math.min(round.totalTumbleWin * (round.totalMultiplier > 0 ? round.totalMultiplier : 1), currencyGroupSettings.maxWinPerRound);
 
         return tumble.win > 0;
     }
