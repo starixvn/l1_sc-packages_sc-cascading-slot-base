@@ -1,12 +1,8 @@
 import TumbleCalculator from "../tumble-calculator";
 import { gameConfigs } from "../../test-data";
 
-const gameData = {
-    gameConfigs,
-};
-
 function initTunmbleCalculator() {
-    return new TumbleCalculator(gameData);
+    return new TumbleCalculator();
 }
 
 describe("calculate", () => {
@@ -21,10 +17,10 @@ describe("calculate", () => {
             const calculator = initTunmbleCalculator();
 
             //Act
-            const result = calculator.calculate(tumble, 10);
+            const result = calculator.calculate(tumble, 10, gameConfigs.cascadingSlotsConfig);
 
             //Assert
-            expect(result.win).toEqual(15);
+            expect(result.win).toEqual(20);
         });
 
         it("should list winning icons correctly", () => {
@@ -33,10 +29,10 @@ describe("calculate", () => {
             const calculator = initTunmbleCalculator();
 
             //Act
-            const result = calculator.calculate(tumble, 10);
+            const result = calculator.calculate(tumble, 10, gameConfigs.cascadingSlotsConfig);
 
             //Assert
-            expect(result.icons).toEqual({ 8: { count: 10, odds: 1.5 } });
+            expect(result.icons).toEqual({ 8: { count: 10, odds: 2 } });
         });
     });
 
@@ -51,7 +47,7 @@ describe("calculate", () => {
             const calculator = initTunmbleCalculator();
 
             //Act
-            const result = calculator.calculate(tumble, 10);
+            const result = calculator.calculate(tumble, 10, gameConfigs.cascadingSlotsConfig);
 
             //Assert
             expect(result.win).toEqual(0);
@@ -63,7 +59,7 @@ describe("calculate", () => {
             const calculator = initTunmbleCalculator();
 
             //Act
-            const result = calculator.calculate(tumble, 10);
+            const result = calculator.calculate(tumble, 10, gameConfigs.cascadingSlotsConfig);
 
             //Assert
             expect(result.icons).toEqual({});
