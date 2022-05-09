@@ -1,21 +1,17 @@
 export default class TumbleCalculator {
-    constructor(gameData) {
-        this.gameData = gameData;
-    }
-
-    calculate(tumble, baseBet) {
+    calculate(tumble, baseBet, gameOdds) {
         const { originalBoard } = tumble;
         const boardArray = originalBoard.split(",");
         const occurences = boardArray.reduce((map, current) => map.set(current, (map.get(current) || 0) + 1), new Map());
 
-        tumble.icons = this.calculateIconOdds(occurences);
+        tumble.icons = this.calculateIconOdds(occurences, gameOdds);
         tumble.win = Object.values(tumble.icons).reduce((total, icon) => total + icon.odds * baseBet, 0);
 
         return tumble;
     }
 
-    calculateIconOdds(occurences) {
-        const { oddsByCounts } = this.gameData.gameConfigs.cascadingSlotsConfig;
+    calculateIconOdds(occurences, gameOdds) {
+        const { oddsByCounts } = gameOdds;
         const icons = {};
 
         Object.entries(oddsByCounts).forEach(([iconValue, odds]) => {

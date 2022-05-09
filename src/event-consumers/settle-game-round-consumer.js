@@ -25,7 +25,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             betsRepository,
         });
 
-        this.freeSpinsConumer = freeSpinsConsumer;
+        this.freeSpinsConsumer = freeSpinsConsumer;
         this.boardGenerator = boardGenerator;
         this.tumbleCalculator = tumbleCalculator;
         this.totalMultiplersRepository = totalMultiplersRepository;
@@ -35,7 +35,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const round = await this.queryRound(roundId);
 
         if (round) {
-            this.processSpinning(round);
+            this.processSpinning(player, round);
 
             round.paid = true;
             round.endTime = new Date();
@@ -43,12 +43,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             const betResult = this.calculateBetResult(round);
 
             await round.save();
-            await this.callEndGame(bet, roundId, round.endTime, betResult);
+            await this.callEndGame(round, roundId, round.endTime, betResult);
             await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(round, betResult));
+            await this.processFreeSpins(player, round);
         }
     }
 
-    async processSpinning(round) {
+    async processSpinning(player, round) {
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
 
         const generatedResult = this.boardGenerator.generate();
@@ -91,7 +92,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async processFreeSpins(player, round) {
         const { id, settlementResult } = round;
         if (settlementResult.freeSpins?.odds > 0) {
-            await this.freeSpinsConumer.gainFreeSpin(player, { roundId: id, numberOfFreeSpins: settlementResult.freeSpins.odds });
+            await this.freeSpinsConsumer.gainFreeSpin(player, {
+                roundId: id,
+                coinValue: round.coinValue,
+                betLevel: round.betLevel,
+                betMultiplier: round.betMultiplier,
+                numberOfFreeSpins: settlementResult.freeSpins.odds,
+            });
         }
     }
 
@@ -103,16 +110,17 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         round.multiplier = lastTumble.multipliers.reduce((total, current) => total + current, 0);
 
         if (round.freeSpin) {
-            const ingameData = this.gameData.ingame[player.profile.name];
-            ingameData.freeSpinsTotalMultiplier = ingameData.freeSpinsTotalMultiplier ?? 0 + round.multiplier;
+            const totalMultiplierDoc = await this.totalMultiplersRepository.findOne({ ended: false, playerId: round.playerId }).lean().exec();
+            const previousRound = totalMultiplierDoc.rounds[totalMultiplierDoc.rounds.length - 1];
+            const prevTotalMultiplier = previousRound?.totalMultiplier ?? 0;
 
-            round.totalMultiplier = ingameData.freeSpinsTotalMultiplier;
+            round.totalMultiplier = round.totalTumbleWin > 0 ? prevTotalMultiplier + round.multiplier : prevTotalMultiplier;
             round.betwin = Math.min(
                 round.totalMultiplier > 0 ? round.totalTumbleWin * round.totalMultiplier : round.totalTumbleWin,
                 currencyGroupSettings.maxWinPerRound
             );
 
-            await this.updateTotalMultiplier(round);
+            round.betwin > 0 && (await this.updateTotalMultiplier(round));
         } else {
             round.betwin = Math.min(
                 round.multiplier > 0 ? round.totalTumbleWin * round.multiplier : round.totalTumbleWin,
@@ -146,7 +154,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const lastBoard = tumbles[tumbles.length - 1].originalBoard.split(",").map((x) => parseInt(x));
         const freeSpinCount = lastBoard.filter((x) => x === defaultDefinition.specialSymbols.freeSpins).length;
 
-        const { freeSpins } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const { freeSpins } = round.odds;
         const freeSpinOddsConfig = round.freeSpin ? freeSpins.additionalOdds : freeSpins.initialOdds;
         const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
 
@@ -157,7 +165,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     settleTumble(round, tumble) {
-        this.tumbleCalculator.calculate(tumble, round.coinValue * round.betLevel);
+        this.tumbleCalculator.calculate(tumble, round.coinValue * round.betLevel, round.odds);
 
         return tumble.win > 0;
     }
@@ -167,7 +175,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     calculateBetResult(round) {
-        const { bigWinRatio } = this.gameData.gameConfigs.slotsConfig;
+        const betResult = {};
+        const { bigWinRatio } = round.odds;
 
         betResult.totalBetAmount = round.totalAmount;
         betResult.totalWin = round.betwin;
