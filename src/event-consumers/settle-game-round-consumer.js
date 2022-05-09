@@ -13,7 +13,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         endGame,
         roundsRepository,
         betsRepository,
-        totalMultiplersRepository,
         totalMultiplierConsumer,
     }) {
         super({
@@ -30,7 +29,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         this.totalMultiplierConsumer = totalMultiplierConsumer;
         this.boardGenerator = boardGenerator;
         this.tumbleCalculator = tumbleCalculator;
-        this.totalMultiplersRepository = totalMultiplersRepository;
     }
 
     async settleRound(player, roundId) {
@@ -112,7 +110,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         round.multiplier = lastTumble.multipliers.reduce((total, current) => total + current, 0);
 
         if (round.freeSpin) {
-            const currentTotalMultiplier = this.totalMultiplersRepository.getCurrentMultiplier();
+            const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
 
             round.totalMultiplier = round.totalTumbleWin > 0 ? currentTotalMultiplier + round.multiplier : currentTotalMultiplier;
             round.betwin = Math.min(
