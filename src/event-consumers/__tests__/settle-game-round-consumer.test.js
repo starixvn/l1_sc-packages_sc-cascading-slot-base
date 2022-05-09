@@ -6,6 +6,7 @@ import TumbleCalculator from "../../board/tumble-calculator";
 import mongoose from "mongoose";
 import { after } from "lodash";
 import defaultDefinition from "../../board/default-definition";
+import TotalMultiplierConsumer from "../total-multiplier-consumer";
 
 const currencyGroupSetting = {
     groupId: "g1",
@@ -30,9 +31,12 @@ const boardGenerator = {
 const freeSpinsConsumer = {
     gainFreeSpin: jest.fn(),
 };
+
+const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
+
 const tumbleCalculator = new TumbleCalculator(gameData);
-const totalMultiplersRepository = stubMongoose(mongoose.Model);
 const endGame = jest.fn(() => ({ isOk: true }));
+
 const player = {
     profile: {
         name: "player01",
@@ -52,7 +56,7 @@ function initConsumer() {
         boardGenerator,
         freeSpinsConsumer,
         tumbleCalculator,
-        totalMultiplersRepository,
+        totalMultiplierConsumer,
         endGame,
     });
 }
@@ -124,20 +128,7 @@ describe("settle round", () => {
         let round;
 
         beforeAll(() => {
-            totalMultiplersRepository
-                .findOne()
-                .lean()
-                .exec.mockReturnValue({
-                    rounds: [
-                        {
-                            time: new Date(),
-                            roundId: 1,
-                            prevTotalMultiplier: 0,
-                            totalMultiplier: 2,
-                            multiplier: 2,
-                        },
-                    ],
-                });
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(2);
         });
 
         beforeEach(() => {
@@ -203,7 +194,7 @@ describe("settle round", () => {
                 expect(round.totalMultiplier).toBe(2);
             });
 
-            it("should not update total_multipliers document", async () => {
+            it("should not call total_multipliers consumer", async () => {
                 //Arange
                 const consumer = initConsumer();
 
@@ -211,7 +202,7 @@ describe("settle round", () => {
                 await consumer.settleRound(player, 2);
 
                 //Assert
-                expect(totalMultiplersRepository.updateOne).not.toHaveBeenCalled();
+                expect(totalMultiplierConsumer.increaseTotalMultiplier).not.toHaveBeenCalled();
             });
 
             afterEach(() => {
