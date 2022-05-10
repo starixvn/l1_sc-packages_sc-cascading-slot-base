@@ -4,9 +4,9 @@ import SettleGameRoundConsumer from "../settle-game-round-consumer";
 import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
 import TumbleCalculator from "../../board/tumble-calculator";
 import mongoose from "mongoose";
-import { after } from "lodash";
 import defaultDefinition from "../../board/default-definition";
 import TotalMultiplierConsumer from "../total-multiplier-consumer";
+import RoundCalculator from "../../board/round-calculator";
 
 const currencyGroupSetting = {
     groupId: "g1",
@@ -34,7 +34,7 @@ const freeSpinsConsumer = {
 
 const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
 
-const tumbleCalculator = new TumbleCalculator(gameData);
+const tumbleCalculator = new TumbleCalculator();
 const endGame = jest.fn(() => ({ isOk: true }));
 
 const player = {
@@ -46,6 +46,7 @@ const player = {
     },
 };
 const roundsRepository = stubMongoose(mongoose.Model);
+const roundCalculator = new RoundCalculator({ boardGenerator, tumbleCalculator });
 
 function initConsumer() {
     return new SettleGameRoundConsumer({
@@ -53,11 +54,10 @@ function initConsumer() {
         gameData,
         roundsRepository,
         userBetResultPublisher,
-        boardGenerator,
         freeSpinsConsumer,
-        tumbleCalculator,
         totalMultiplierConsumer,
         endGame,
+        roundCalculator,
     });
 }
 
