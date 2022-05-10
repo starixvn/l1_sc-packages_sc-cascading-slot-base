@@ -20,6 +20,7 @@ export default class RoundCalculator {
         round.settlementResult = { tumbles };
 
         let win = this.settleTumble(round, firstTumble);
+        this.updateRound(round, totalMultiplier, maxWinPerRound);
 
         while (win && round.betwin < maxWinPerRound) {
             const lastTumble = tumbles[tumbles.length - 1];
@@ -41,9 +42,11 @@ export default class RoundCalculator {
             tumbles.push(nextTumble);
 
             win = this.settleTumble(round, nextTumble);
+            this.updateRound(round, totalMultiplier, maxWinPerRound);
         }
 
-        return this.updateRound(round, totalMultiplier, maxWinPerRound);
+        this.countFreeSpin(round);
+        return round;
     }
 
     settleTumble(round, tumble) {
@@ -64,9 +67,6 @@ export default class RoundCalculator {
         } else {
             round.betwin = Math.min(round.multiplier > 0 ? round.totalTumbleWin * round.multiplier : round.totalTumbleWin, maxWinPerRound);
         }
-
-        this.countFreeSpin(round);
-        return round;
     }
 
     countFreeSpin(round) {
