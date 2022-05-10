@@ -28,6 +28,15 @@ export default class TotalMultiplierConsumer {
         };
 
         if (currentTotalMultiplier) {
+            await this.totalMultiplierRepository.updateOne(
+                { uid: player.UID, ended: false },
+                {
+                    $push: {
+                        rounds: newRoundRecord,
+                    },
+                }
+            );
+        } else {
             await this.totalMultiplierRepository.create({
                 uid: player.UID,
                 playerId: player.session?.memberId,
@@ -36,15 +45,6 @@ export default class TotalMultiplierConsumer {
                 time: new Date(),
                 rounds: [newRoundRecord],
             });
-        } else {
-            await this.totalMultiplier.updateOne(
-                { uid: player.UID, ended: false },
-                {
-                    $push: {
-                        rounds: newRoundRecord,
-                    },
-                }
-            );
         }
 
         this.gameData.ingame[memberName].totalMultiplier = newTotalMultiplier;
@@ -60,5 +60,13 @@ export default class TotalMultiplierConsumer {
         this.gameData.ingame[player.profile.name].totalMultiplier = 0;
     }
 
-    async reload() {}
+    async reload() {
+        const totalMultipliers = await this.totalMultiplierRepository.find({ ended: false }).lean().exec();
+
+        totalMultipliers.forEach((totalMultiplier) => {
+            const latestTotalMultiplier = totalMultiplier.rounds[totalMultiplier.rounds.length - 1].totalMultiplier;
+
+            this.gameData.ingame[totalMultiplier.name].totalMultiplier = latestTotalMultiplier;
+        });
+    }
 }
