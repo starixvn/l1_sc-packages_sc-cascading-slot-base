@@ -8,7 +8,7 @@
         "test-coverage": "jest --collect-coverage",
         "reg": "npm set registry http://npm.lumigame.com",
         "pub": "npm publish --registry http://npm.lumigame.com",
-        "betaver": "npm version prerelease --preid beta",
+        "betaver": "npm version prerelease --git-tag-version false --preid beta",
         "pubbeta": "npm publish --registry http://npm.lumigame.com --tag beta",
         "semantic-release": "semantic-release"
     },
