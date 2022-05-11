@@ -32,7 +32,7 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
     }
 
     validateBetRequest(player, payload) {
-        const isValid = payload.betLevel && payload.coinValue;
+        const isValid = payload.freeSpin || (payload.betLevel && payload.coinValue);
         if (!isValid) {
             return false;
         }
@@ -67,24 +67,19 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
     }
 
     composeBetAmountValidationCriteria(player, payload) {
+        const { betLevel, coinValue } = payload;
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId) ?? {
             betLevels: [],
             coinValues: [],
         };
-        const configs = this.gameData.gameConfigs;
-        const { betLevel, coinValue } = payload;
 
         return [
             {
-                failure: payload.freeBet && !configs.enableFreeBet,
+                failure: !payload.freeSpin && settings.betLevels.indexOf(betLevel) === -1,
                 notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
             },
             {
-                failure: settings.betLevels.indexOf(betLevel) === -1,
-                notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
-            },
-            {
-                failure: settings.coinValues.indexOf(coinValue) === -1,
+                failure: !payload.freeSpin && settings.coinValues.indexOf(coinValue) === -1,
                 notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
             },
         ];
