@@ -34,6 +34,22 @@ describe("service-container-registry", () => {
         expect(serviceContainerRegistry instanceof Slot.SlotContainerRegistry);
     });
 
+    describe("registerConsumers", () => {
+        it("should register correct consumers", () => {
+            // Arrange
+            const serviceContainerRegistry = new ServiceContainerRegistry(defaultInjectionMode);
+            serviceContainerRegistry.container = { register: jest.fn() };
+
+            // Act
+            serviceContainerRegistry.registerConsumers();
+
+            // Assert
+            expect(serviceContainerRegistry.container.register).toBeCalledWith({
+                placeBetConsumer: expect.any(Object),
+            });
+        });
+    });
+
     describe("registerApis", () => {
         it("should register correct apis", () => {
             // Arrange
