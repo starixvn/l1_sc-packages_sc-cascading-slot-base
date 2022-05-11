@@ -7,8 +7,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         roundResultPublisher,
         userBetResultPublisher,
         freeSpinsConsumer,
-        boardGenerator,
-        tumbleCalculator,
         endGame,
         roundsRepository,
         betsRepository,
@@ -27,8 +25,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         this.freeSpinsConsumer = freeSpinsConsumer;
         this.totalMultiplierConsumer = totalMultiplierConsumer;
-        this.boardGenerator = boardGenerator;
-        this.tumbleCalculator = tumbleCalculator;
         this.roundCalculator = roundCalculator;
     }
 

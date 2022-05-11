@@ -23,7 +23,7 @@ export default class TumbleCalculator {
                     count: iconOcurrence,
                     odds: iconOdds,
                     win: baseBet * iconOdds,
-                };
+                };                           
             }
         });
 

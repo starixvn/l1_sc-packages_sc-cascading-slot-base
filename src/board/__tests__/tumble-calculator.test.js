@@ -32,7 +32,7 @@ describe("calculate", () => {
             const result = calculator.calculate(tumble, 10, gameConfigs.cascadingSlotsConfig);
 
             //Assert
-            expect(result.icons).toEqual({ 8: { count: 10, odds: 2 } });
+            expect(result.icons).toEqual({ 8: { count: 10, odds: 2, win: 10 * 2 } });
         });
     });
 
