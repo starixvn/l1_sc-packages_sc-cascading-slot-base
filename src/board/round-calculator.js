@@ -26,7 +26,11 @@ export default class RoundCalculator {
             const lastTumble = tumbles[tumbles.length - 1];
             const refilledResult =
                 preGeneratedResult?.shift() ??
-                this.boardGenerator.explodeAndRefill(lastTumble.originalBoard.split(","), Object.keys(lastTumble.icons), lastTumble.multipliers);
+                this.boardGenerator.explodeAndRefill(
+                    lastTumble.originalBoard.split(",").map((x) => parseInt(x)),
+                    Object.keys(lastTumble.icons).map((x) => parseInt(x)),
+                    lastTumble.multipliers
+                );
 
             lastTumble.newBoard = refilledResult.newBoard.join(",");
             lastTumble.explodedSymbols = refilledResult.explodedSymbols;
