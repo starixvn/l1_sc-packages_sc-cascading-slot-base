@@ -63,10 +63,20 @@ export default class TotalMultiplierConsumer {
     async reload() {
         const totalMultipliers = await this.totalMultiplierRepository.find({ ended: false }).lean().exec();
 
-        totalMultipliers.forEach((totalMultiplier) => {
+        totalMultipliers.forEach(async (totalMultiplier) => {
             const latestTotalMultiplier = totalMultiplier.rounds[totalMultiplier.rounds.length - 1].totalMultiplier;
+            const isHavingFreeSpins = this.freeSpinsConsumer.hasFreeSpin({ profile: { name: totalMultiplier.name } });
 
-            this.gameData.ingame[totalMultiplier.name].totalMultiplier = latestTotalMultiplier;
+            if (isHavingFreeSpins) {
+                this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
+                this.gameData.ingame[totalMultiplier.name].totalMultiplier = latestTotalMultiplier;
+            } else {
+                !this.gameData.ingame[totalMultiplier.name]?.finish &&
+                    (await this.totalMultiplierRepository.updateOne(
+                        { uid: totalMultiplier.uid, ended: false },
+                        { ended: true, endTime: new Date() }
+                    ));
+            }
         });
     }
 }
