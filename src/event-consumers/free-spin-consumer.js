@@ -1,6 +1,6 @@
-import { FreeSpinsConsumer } from "sc-slot-game-base/src/event-consumers";
+import { EventConsumers } from "sc-slot-game-base";
 
-export default class FreeSpinConsumer extends FreeSpinsConsumer {
+export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer {
     async gainFreeSpin(player, { roundId, bet, betLevel, coinValue, numberOfFreeSpins }, timeToLive) {
         const createdTime = new Date();
         const expiryTime = new Date(createdTime.getTime()).setSeconds(createdTime.getSeconds() + timeToLive);
@@ -19,7 +19,7 @@ export default class FreeSpinConsumer extends FreeSpinsConsumer {
             expiryTime,
             betLevel,
             coinValue,
-            betMultiplier: this.gameData.gameConfigs.slotsConfig.multiplier,
+            betMultiplier: this.gameData.gameConfigs.slotsConfig.betMultiplier,
         };
 
         const gainedFreeSpin = {
