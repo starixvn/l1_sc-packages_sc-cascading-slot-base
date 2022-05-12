@@ -173,17 +173,39 @@ describe("totalMultiplierConsumer", () => {
             expect(totalMultiplierRepository.find).toHaveBeenCalledWith({ ended: false });
         });
 
-        it("should set total multiplier to ingame data", async () => {
-            // Arrange
-            const totalMultiplier = chance.natural();
-            const records = [{ name: player.profile.name, rounds: [{ totalMultiplier }] }];
-            totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
+        describe("when player has freeSpins", () => {
+            it("should set total multiplier to ingame data", async () => {
+                // Arrange
+                const totalMultiplier = chance.natural();
+                const records = [{ name: player.profile.name, rounds: [{ totalMultiplier }] }];
+                totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
+                freeSpinConsumer.hasFreeSpin = jest.fn().mockReturnValue(true);
 
-            // Act
-            await consumer.reload();
+                // Act
+                await consumer.reload();
 
-            // Assert
-            expect(gameData.ingame[player.profile.name].totalMultiplier).toBe(totalMultiplier);
+                // Assert
+                expect(gameData.ingame[player.profile.name].totalMultiplier).toBe(totalMultiplier);
+            });
+        });
+
+        describe("when player does NOT have free spin", () => {
+            it("should call totalMultiplier.updateOne", async () => {
+                // Arrange
+                const totalMultiplier = chance.natural();
+                const records = [{ name: player.profile.name, uid: chance.guid(), rounds: [{ totalMultiplier }] }];
+                totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
+                freeSpinConsumer.hasFreeSpin = jest.fn().mockReturnValue(false);
+
+                // Act
+                await consumer.reload();
+
+                // Assert
+                expect(totalMultiplierRepository.updateOne).toBeCalledWith(
+                    { uid: records[0].uid, ended: false },
+                    { ended: true, endTime: new Date() }
+                );
+            });
         });
     });
 
