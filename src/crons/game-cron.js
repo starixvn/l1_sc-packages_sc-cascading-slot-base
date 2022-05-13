@@ -1,0 +1,141 @@
+import cron from "cron";
+import { Crons } from "sc-slot-game-base";
+
+export default class GameCron extends Crons.SlotGameCron {
+    /**
+     * @param {Object} dependencies
+     * @param {SlotGameDefinition} dependencies.definition
+     * @param {SlotGameData} dependencies.gameData
+     * @param {SlotGameBot} dependencies.bot
+     * @param {EventConsumers.SettleGameRoundConsumer} dependencies.settleGameRoundConsumer
+     * @param {EventConsumers.FreeSpinsConsumer} dependencies.freeSpinsConsumer
+     * @param {EventConsumers.BonusConsumer} dependencies.bonusConsumer
+     * @param {EventConsumers.IdCountersConsumer} dependencies.idCountersConsumer
+     * @param {EventConsumers.JackpotConsumer} dependencies.jackpotConsumer
+     * @param {Core.BaseEventPublishers.GameStatusPublisher} dependencies.gameStatusPublisher
+     * @param {Core.BaseEventPublishers.RunningRoundInfoPublisher} dependencies.runningRoundInfoPublisher
+     * @param {logger} dependencies.logService
+     * @param {mongoose.Model} dependencies.gameConfigsRepository
+     * @param {mongoose.Model} dependencies.roundsRepository
+     * @param {mongoose.Model} dependencies.archiveStatusesRepository
+     * @param {mongoose.Model} dependencies.notificationRepository
+     * @param {mongoose.Model} dependencies.exchangeRatesRepository
+     * @param {mongoose.Model} dependencies.partnerConfigRepository
+     * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
+     */
+    constructor({
+        definition,
+        gameData,
+        bot,
+        settleGameRoundConsumer,
+        freeSpinsConsumer,
+        bonusConsumer,
+        idCountersConsumer,
+        jackpotConsumer,
+        gameStatusPublisher,
+        runningRoundInfoPublisher,
+        logService,
+        gameConfigsRepository,
+        roundsRepository,
+        archiveStatusesRepository,
+        notificationRepository,
+        exchangeRatesRepository,
+        currencyGroupGamesRepository,
+        partnerConfigRepository,
+        currencyGroupRepository,
+        currencyRepository,
+        totalMultiplierConsumer,
+    }) {
+        super({
+            definition,
+            gameData,
+            bot,
+            settleGameRoundConsumer,
+            gameStatusPublisher,
+            runningRoundInfoPublisher,
+            logService,
+            gameConfigsRepository,
+            roundsRepository,
+            archiveStatusesRepository,
+            notificationRepository,
+            exchangeRatesRepository,
+            currencyGroupGamesRepository,
+            partnerConfigRepository,
+            currencyGroupRepository,
+            currencyRepository,
+            freeSpinsConsumer,
+            bonusConsumer,
+            idCountersConsumer,
+            jackpotConsumer,
+        });
+
+        this.totalMultiplierConsumer = totalMultiplierConsumer;
+    }
+
+    async start() {
+        this.gameData.roundId = await this.idCountersConsumer.getLatestId("round");
+        this.gameData.freeSpinId = await this.idCountersConsumer.getLatestId("freespin");
+
+        if (this.gameData.roundId < 1 && this.gameData.freeSpinId < 1) {
+            const { roundId, freeSpinId } = await this.getLastArchiveRound(this.gameData.gameConfigs.slotsConfig?.jackpot.enabled);
+
+            await this.idCountersConsumer.updateLatestId("round", roundId);
+            await this.idCountersConsumer.updateLatestId("freespin", freeSpinId);
+
+            this.gameData.roundId = roundId;
+            this.gameData.freeSpinId = freeSpinId;
+
+            this.logService.logError(
+                `${this.definition.name} get roundId #${this.gameData.roundId} and freeSpinId #${this.gameData.freeSpinId} from archive.`
+            );
+        }
+
+        await this.loadUnsettledBetsToIngame();
+        await this.bonusConsumer.processExpiredBonus();
+        await this.freeSpinsConsumer.reload();
+        await this.totalMultiplierConsumer.reload();
+
+        await this.getSettingForNewRound();
+        await this.updateExchangeRates();
+
+        if (this.gameData.gameConfigs.slotsConfig?.jackpot.enabled) {
+            await this.jackpotConsumer.initialize();
+        }
+
+        const job = new cron.CronJob(
+            "* * * * * *",
+            () => this.proceed().catch(this.logService.logError),
+            () => {
+                this.logService.logError(
+                    `${this.definition.name} unexpectedly stopped at round #${this.gameData.roundId} because some other tasks halt it.`
+                );
+                job.start();
+            }
+        );
+
+        job.start();
+    }
+
+    async proceed() {
+        const { durations } = this.definition;
+
+        if (this.gameData.remainingTime === durations.wholeRound) {
+            await this.checkGameStatus();
+            this.bot && (await this.bot.reset());
+        }
+
+        if (!this.gameData.disabled) {
+            this.gameData.remainingTime--;
+            this.bot && (await this.bot.run());
+        }
+
+        if (this.gameData.remainingTime < 0) {
+            this.gameData.remainingTime = durations.wholeRound;
+
+            await this.freeSpinsConsumer.reload();
+            await this.totalMultiplierConsumer.reload();
+        }
+
+        await this.bonusConsumer.processExpiredBonus();
+    }
+}
