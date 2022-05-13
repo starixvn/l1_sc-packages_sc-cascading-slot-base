@@ -49,11 +49,18 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async processSpinning(player, round) {
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
-        round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, currencyGroupSettings.maxWinPerRound);
+        round = this.roundCalculator.processSpinning(
+            round,
+            currentTotalMultiplier,
+            currencyGroupSettings.maxWinPerRound,
+            this.gameData.settlementResultFromAdmin[player.profile.name]
+        );
 
         if (round.freeSpin && round.betwin > 0) {
             await this.totalMultiplierConsumer.increaseTotalMultiplier(player, { roundId: round.id, multiplier: round.multiplier });
         }
+
+        delete this.gameData.settlementResultFromAdmin[player.profile.name];
     }
 
     async processFreeSpins(player, round) {

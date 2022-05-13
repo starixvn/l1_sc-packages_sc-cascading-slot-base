@@ -15,6 +15,7 @@ const currencyGroupSetting = {
 const gameData = {
     gameConfigs,
     currencyGroupGames: [currencyGroupSetting],
+    settlementResultFromAdmin: {},
 };
 
 const definition = {
