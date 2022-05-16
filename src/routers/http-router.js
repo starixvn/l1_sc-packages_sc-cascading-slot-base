@@ -44,7 +44,10 @@ export default class HttpRouter extends Core.Routers.HttpRouter {
 
             res.send(
                 preGeneratedResult.map((x) => ({
-                    icons: x.icons,
+                    icons: Object.entries(x.icons).map(([key, value]) => ({
+                        index: parseInt(key),
+                        ...value,
+                    })),
                     multipliers: x.multipliers,
                     board: x.newBoard,
                     freeSpinCount: x.newBoard.filter((symbol) => symbol === defaultDefinition.specialSymbols.freeSpins).length,
