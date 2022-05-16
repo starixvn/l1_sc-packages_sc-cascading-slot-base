@@ -87,7 +87,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
     calculateBetResult(round) {
         const betResult = {};
-        const { bigWinRatio } = round.odds;
+        const { bigWinRatio } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
         betResult.totalBetAmount = round.totalAmount;
         betResult.totalWin = round.betwin;
@@ -111,10 +111,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                     win: tumble.win,
                     result: tumble.newBoard,
                     settlement: {
-                        explode: tumble.explode,
-                        new: tumble.new,
+                        explode: tumble.explodedSymbols,
+                        new: tumble.newSymbols,
                     },
+                    multipliers: tumble.multipliers,
                 })),
+                multiplier: round.multiplier,
+                totalMultiplier: round.totalMultiplier,
             },
         };
     }
