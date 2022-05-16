@@ -29,7 +29,6 @@ describe("gameCron", () => {
     const bot = stub(Crons.SlotGameBot);
     const settleGameRoundConsumer = stub(EventConsumers.SettleGameRoundConsumer);
     const freeSpinsConsumer = stub(FreeSpinsConsumer);
-    const bonusConsumer = stub(EventConsumers.BonusConsumer);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
     const jackpotConsumer = stub(EventConsumers.JackpotConsumer);
     const gameStatusPublisher = {};
@@ -54,7 +53,6 @@ describe("gameCron", () => {
             bot,
             settleGameRoundConsumer,
             freeSpinsConsumer,
-            bonusConsumer,
             idCountersConsumer,
             jackpotConsumer,
             gameStatusPublisher,
@@ -151,14 +149,6 @@ describe("gameCron", () => {
 
             // Assert
             expect(gameCron.loadUnsettledBetsToIngame).toBeCalled();
-        });
-
-        it("should process expired bonus", async () => {
-            // Act
-            await gameCron.start();
-
-            // Assert
-            expect(bonusConsumer.processExpiredBonus).toBeCalled();
         });
 
         it("should reload free spin", async () => {
@@ -379,14 +369,6 @@ describe("gameCron", () => {
                 // Assert
                 expect(totalMultiplierConsumer.reload).toBeCalled();
             });
-        });
-
-        it("should call bonusConsumer.processExpiredBonus", async () => {
-            // Act
-            await gameCron.proceed();
-
-            // Assert
-            expect(bonusConsumer.processExpiredBonus).toBeCalled();
         });
     });
 

@@ -9,7 +9,6 @@ export default class GameCron extends Crons.SlotGameCron {
      * @param {SlotGameBot} dependencies.bot
      * @param {EventConsumers.SettleGameRoundConsumer} dependencies.settleGameRoundConsumer
      * @param {EventConsumers.FreeSpinsConsumer} dependencies.freeSpinsConsumer
-     * @param {EventConsumers.BonusConsumer} dependencies.bonusConsumer
      * @param {EventConsumers.IdCountersConsumer} dependencies.idCountersConsumer
      * @param {EventConsumers.JackpotConsumer} dependencies.jackpotConsumer
      * @param {Core.BaseEventPublishers.GameStatusPublisher} dependencies.gameStatusPublisher
@@ -29,7 +28,6 @@ export default class GameCron extends Crons.SlotGameCron {
         bot,
         settleGameRoundConsumer,
         freeSpinsConsumer,
-        bonusConsumer,
         idCountersConsumer,
         jackpotConsumer,
         gameStatusPublisher,
@@ -64,7 +62,6 @@ export default class GameCron extends Crons.SlotGameCron {
             currencyGroupRepository,
             currencyRepository,
             freeSpinsConsumer,
-            bonusConsumer,
             idCountersConsumer,
             jackpotConsumer,
         });
@@ -91,7 +88,6 @@ export default class GameCron extends Crons.SlotGameCron {
         }
 
         await this.loadUnsettledBetsToIngame();
-        await this.bonusConsumer.processExpiredBonus();
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload();
 
@@ -135,7 +131,5 @@ export default class GameCron extends Crons.SlotGameCron {
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
         }
-
-        await this.bonusConsumer.processExpiredBonus();
     }
 }
