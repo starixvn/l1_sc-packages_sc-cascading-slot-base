@@ -14,12 +14,23 @@ export default class HistoryQuery {
         const total = await this.roundsRepository.countDocuments(filter).exec();
         const roundProjection = {
             _id: false,
-            paid: false,
-            odds: false,
-            siteId: false,
-            memberId: false,
             __v: false,
             __archive: false,
+            bet: false,
+            betMultiplier: false,
+            result: false,
+            betwin: false,
+            paid: false,
+            uid: false,
+            name: false,
+            rate: false,
+            exchangeRateId: false,
+            memberId: false,
+            siteId: false,
+            playerId: false,
+            operatorId: false,
+            endTime: false,
+            odds: false,
         };
 
         const rawBetLogs = await this.roundsRepository
