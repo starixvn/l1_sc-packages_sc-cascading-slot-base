@@ -19,10 +19,7 @@ export default class RoundCalculator {
         const tumbles = [firstTumble];
         round.settlementResult = { tumbles };
 
-        let win = this.settleTumble(round, firstTumble);
-        this.updateRound(round, totalMultiplier, maxWinPerRound);
-
-        while (win && round.betwin < maxWinPerRound) {
+        while (this.settleTumble(round, totalMultiplier, maxWinPerRound)) {
             const lastTumble = tumbles[tumbles.length - 1];
             const refilledResult =
                 preGeneratedResult?.shift() ??
@@ -44,18 +41,20 @@ export default class RoundCalculator {
             };
 
             tumbles.push(nextTumble);
-
-            win = this.settleTumble(round, nextTumble);
-            this.updateRound(round, totalMultiplier, maxWinPerRound);
         }
 
         this.countFreeSpin(round);
         return round;
     }
 
-    settleTumble(round, tumble) {
-        this.tumbleCalculator.calculate(tumble, round.coinValue * round.betLevel, round.odds);
-        return tumble.win > 0;
+    settleTumble(round, totalMultiplier, maxWinPerRound) {
+        const { tumbles } = round.settlementResult;
+        const lastTumble = tumbles[tumbles.length - 1];
+        this.tumbleCalculator.calculate(lastTumble, round.coinValue * round.betLevel, round.odds);
+
+        this.updateRound(round, totalMultiplier, maxWinPerRound);
+
+        return lastTumble.win > 0 && round.betwin < maxWinPerRound;
     }
 
     updateRound(round, totalMultiplier, maxWinPerRound) {
@@ -67,7 +66,7 @@ export default class RoundCalculator {
 
         if (round.freeSpin) {
             round.totalMultiplier = round.totalTumbleWin > 0 ? totalMultiplier + round.multiplier : totalMultiplier;
-            round.betwin = Math.min(round.totalMultiplier > 0 ? round.totalTumbleWin * round.totalMultiplier : round.totalTumbleWin, maxWinPerRound);
+            round.betwin = Math.min(round.multiplier > 0 ? round.totalTumbleWin * round.totalMultiplier : round.totalTumbleWin, maxWinPerRound);
         } else {
             round.betwin = Math.min(round.multiplier > 0 ? round.totalTumbleWin * round.multiplier : round.totalTumbleWin, maxWinPerRound);
         }
