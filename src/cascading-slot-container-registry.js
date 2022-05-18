@@ -1,13 +1,12 @@
-import awilix from "awilix";
+import { asClass, asValue } from "awilix";
 import { SlotContainerRegistry } from "sc-slot-game-base";
 import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
 import { PlaceBetConsumer, TotalMultiplierConsumer } from "./event-consumers";
 import SettleGameRoundConsumer from "./event-consumers/settle-game-round-consumer";
 import HttpRouter from "./routers/http-router";
-import { BoardGenerator } from from "sc-slot-board-generator";
-
-const { asClass, asValue } = awilix;
+import CascadingBoardGenerator from "./board/cascading-board-generator";
+import defaultDefinition from "./board/default-definition";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     /**
@@ -22,9 +21,13 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
 
     registerBoardUtilities() {
         this.container.register({
+            boardSettings: asValue(defaultDefinition.boardSettings),
+        });
+
+        this.container.register({
             tumbleCalculator: asClass(TumbleCalculator),
             roundCalculator: asClass(RoundCalculator).proxy(),
-            boardGenerator: asClass(BoardGenerator)
+            boardGenerator: asClass(CascadingBoardGenerator).singleton(),
         });
     }
 

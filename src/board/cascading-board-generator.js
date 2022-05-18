@@ -2,8 +2,8 @@ import { BoardGenerator } from "sc-slot-board-generator";
 import defaultDefinition from "./default-definition";
 
 export default class CascadingBoardGenerator {
-    constructor(boardSettings, slotConfigs) {
-        const { multiplierBonus } = slotConfigs;
+    constructor(boardSettings, gameData) {
+        const { multiplierBonus } = gameData.gameConfigs.cascadingSlotConfigs;
 
         this.boardGenerator = new BoardGenerator(boardSettings, {
             symbol: defaultDefinition.specialSymbols.multiplier,
