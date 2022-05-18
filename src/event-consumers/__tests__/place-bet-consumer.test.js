@@ -62,13 +62,13 @@ describe("PlaceBetConsumer", () => {
         payload = {
             betLevel: chance.natural(),
             coinValue: chance.natural(),
-            freeBet: chance.bool(),
+            freeSpin: chance.bool(),
             roundId: chance.natural(),
         };
     });
 
     it("inherit Core.BaseEventConsumers.PlaceBetConsumer", () => {
-        //assert
+        // Assert
         expect(consumer instanceof Core.BaseEventConsumers.PlaceBetConsumer);
     });
 
@@ -77,6 +77,7 @@ describe("PlaceBetConsumer", () => {
             it("should not add bet to queue", () => {
                 // Arrange
                 jest.spyOn(consumer, "validateBetRequest").mockReturnValueOnce(false);
+                payload.freeSpin = undefined;
                 payload.roundId = undefined;
                 const expectedValue = {};
 
@@ -93,6 +94,7 @@ describe("PlaceBetConsumer", () => {
                 it("should add bet to queue", () => {
                     // Arrange
                     jest.spyOn(consumer, "validateBetRequest").mockReturnValueOnce(true);
+                    payload.freeSpin = true;
                     payload.roundId = 1;
                     const expectedValue = [{ player, payload }];
 
@@ -122,70 +124,124 @@ describe("PlaceBetConsumer", () => {
     });
 
     describe("validateBetRequest", () => {
-        describe("when payload not have bet level", () => {
-            it("should return false", () => {
-                // Arrange
-                payload.betLevel = null;
-
-                // Act
-                const actualValue = consumer.validateBetRequest(player, payload);
-
-                // Assert
-                expect(actualValue).toBeFalse();
-            });
-        });
-
-        describe("when payload not have coin value", () => {
-            it("should return false", () => {
-                // Arrange
-                payload.betLevel = 10;
-                payload.coinValue = null;
-
-                // Act
-                const actualValue = consumer.validateBetRequest(player, payload);
-
-                // Assert
-                expect(actualValue).toBeFalse();
-            });
-        });
-
-        describe("when have failed validation", () => {
+        describe("when free spin", () => {
             beforeEach(() => {
                 // Arrange
-                payload.betLevel = 10;
-                payload.coinValue = 2;
-                jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: true, notice: "SB1935" }]);
+                payload.freeSpin = true;
             });
 
-            it("should return false", () => {
-                // Act
-                const actualValue = consumer.validateBetRequest(player, payload);
+            describe("when have failed validation", () => {
+                beforeEach(() => {
+                    // Arrange
+                    payload.betLevel = null;
+                    payload.coinValue = null;
+                    jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: true, notice: "SB1935" }]);
+                });
 
-                // Assert
-                expect(actualValue).toBeFalse();
+                it("should return false", () => {
+                    // Act
+                    const actualValue = consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(actualValue).toBeFalse();
+                });
+
+                it("should publish failed event", () => {
+                    // Act
+                    consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(baseEventPublisher.publishToUser).toHaveBeenCalledWith(player.UID, { endBet: -1, notice: "SB1935" });
+                });
             });
 
-            it("should publish failed event", () => {
-                // Act
-                consumer.validateBetRequest(player, payload);
+            describe("when not have failed validation", () => {
+                it("should return true", () => {
+                    // Arrange
+                    payload.betLevel = 10;
+                    payload.coinValue = 2;
+                    jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: false, notice: "SB1935" }]);
 
-                // Assert
-                expect(baseEventPublisher.publishToUser).toHaveBeenCalledWith(player.UID, { endBet: -1, notice: "SB1935" });
+                    // Act
+                    const actualValue = consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(actualValue).toBeTrue();
+                });
             });
         });
 
-        describe("when not have failed validation", () => {
-            it("should return true", () => {
+        describe("when not free spin", () => {
+            beforeEach(() => {
                 // Arrange
-                payload.betLevel = 10;
-                payload.coinValue = 2;
-                jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: false, notice: "SB1935" }]);
+                payload.freeSpin = false;
+            });
 
-                // Act
-                const actualValue = consumer.validateBetRequest(player, payload);
+            describe("when payload not have bet level", () => {
+                it("should return false", () => {
+                    // Arrange
+                    payload.betLevel = null;
 
-                // Assert
-                expect(actualValue).toBeTrue();
+                    // Act
+                    const actualValue = consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(actualValue).toBeFalse();
+                });
+            });
+
+            describe("when payload not have coin value", () => {
+                it("should return false", () => {
+                    // Arrange
+                    payload.betLevel = 10;
+                    payload.coinValue = null;
+
+                    // Act
+                    const actualValue = consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(actualValue).toBeFalse();
+                });
+            });
+
+            describe("when have failed validation", () => {
+                beforeEach(() => {
+                    // Arrange
+                    payload.betLevel = 10;
+                    payload.coinValue = 2;
+                    jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: true, notice: "SB1935" }]);
+                });
+
+                it("should return false", () => {
+                    // Act
+                    const actualValue = consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(actualValue).toBeFalse();
+                });
+
+                it("should publish failed event", () => {
+                    // Act
+                    consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(baseEventPublisher.publishToUser).toHaveBeenCalledWith(player.UID, { endBet: -1, notice: "SB1935" });
+                });
+            });
+
+            describe("when not have failed validation", () => {
+                it("should return true", () => {
+                    // Arrange
+                    payload.betLevel = 10;
+                    payload.coinValue = 2;
+                    jest.spyOn(consumer, "composeValidationCriteria").mockReturnValueOnce([{ failure: false, notice: "SB1935" }]);
+
+                    // Act
+                    const actualValue = consumer.validateBetRequest(player, payload);
+
+                    // Assert
+                    expect(actualValue).toBeTrue();
+                });
             });
         });
     });
@@ -239,14 +295,80 @@ describe("PlaceBetConsumer", () => {
     });
 
     describe("composeBetAmountValidationCriteria", () => {
-        describe("when free bet", () => {
-            describe("when config not enableFreeBet", () => {
+        describe("when free spin", () => {
+            describe("when bet level is invalid", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    player.session.currencyGroupId = "3";
+                    payload.betLevel = 2;
+                    payload.freeSpin = true;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when bet level is valid", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    player.session.currencyGroupId = "1";
+                    payload.betLevel = 5;
+                    payload.freeSpin = true;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when coin value is invalid", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.coinValue = 2;
+                    payload.freeSpin = true;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when coin value is valid", () => {
+                it("should return result with not failure", () => {
+                    // Arrange
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.coinValue = 10;
+                    payload.freeSpin = true;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                });
+            });
+        });
+
+        describe("when not free spin", () => {
+            beforeEach(() => {
+                payload.freeSpin = false;
+            });
+            describe("when bet level is invalid", () => {
                 it("should return result with failure", () => {
                     // Arrange
-                    player.session.currencyGroupId = "3";
-                    gameData.gameConfigs.enableFreeBet = false;
                     const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                    payload.freeBet = true;
+                    player.session.currencyGroupId = "3";
+                    payload.betLevel = 2;
 
                     // Act
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
@@ -256,13 +378,12 @@ describe("PlaceBetConsumer", () => {
                 });
             });
 
-            describe("when config enableFreeBet", () => {
+            describe("when bet level is valid", () => {
                 it("should return result with not failure", () => {
                     // Arrange
-                    gameData.gameConfigs.enableFreeBet = true;
+                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
                     player.session.currencyGroupId = "1";
-                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                    payload.freeBet = true;
+                    payload.betLevel = 5;
 
                     // Act
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
@@ -271,97 +392,33 @@ describe("PlaceBetConsumer", () => {
                     expect(actualValue[0]).toStrictEqual(expectedValue);
                 });
             });
-        });
 
-        describe("when not free bet", () => {
-            describe("when config not enableFreeBet", () => {
+            describe("when coin value is invalid", () => {
+                it("should return result with failure", () => {
+                    // Arrange
+                    const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    payload.coinValue = 2;
+
+                    // Act
+                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                    // Assert
+                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                });
+            });
+
+            describe("when coin value is valid", () => {
                 it("should return result with not failure", () => {
                     // Arrange
-                    gameData.gameConfigs.enableFreeBet = false;
                     const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                    payload.freeBet = false;
+                    payload.coinValue = 10;
 
                     // Act
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
 
                     // Assert
-                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                    expect(actualValue[1]).toStrictEqual(expectedValue);
                 });
-            });
-
-            describe("when config enableFreeBet", () => {
-                it("should return result with not failure", () => {
-                    // Arrange
-                    gameData.gameConfigs.enableFreeBet = true;
-                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                    payload.freeBet = false;
-
-                    // Act
-                    const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
-
-                    // Assert
-                    expect(actualValue[0]).toStrictEqual(expectedValue);
-                });
-            });
-        });
-
-        describe("when bet level is invalid", () => {
-            it("should return result with failure", () => {
-                // Arrange
-                gameData.gameConfigs.enableFreeBet = true;
-                const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                payload.betLevel = 2;
-
-                // Act
-                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
-
-                // Assert
-                expect(actualValue[1]).toStrictEqual(expectedValue);
-            });
-        });
-
-        describe("when bet level is valid", () => {
-            it("should return result with not failure", () => {
-                // Arrange
-                gameData.gameConfigs.enableFreeBet = true;
-                const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                payload.betLevel = 5;
-
-                // Act
-                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
-
-                // Assert
-                expect(actualValue[1]).toStrictEqual(expectedValue);
-            });
-        });
-
-        describe("when coin value is invalid", () => {
-            it("should return result with failure", () => {
-                // Arrange
-                gameData.gameConfigs.enableFreeBet = true;
-                const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                payload.coinValue = 2;
-
-                // Act
-                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
-
-                // Assert
-                expect(actualValue[2]).toStrictEqual(expectedValue);
-            });
-        });
-
-        describe("when coin value is valid", () => {
-            it("should return result with not failure", () => {
-                // Arrange
-                gameData.gameConfigs.enableFreeBet = true;
-                const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
-                payload.coinValue = 10;
-
-                // Act
-                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
-
-                // Assert
-                expect(actualValue[2]).toStrictEqual(expectedValue);
             });
         });
     });
