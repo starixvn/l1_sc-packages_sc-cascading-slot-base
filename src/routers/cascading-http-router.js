@@ -2,7 +2,7 @@ import { logger, utils } from "sc-common";
 import { Core } from "sc-game-base";
 import defaultDefinition from "../board/default-definition";
 
-export default class HttpRouter extends Core.Routers.HttpRouter {
+export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
     /**
      * @param {Object} appConfigs
      * @param {logger} logService

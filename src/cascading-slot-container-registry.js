@@ -4,7 +4,7 @@ import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
 import { PlaceBetConsumer, TotalMultiplierConsumer } from "./event-consumers";
 import SettleGameRoundConsumer from "./event-consumers/settle-game-round-consumer";
-import HttpRouter from "./routers/http-router";
+import HttpRouter from "./routers/cascading-http-router";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
 

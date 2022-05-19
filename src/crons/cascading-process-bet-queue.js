@@ -2,7 +2,7 @@ import { Crons } from "sc-slot-game-base";
 import { helpers } from "sc-common";
 import { SlotNoticeHelper } from "sc-slot-game-base/src/helpers";
 
-export default class ProcessBetQueue extends Crons.SlotProcessBetQueue {
+export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
     /**
      * @param {SlotGameDefinition} definition
      * @param {SlotGameData} gameData
