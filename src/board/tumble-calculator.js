@@ -1,7 +1,9 @@
+import defaultDefinition from "./default-definition";
+
 export default class TumbleCalculator {
     calculate(tumble, baseBet, gameOdds) {
         const { originalBoard } = tumble;
-        const boardArray = originalBoard.split(",");
+        const boardArray = originalBoard.split(",").map((x) => parseInt(x));
 
         tumble.icons = this.calculateIconOdds(boardArray, gameOdds);
         this.calculateWinAmount(tumble, baseBet);
@@ -19,18 +21,19 @@ export default class TumbleCalculator {
     }
 
     calculateIconOdds(boardArray, gameOdds) {
-        const occurences = boardArray.reduce((map, current) => map.set(current, (map.get(current) || 0) + 1), new Map());
+        const occurences = boardArray
+            .filter((x) => x !== defaultDefinition.specialSymbols.multiplier && x !== defaultDefinition.specialSymbols.freeSpins)
+            .reduce((map, current) => map.set(current, (map.get(current) || 0) + 1), new Map());
 
         const { oddsByCounts } = gameOdds;
         const icons = {};
-
-        Object.entries(oddsByCounts).forEach(([iconValue, odds]) => {
-            const iconOcurrence = occurences.get(iconValue);
-            const iconOdds = odds.find((x) => x.from <= iconOcurrence && x.to >= iconOcurrence)?.odds;
+        
+        occurences.forEach((value, key) => {
+            const iconOdds = oddsByCounts[key].find((x) => x.from <= value && x.to >= value)?.odds;
 
             if (iconOdds) {
-                icons[iconValue] = {
-                    count: iconOcurrence,
+                icons[key] = {
+                    count: value,
                     odds: iconOdds,
                 };
             }

@@ -66,3 +66,69 @@ describe("calculate", () => {
         });
     });
 });
+
+describe("calculate win amount", () => {
+    describe("when theres no winning icon", () => {
+        it("win should be zero", () => {
+            //Arrange
+            const calculator = initTunmbleCalculator();
+            const tumble = { icons: {} };
+
+            //Act
+            calculator.calculateWinAmount(tumble, 0.5);
+
+            //Assert
+            expect(tumble.win).toEqual(0);
+        });
+    });
+
+    describe("when there're winning icons", () => {
+        it("each icon should have win correctly", () => {
+            //Arrange
+            const calculator = initTunmbleCalculator();
+            const tumble = {
+                icons: {
+                    8: {
+                        count: 8,
+                        odds: 1.5,
+                    },
+                    9: {
+                        count: 9,
+                        odds: 2,
+                    },
+                },
+            };
+
+            //Act
+            calculator.calculateWinAmount(tumble, 0.5);
+
+            //Assert
+            Object.values(tumble.icons).forEach((value) => {
+                expect(value.win).toEqual(0.5 * value.odds);
+            });
+        });
+
+        it("should calculate tumble win correctly", () => {
+            //Arrange
+            const calculator = initTunmbleCalculator();
+            const tumble = {
+                icons: {
+                    8: {
+                        count: 8,
+                        odds: 1.5,
+                    },
+                    9: {
+                        count: 9,
+                        odds: 2,
+                    },
+                },
+            };
+
+            //Act
+            calculator.calculateWinAmount(tumble, 0.5);
+
+            //Assert
+            expect(tumble.win).toEqual(Object.values(tumble.icons).reduce((tumbleWin, value) => tumbleWin + 0.5 * value.odds, 0));
+        });
+    });
+});

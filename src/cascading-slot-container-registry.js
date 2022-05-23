@@ -7,6 +7,7 @@ import SettleGameRoundConsumer from "./event-consumers/settle-game-round-consume
 import HttpRouter from "./routers/cascading-http-router";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
+import { HistoryQuery } from "./query-apis";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     /**
@@ -46,6 +47,14 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             placeBetConsumer: asClass(PlaceBetConsumer).singleton(),
             settleGameRoundConsumer: asClass(SettleGameRoundConsumer).singleton().proxy(),
             totalMultiplierConsumer: asClass(TotalMultiplierConsumer).singleton(),
+        });
+    }
+
+    registerApis() {
+        super.registerApis();
+
+        this.container.register({
+            historyQuery: asClass(HistoryQuery).singleton(),
         });
     }
 }

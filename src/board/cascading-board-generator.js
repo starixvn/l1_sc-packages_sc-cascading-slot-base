@@ -23,4 +23,8 @@ export default class CascadingBoardGenerator {
     updateMultiplierConfig(min, max) {
         this.boardGenerator.updateMultiplierConfig(min, max);
     }
+
+    setRefillSymbols(newSymbols, multipliers) {
+        this.boardGenerator.setRefillSymbols(newSymbols, multipliers);
+    }
 }
