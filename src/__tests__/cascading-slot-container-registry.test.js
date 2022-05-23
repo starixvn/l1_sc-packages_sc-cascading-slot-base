@@ -1,4 +1,4 @@
-import ServiceContainerRegistry from "../service-container-registry";
+import ServiceContainerRegistry from "../cascading-slot-container-registry";
 import * as Slot from "sc-slot-game-base";
 import { InjectionMode } from "awilix";
 
@@ -46,6 +46,9 @@ describe("service-container-registry", () => {
             // Assert
             expect(serviceContainerRegistry.container.register).toBeCalledWith({
                 placeBetConsumer: expect.any(Object),
+                settleGameRoundConsumer: expect.any(Function),
+                totalMultiplierConsumer: expect.any(Object),
+                freeSpinsConsumer: expect.any(Object),
             });
         });
     });
