@@ -6744,7 +6744,7 @@ npm-normalize-package-bin@^1.0.0, npm-normalize-package-bin@^1.0.1:
   resolved "http://npm.lumigame.com/npm-normalize-package-bin/-/npm-normalize-package-bin-1.0.1.tgz"
   integrity sha512-EPfafl6JL5/rU+ot6P3gRSCpPDW5VmIzX959Ob1+ySFUuuYHWHekXpwdUZcKP5C+DS4GEtdJluwBjnsNDl+fSA==
 
-npm-package-arg@^8.0.0, npm-package-arg@^8.0.1, npm-package-arg@^8.1.0, npm-package-arg@^8.1.2, npm-package-arg@^8.1.4, npm-package-arg@^8.1.5:
+npm-package-arg@^8.0.0, npm-package-arg@^8.0.1, npm-package-arg@^8.1.0, npm-package-arg@^8.1.1, npm-package-arg@^8.1.2, npm-package-arg@^8.1.5:
   version "8.1.5"
   resolved "http://npm.lumigame.com/npm-package-arg/-/npm-package-arg-8.1.5.tgz"
   integrity sha512-LhgZrg0n0VgvzVdSm1oiZworPbTxYHUJCgtsJW8mGvlDpxTM1vSJc3m5QZeUkhAHIzbz3VCHd/R4osi1L1Tg/Q==
@@ -7219,7 +7219,7 @@ p-try@^2.0.0:
   resolved "http://npm.lumigame.com/p-try/-/p-try-2.2.0.tgz"
   integrity sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==
 
-pacote@^11.1.11, pacote@^11.2.6, pacote@^11.3.1, pacote@^11.3.4, pacote@^11.3.5:
+pacote@^11.1.11, pacote@^11.2.6, pacote@^11.3.0, pacote@^11.3.1, pacote@^11.3.5:
   version "11.3.5"
   resolved "http://npm.lumigame.com/pacote/-/pacote-11.3.5.tgz"
   integrity sha512-fT375Yczn4zi+6Hkk2TBe1x1sP8FgFsEIZ2/iWaXY2r/NkhDJfxbcn5paz1+RTFCyNf+dPnaoBDJoAxXSU8Bkg==
@@ -8093,15 +8093,39 @@ sc-game-base@2.9.0:
     socket.io-msgpack-parser "^3.0.1"
     socket.io-prom-metrics "^1.0.3"
 
+sc-game-base@3.0.1-beta.1:
+  version "3.0.1-beta.1"
+  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-3.0.1-beta.1.tgz#603c9ab54a1bb99c46a8946b99a42ebef370da93"
+  integrity sha512-ybdyCbGQJwGUbaMDLuKQUnGUhBb1lV/XOJLgQlqRpmKIgBppYGygRkdYUaCK1j+mpjDHmZ4rW4SCPUJJ2Ua3XQ==
+  dependencies:
+    awilix "^4.3.1"
+    axios "^0.20.0"
+    body-parser "^1.19.0"
+    chance "^1.1.7"
+    cors "^2.8.5"
+    cron "^1.8.2"
+    express "^4.17.1"
+    helmet "^3.23.3"
+    lodash "^4.17.19"
+    mongoose "^5.9.25"
+    morgan "^1.10.0"
+    openid-client "^4.2.0"
+    sc-base-apis "1.17.0"
+    sc-base-database "1.10.0"
+    sc-common "1.8.1"
+    socket.io "^4.1.2"
+    socket.io-msgpack-parser "^3.0.1"
+    socket.io-prom-metrics "^1.0.3"
+
 sc-semantic-release@^1.2.0:
   version "1.2.0"
   resolved "http://npm.lumigame.com/sc-semantic-release/-/sc-semantic-release-1.2.0.tgz"
   integrity sha512-izZqZiS8hL05cGzYbcR3+GZ1Oktr9rU1nIL05S9mZnEBm5nZfqzRkSpR2OHVJARjYsMI5dps0oUX1HjFV9x47w==
 
-sc-slot-board-generator@0.0.2-beta.3:
-  version "0.0.2-beta.3"
-  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-0.0.2-beta.3.tgz#f95d0ebd495b9215258b06f7b44b4a9fc909e6a0"
-  integrity sha512-rbxPdkWG27GSW+tMEaI1+eeAu6ae0M7SSlZtWL3pTtOn/MIOR9xzjgw6vCTJM4a62YlK8nMjrxhPBr4Bqz0XMg==
+sc-slot-board-generator@0.0.2-beta.2:
+  version "0.0.2-beta.2"
+  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-0.0.2-beta.2.tgz#83013d287da46f970d0702939a430fe795c5305c"
+  integrity sha512-Iiv+LBTfZNvgjF4HMgJcOI5gZ5vrM9DxOxcZYneXpI4gnRHiuevrEHHLXte94iotp5sTJ5Ms7+8XRLDoqdPrbw==
   dependencies:
     chance "^1.1.7"
     ramda "^0.28.0"
@@ -8117,6 +8141,15 @@ sc-slot-game-base@1.4.1-beta.0:
     chance "^1.1.7"
     lodash "^4.17.20"
     sc-game-base "2.9.0"
+
+sc-slot-game-base@1.4.3-beta.2:
+  version "1.4.3-beta.2"
+  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-1.4.3-beta.2.tgz#93ab71a0890ba52bf6c493d057c2251a14fc085e"
+  integrity sha512-ZU0C2Os76euT/rjNSPpOOCVac00gyGHMWeGwbzvnXfqvLSNgSilP44NrbeoG5FrJFP00Qc1wy+srJtj46i8pLA==
+  dependencies:
+    chance "^1.1.7"
+    lodash "^4.17.20"
+    sc-game-base "3.0.1-beta.1"
 
 semantic-release@^17.1.1:
   version "17.4.7"

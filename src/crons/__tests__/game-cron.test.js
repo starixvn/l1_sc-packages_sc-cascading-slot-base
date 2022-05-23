@@ -1,5 +1,5 @@
-import GameCron from "../game-cron";
-import { Crons, SlotGameData, EventConsumers } from "sc-slot-game-base";
+import CascadingGameCron from "../cascading-game-cron";
+import { Crons, EventConsumers } from "sc-slot-game-base";
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import { FreeSpinsConsumer, TotalMultiplierConsumer } from "../../event-consumers";
 import { logger } from "sc-common";
@@ -47,7 +47,7 @@ describe("gameCron", () => {
     let gameCron;
 
     beforeEach(() => {
-        gameCron = new GameCron({
+        gameCron = new CascadingGameCron({
             definition,
             gameData,
             bot,

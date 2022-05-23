@@ -1,11 +1,10 @@
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import Chance from "chance";
-import { FreeSpinConsumer } from "..";
-import { SlotGameData } from "sc-slot-game-base";
-import { EventConsumers } from "sc-slot-game-base";
+import { FreeSpinsConsumer } from "..";
+import { SlotGameData, EventConsumers } from "sc-slot-game-base";
 
-describe("freeSpinConsumer", () => {
+describe("freeSpinsConsumer", () => {
     const chance = new Chance();
 
     const gameData = stubGameData();
@@ -22,7 +21,7 @@ describe("freeSpinConsumer", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        consumer = new FreeSpinConsumer(chance.natural(), gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
+        consumer = new FreeSpinsConsumer(chance.natural(), gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
     });
 
     describe("gainFreeSpin", () => {
