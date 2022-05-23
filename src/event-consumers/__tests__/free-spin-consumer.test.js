@@ -1,7 +1,7 @@
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import Chance from "chance";
-import { FreeSpinsConsumer } from "..";
+import { FreeSpinsConsumer } from "../index";
 import { SlotGameData, EventConsumers } from "sc-slot-game-base";
 
 describe("freeSpinsConsumer", () => {

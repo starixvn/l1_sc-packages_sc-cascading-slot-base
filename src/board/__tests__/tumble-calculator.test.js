@@ -8,7 +8,7 @@ function initTunmbleCalculator() {
 describe("calculate", () => {
     describe("when board has winning icons", () => {
         const tumble = {
-            originalBoard: "8,8,8,3,8,9,8,8,8,9,5,9,8,10,10,9,5,8,10,11,10,6,11,8,10,11,11,6,11,7",
+            originalBoard: "8,8,8,3,8,9,8,8,8,9,5,9,8,10,10,9,5,8,10,2,10,6,2,8,10,2,2,6,2,7",
         };
 
         it("should calculate win correctly", () => {
@@ -38,7 +38,7 @@ describe("calculate", () => {
 
     describe("when board has no winning icon", () => {
         const tumble = {
-            originalBoard: "8,1,1,3,2,9,3,5,6,9,5,9,8,10,10,9,5,8,10,11,10,6,11,8,10,11,11,6,11,7",
+            originalBoard: "8,1,1,3,2,9,3,5,6,9,5,9,8,10,10,9,5,8,10,2,10,6,2,8,10,2,2,6,2,7",
         };
 
         it("should calculate win = 0", () => {
