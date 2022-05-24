@@ -1,7 +1,7 @@
 import cron from "cron";
 import { Crons } from "sc-slot-game-base";
 
-export default class GameCron extends Crons.SlotGameCron {
+export default class CascadingGameCron extends Crons.SlotGameCron {
     /**
      * @param {Object} dependencies
      * @param {SlotGameDefinition} dependencies.definition

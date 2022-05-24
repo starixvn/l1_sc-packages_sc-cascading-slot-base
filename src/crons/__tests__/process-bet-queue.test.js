@@ -1,14 +1,13 @@
-import ProcessBetQueue from "../process-bet-queue";
+import CascadingProcessBetQueue from "../cascading-process-bet-queue";
 import { SlotGameData, EventConsumers } from "sc-slot-game-base";
 import { FreeSpinConsumer, SettleGameRoundConsumer, TotalMultiplierConsumer } from "../../event-consumers";
 import { stub, stubMongoose } from "jest-micro-auto-stub";
-import { logger, helpers } from "sc-common";
+import { logger } from "sc-common";
 import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
 import mongoose from "mongoose";
 import Chance from "chance";
-import { SlotNoticeHelper } from "sc-slot-game-base/src/helpers";
 
-describe("processBetQueue", () => {
+describe("cascadingProcessBetQueue", () => {
     jest.mock("sc-common");
 
     const chance = new Chance();
@@ -29,7 +28,7 @@ describe("processBetQueue", () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        consumer = new ProcessBetQueue({
+        consumer = new CascadingProcessBetQueue({
             definition,
             gameData,
             freeSpinsConsumer,
@@ -44,287 +43,64 @@ describe("processBetQueue", () => {
         });
     });
 
-    describe("proceed Bet", () => {
-        describe("when player previous round has been not finished yet", () => {
-            it("should call placeBetPublisher.publishGameFailedBet", async () => {
+    describe("generateBetInfo", () => {
+        describe("when bet is free spin", () => {
+            it("should update bet info follow freeSpin info", async () => {
                 // Arrange
-                gameData.ingame[player.profile.name] = { finish: {} };
+                const payload = { freeBet: true };
+                const freeSpinInfo = { betLevel: chance.natural(), coinValue: chance.natural(), betMultiplier: chance.natural() };
 
                 // Act
-                await consumer.proceedBet(player);
+                const actualResult = await consumer.generateBetInfo(payload, freeSpinInfo);
 
                 // Assert
-                expect(placeBetPublisher.publishGameFailedBet).toBeCalledWith(player.UID, {
-                    endBet: -1,
-                    notice: { errorCode: helpers.noticeHelper.cannotPlaceBet },
+                expect(actualResult).toStrictEqual({
+                    freeBet: true,
+                    ...freeSpinInfo,
+                    amount: freeSpinInfo.betLevel * freeSpinInfo.coinValue,
+                    totalAmount: freeSpinInfo.betLevel * freeSpinInfo.coinValue * freeSpinInfo.betMultiplier,
+                    contributionAmount: 0,
+                    contributionRate: 0,
                 });
             });
         });
 
-        describe("when player previous round is finished", () => {
-            const defaultPayload = {
-                roundId: chance.natural(),
-                betLevel: chance.natural({ min: 1, max: 50 }),
-                coinValue: chance.floating({ min: 0.1, max: 20, fixed: 1 }),
-            };
+        describe("when bet is NOT free spin", () => {
+            const payload = { freeBet: false, betLevel: chance.natural(), coinValue: chance.natural() };
 
-            beforeEach(() => {
-                gameData.ingame[player.profile.name] = {};
-                consumer.proceedOperatorBet = jest.fn();
-            });
-
-            it("should get soonestExpiredFreeSpinSet", async () => {
+            it("should call totalMultiplierConsumer.getCurrentMultiplier", async () => {
                 // Act
-                await consumer.proceedBet(player, defaultPayload);
+                await consumer.generateBetInfo(payload, undefined, player);
 
                 // Assert
-                expect(freeSpinsConsumer.getSoonestExpiredFreeSpinSet).toBeCalledWith(player);
+                expect(totalMultiplierConsumer.getCurrentMultiplier).toBeCalledWith(player);
             });
 
-            it("should call idCountersConsumer.consume", async () => {
-                // Act
-                await consumer.proceedBet(player, defaultPayload);
-
-                // Assert
-                expect(idCountersConsumer.consume).toBeCalledWith("round");
-            });
-
-            it("should call validateBetRequest", async () => {
-                // Arrange
-                consumer.validateBetRequest = jest.fn();
-
-                // Act
-                await consumer.proceedBet(player, defaultPayload);
-
-                // Assert
-                expect(consumer.validateBetRequest).toBeCalledWith(player, defaultPayload);
-            });
-
-            describe("when bet is freeSpin", () => {
-                describe("when NOT having freeSpin", () => {
-                    it("should call placeBetPublisher.publishGameFailedBet", async () => {
-                        // Arrange
-                        freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce(null);
-
-                        // Act
-                        await consumer.proceedBet(player, { freeSpin: true });
-
-                        // Assert
-                        expect(placeBetPublisher.publishGameFailedBet).toBeCalledWith(player.UID, {
-                            endBet: -1,
-                            notice: { errorCode: SlotNoticeHelper.invalidFreeSpin },
-                        });
-                    });
-                });
-            });
-
-            describe("when having NO freeSpin", () => {
-                describe("when having total multiplier", () => {
-                    it("should call totalMultiplierConsumer.stopChain", async () => {
-                        // Arrange
-                        freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce(null);
-                        totalMultiplierConsumer.getCurrentMultiplier.mockReturnValueOnce(chance.natural());
-
-                        // Act
-                        await consumer.proceedBet(player, defaultPayload);
-
-                        // Assert
-                        expect(totalMultiplierConsumer.stopChain).toBeCalledWith(player);
-                    });
-                });
-            });
-
-            describe("when bet is valid", () => {
-                it("should call proceedOperatorBet", async () => {
+            describe("when player is having total multiplier", () => {
+                it("should call totalMultiplier.stopChain", async () => {
                     // Arrange
-                    consumer.validateBetRequest = jest.fn().mockResolvedValueOnce(true);
+                    totalMultiplierConsumer.getCurrentMultiplier.mockReturnValueOnce(chance.natural());
 
                     // Act
-                    await consumer.proceedBet(player, defaultPayload);
+                    await consumer.generateBetInfo(payload, undefined, player);
 
                     // Assert
-                    expect(consumer.proceedOperatorBet).toBeCalledWith(player, defaultPayload);
+                    expect(totalMultiplierConsumer.stopChain).toBeCalled();
                 });
             });
-        });
-    });
 
-    describe("proceedOperatorBet", () => {
-        const apiBetInfo = {
-            amount: chance.natural(),
-            gameId: definition.id,
-            gameRoundId: chance.natural(),
-            choiceId: chance.natural(),
-            freeBet: chance.bool(),
-            clientSentTime: new Date(),
-        };
-
-        const payload = {
-            freeBet: chance.bool(),
-            amount: chance.natural(),
-            roundId: chance.natural(),
-            receivedTime: new Date(),
-            time: new Date(),
-        };
-
-        beforeEach(() => {
-            jest.clearAllMocks();
-
-            consumer.formatApiBetInfo = jest.fn().mockReturnValue({ ...apiBetInfo });
-            consumer.proceedBetQueue = jest.fn();
-            consumer.validateBetRequest = jest.fn();
-            consumer.handleSuccessBet = jest.fn();
-            consumer.handleFailedBet = jest.fn();
-            baseMetrics.collectBetProcessedTime = jest.fn();
-        });
-
-        it("should call formatApiBetInfo", async () => {
-            // Arrange
-            placeBet.mockResolvedValueOnce({ isOk: true });
-
-            // Act
-            await consumer.proceedOperatorBet(player, payload);
-
-            // Assert
-            expect(consumer.formatApiBetInfo).toBeCalledWith(payload);
-        });
-
-        it("should call placeBet", async () => {
-            // Arrange
-            placeBet.mockReturnValueOnce({ isOk: true });
-
-            // Act
-            await consumer.proceedOperatorBet(player, payload);
-
-            // Assert
-            expect(consumer.placeBet).toBeCalledWith({ id: player.UID, session: player.session }, apiBetInfo);
-        });
-
-        it("should call collectBetProcessedTime", async () => {
-            // Arrange
-            const mockDate = new Date();
-            placeBet.mockReturnValueOnce({ isOk: true, response: {} });
-            jest.spyOn(global, "Date").mockImplementation(() => mockDate);
-            spyOn(baseMetrics, "collectBetProcessedTime");
-
-            // Act
-            await consumer.proceedOperatorBet(player, payload);
-
-            // Assert
-            expect(baseMetrics.collectBetProcessedTime).toBeCalledWith((mockDate - payload.receivedTime) / 1000);
-        });
-
-        describe("when api result is Ok", () => {
-            it("should call handleSuccessBet", async () => {
-                // Arrange
-                placeBet.mockReturnValueOnce({ isOk: true, response: {} });
-
+            it("should return correct bet info", async () => {
                 // Act
-                await consumer.proceedOperatorBet(player, payload);
+                const actualResult = await consumer.generateBetInfo(payload, undefined, player);
 
                 // Assert
-                expect(consumer.handleSuccessBet).toBeCalledWith(player, {}, apiBetInfo.gameRoundId, payload);
-            });
-        });
-
-        describe("when api result is NOT Ok", () => {
-            it("should call handleFailedBet", async () => {
-                // Arrange
-                placeBet.mockResolvedValueOnce({ isOk: false, response: {} });
-
-                // Act
-                await consumer.proceedOperatorBet(player, payload);
-
-                // Assert
-                expect(consumer.handleFailedBet).toBeCalled();
-            });
-
-            describe("when user stake level is NOT updated", () => {
-                it("should NOT call updateUserStakeLevel", async () => {
-                    // Arrange
-                    jest.spyOn(consumer, "updateUserStakeLevel");
-                    placeBet.mockResolvedValueOnce({
-                        isOk: false,
-                        response: {
-                            apiError: {
-                                minBet: player.profile.minBet,
-                                maxBet: player.profile.maxBet,
-                            },
-                        },
-                    });
-
-                    // Act
-                    await consumer.proceedOperatorBet(player, payload);
-
-                    // Assert
-                    expect(consumer.updateUserStakeLevel).not.toBeCalled();
-                });
-            });
-
-            describe("when user stake level from API having maxBet is equal 0", () => {
-                it("should NOT call updateUserStakeLevel", async () => {
-                    // Arrange
-                    jest.spyOn(consumer, "updateUserStakeLevel");
-                    placeBet.mockResolvedValueOnce({
-                        isOk: false,
-                        response: {
-                            apiError: {
-                                minBet: player.profile.minBet + 10,
-                                maxBet: 0,
-                            },
-                        },
-                    });
-
-                    // Act
-                    await consumer.proceedOperatorBet(player, payload);
-
-                    // Assert
-                    expect(consumer.updateUserStakeLevel).not.toBeCalled();
-                });
-            });
-
-            describe("when user stake level from API having minBet is equal 0", () => {
-                it("should NOT call updateUserStakeLevel", async () => {
-                    // Arrange
-                    jest.spyOn(consumer, "updateUserStakeLevel");
-                    placeBet.mockResolvedValueOnce({
-                        isOk: false,
-                        response: {
-                            apiError: {
-                                minBet: 0,
-                                maxBet: player.profile.maxBet + 1000,
-                            },
-                        },
-                    });
-
-                    // Act
-                    await consumer.proceedOperatorBet(player, payload);
-
-                    // Assert
-                    expect(consumer.updateUserStakeLevel).not.toBeCalled();
-                });
-            });
-
-            describe("when user stake level is updated and maxBet, minBet is greater than 0", () => {
-                it("should call updateUserStakeLevel", async () => {
-                    // Arrange
-                    const apiError = {
-                        minBet: player.profile.minBet,
-                        maxBet: player.profile.maxBet + 1000,
-                    };
-                    consumer.updateUserStakeLevel = jest.fn();
-                    placeBet.mockResolvedValueOnce({
-                        isOk: false,
-                        response: {
-                            apiError,
-                        },
-                    });
-
-                    // Act
-                    await consumer.proceedOperatorBet(player, payload);
-
-                    // Assert
-                    expect(consumer.updateUserStakeLevel).toBeCalledWith(player, apiError.minBet, apiError.maxBet);
+                expect(actualResult).toStrictEqual({
+                    ...payload,
+                    betMultiplier: gameData.gameConfigs.slotsConfig.betMultiplier,
+                    amount: payload.betLevel * payload.coinValue,
+                    totalAmount: payload.betLevel * payload.coinValue * gameData.gameConfigs.slotsConfig.betMultiplier,
+                    contributionAmount: 0,
+                    contributionRate: 0,
                 });
             });
         });
@@ -395,6 +171,7 @@ describe("processBetQueue", () => {
         };
         data.exchangeRates = { exId: chance.string() };
         data.freeSpinId = 1;
+        data.betMultiplier = 20;
 
         return data;
     }

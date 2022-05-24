@@ -15,6 +15,7 @@ const currencyGroupSetting = {
 const gameData = {
     gameConfigs,
     currencyGroupGames: [currencyGroupSetting],
+    settlementResultFromAdmin: {},
 };
 
 const definition = {
@@ -74,6 +75,8 @@ function initRoundDocument({ id = 1, playerId, coinValue, betLevel, betMultiplie
         odds: gameConfigs.cascadingSlotsConfig,
         betwin: 0,
         freeSpin,
+        multiplier: 0,
+        totalMultiplier: 0,
         save: jest.fn(),
     };
 }
@@ -191,7 +194,7 @@ describe("settle round", () => {
                 await consumer.settleRound(player, 2);
 
                 //Assert
-                expect(round.totalMultiplier).toBe(2);
+                expect(round.totalMultiplier).toEqual(2);
             });
 
             it("should not call total_multipliers consumer", async () => {
