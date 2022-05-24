@@ -1,6 +1,6 @@
 import { Core } from "sc-game-base";
 export default class CascadingBot extends Core.Crons.BaseBot {
-    constructor({ definition, gameData, idCountersConsumer }) {
+    constructor({ definition, gameData, idCountersConsumer, userInfosRepository }) {
         super(definition, gameData, userInfosRepository);
 
         this.idCountersConsumer = idCountersConsumer;
