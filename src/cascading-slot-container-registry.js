@@ -7,6 +7,7 @@ import HttpRouter from "./routers/cascading-http-router";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
 import { HistoryQuery } from "./query-apis";
+import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     /**
@@ -55,6 +56,16 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
 
         this.container.register({
             historyQuery: asClass(HistoryQuery).singleton(),
+        });
+    }
+
+    registerCrons() {
+        super.registerCrons();
+
+        this.container.register({
+            bot: asClass(CascadingBot).singleton().proxy(),
+            gameCron: asClass(CascadingGameCron).singleton().proxy(),
+            processBetQueue: asClass(CascadingProcessBetQueue).singleton().proxy(),
         });
     }
 }
