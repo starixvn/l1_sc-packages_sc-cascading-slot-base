@@ -3,9 +3,14 @@ import defaultDefinition from "./default-definition";
 
 export default class CascadingBoardGenerator {
     constructor(boardSettings, gameData) {
-        const { multiplierBonus } = gameData.gameConfigs.cascadingSlotsConfigs;
+        this.boardSettings = boardSettings;
+        this.gameData = gameData;
+    }
 
-        this.boardGenerator = new BoardGenerator(boardSettings, {
+    initialize() {
+        const { multiplierBonus } = this.gameData.gameConfigs.cascadingSlotsConfigs;
+
+        this.boardGenerator = new BoardGenerator(this.boardSettings, {
             symbol: defaultDefinition.specialSymbols.multiplier,
             min: multiplierBonus.min,
             max: multiplierBonus.max,

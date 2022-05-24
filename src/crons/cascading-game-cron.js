@@ -41,6 +41,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         currencyGroupRepository,
         currencyRepository,
         totalMultiplierConsumer,
+        boardGenerator,
     }) {
         super({
             definition,
@@ -64,6 +65,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         });
 
         this.totalMultiplierConsumer = totalMultiplierConsumer;
+        this.boardGenerator = boardGenerator;
     }
 
     async start() {
@@ -90,6 +92,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
 
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
+        this.boardGenerator.initialize();
 
         const job = new cron.CronJob(
             "* * * * * *",
