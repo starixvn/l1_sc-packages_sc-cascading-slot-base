@@ -96,9 +96,9 @@ describe("cascadingProcessBetQueue", () => {
                 // Assert
                 expect(actualResult).toStrictEqual({
                     ...payload,
-                    betMultiplier: gameData.gameConfigs.slotsConfig.betMultiplier,
+                    betMultiplier: gameData.gameConfigs.cascadingSlotsConfigs.betMultiplier,
                     amount: payload.betLevel * payload.coinValue,
-                    totalAmount: payload.betLevel * payload.coinValue * gameData.gameConfigs.slotsConfig.betMultiplier,
+                    totalAmount: payload.betLevel * payload.coinValue * gameData.gameConfigs.cascadingSlotsConfigs.betMultiplier,
                     contributionAmount: 0,
                     contributionRate: 0,
                 });
@@ -142,8 +142,8 @@ describe("cascadingProcessBetQueue", () => {
                 rate: rate,
                 exchangeRateId: gameData.exchangeRates.exId,
                 odds: {
-                    oddsByCounts: gameData.gameConfigs.slotsConfig.oddsByCounts,
-                    freeSpins: gameData.gameConfigs.slotsConfig.freeSpins,
+                    oddsByCounts: gameData.gameConfigs.cascadingSlotsConfigs.oddsByCounts,
+                    freeSpins: gameData.gameConfigs.cascadingSlotsConfigs.freeSpins,
                 },
                 memberId: player.session.memberId,
                 playerId: player.session.memberId,
@@ -163,7 +163,7 @@ describe("cascadingProcessBetQueue", () => {
             enabled: true,
             minbet: 1,
             maxbet: 1000,
-            slotsConfig: {
+            cascadingSlotsConfigs: {
                 betMultiplier: 20,
                 oddsByCounts: {},
                 freeSpins: {},

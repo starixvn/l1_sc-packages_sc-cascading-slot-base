@@ -228,7 +228,7 @@ describe("totalMultiplierConsumer", () => {
             enabled: true,
             minbet: 1,
             maxbet: 1000,
-            slotsConfig: {
+            cascadingSlotsConfigs: {
                 multiplier: 20,
             },
         };

@@ -10,7 +10,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
      * @param {EventConsumers.SettleGameRoundConsumer} dependencies.settleGameRoundConsumer
      * @param {EventConsumers.FreeSpinsConsumer} dependencies.freeSpinsConsumer
      * @param {EventConsumers.IdCountersConsumer} dependencies.idCountersConsumer
-     * @param {EventConsumers.JackpotConsumer} dependencies.jackpotConsumer
      * @param {Core.BaseEventPublishers.GameStatusPublisher} dependencies.gameStatusPublisher
      * @param {Core.BaseEventPublishers.RunningRoundInfoPublisher} dependencies.runningRoundInfoPublisher
      * @param {logger} dependencies.logService
@@ -29,7 +28,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         settleGameRoundConsumer,
         freeSpinsConsumer,
         idCountersConsumer,
-        jackpotConsumer,
         gameStatusPublisher,
         runningRoundInfoPublisher,
         logService,
@@ -63,7 +61,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             currencyRepository,
             freeSpinsConsumer,
             idCountersConsumer,
-            jackpotConsumer,
         });
 
         this.totalMultiplierConsumer = totalMultiplierConsumer;
@@ -74,7 +71,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         this.gameData.freeSpinId = await this.idCountersConsumer.getLatestId("freespin");
 
         if (this.gameData.roundId < 1 && this.gameData.freeSpinId < 1) {
-            const { roundId, freeSpinId } = await this.getLastArchiveRound(this.gameData.gameConfigs.slotsConfig?.jackpot.enabled);
+            const { roundId, freeSpinId } = await this.getLastArchiveRound();
 
             await this.idCountersConsumer.updateLatestId("round", roundId);
             await this.idCountersConsumer.updateLatestId("freespin", freeSpinId);
@@ -93,10 +90,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
 
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
-
-        if (this.gameData.gameConfigs.slotsConfig?.jackpot.enabled) {
-            await this.jackpotConsumer.initialize();
-        }
 
         const job = new cron.CronJob(
             "* * * * * *",

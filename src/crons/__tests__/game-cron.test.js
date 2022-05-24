@@ -21,16 +21,13 @@ describe("gameCron", () => {
     const gameData = {
         roundId: chance.natural(),
         gameConfigs: {
-            slotsConfig: {
-                jackpot: {},
-            },
+            cascadingSlotsConfigs: {},
         },
     };
     const bot = stub(Crons.SlotGameBot);
     const settleGameRoundConsumer = stub(EventConsumers.SettleGameRoundConsumer);
     const freeSpinsConsumer = stub(FreeSpinsConsumer);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
-    const jackpotConsumer = stub(EventConsumers.JackpotConsumer);
     const gameStatusPublisher = {};
     const runningRoundInfoPublisher = {};
     const gameConfigsRepository = stubMongoose(mongoose.Model);
@@ -54,7 +51,6 @@ describe("gameCron", () => {
             settleGameRoundConsumer,
             freeSpinsConsumer,
             idCountersConsumer,
-            jackpotConsumer,
             gameStatusPublisher,
             runningRoundInfoPublisher,
             logService: logger,
@@ -115,7 +111,7 @@ describe("gameCron", () => {
                 await gameCron.start();
 
                 // Assert
-                expect(gameCron.getLastArchiveRound).toBeCalledWith(gameData.gameConfigs.slotsConfig.jackpot.enabled);
+                expect(gameCron.getLastArchiveRound).toBeCalledWith();
             });
 
             it("should update latest round id", async () => {
@@ -181,19 +177,6 @@ describe("gameCron", () => {
 
             // Assert
             expect(gameCron.updateExchangeRates).toBeCalled();
-        });
-
-        describe("when enabled jackpot", () => {
-            it("should call jackpotConsumer.intitialize", async () => {
-                // Arrange
-                gameData.gameConfigs.slotsConfig.jackpot.enabled = true;
-
-                // Act
-                await gameCron.start();
-
-                // Assert
-                expect(jackpotConsumer.initialize).toBeCalled();
-            });
         });
 
         describe("start cron job", () => {
