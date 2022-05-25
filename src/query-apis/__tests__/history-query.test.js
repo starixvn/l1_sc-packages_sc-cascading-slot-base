@@ -5,14 +5,14 @@ import { HistoryQuery } from "..";
 
 /** @type {mongoose.Model}*/
 const roundsRepository = stubMongoose(mongoose.Model);
-const totalMultipliersRepository = stubMongoose(mongoose.Model);
+const totalMultiplierRepository = stubMongoose(mongoose.Model);
 
 describe("queryHistory", () => {
     let historyQuery;
 
     beforeEach(() => {
         // Arrange
-        historyQuery = new HistoryQuery(roundsRepository, totalMultipliersRepository);
+        historyQuery = new HistoryQuery(roundsRepository, totalMultiplierRepository);
     });
 
     describe("when page < 1", () => {
@@ -54,13 +54,10 @@ describe("queryHistory", () => {
             describe("when total multipliers have data", () => {
                 it("should return data", async () => {
                     // Arrange
-                    totalMultipliersRepository
+                    totalMultiplierRepository
                         .find()
                         .lean()
-                        .exec.mockReturnValueOnce([
-                            { rounds: [{ roundId: 3 }, { roundId: 2 }] },
-                            { rounds: [{ roundId: 4 }, { roundId: 7 }] },
-                        ]);
+                        .exec.mockReturnValueOnce([{ rounds: [{ roundId: 3 }, { roundId: 2 }] }, { rounds: [{ roundId: 4 }, { roundId: 7 }] }]);
 
                     const expectValue = {
                         history: {
@@ -85,7 +82,7 @@ describe("queryHistory", () => {
             describe("when total multipliers not have data", () => {
                 it("should return data", async () => {
                     // Arrange
-                    totalMultipliersRepository.find().lean().exec.mockReturnValueOnce(null);
+                    totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(null);
 
                     const expectValue = {
                         history: {

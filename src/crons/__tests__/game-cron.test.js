@@ -2,6 +2,7 @@ import CascadingGameCron from "../cascading-game-cron";
 import { Crons, EventConsumers } from "sc-slot-game-base";
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import { FreeSpinsConsumer, TotalMultiplierConsumer } from "../../event-consumers";
+import { BoardGenerator } from "sc-slot-board-generator";
 import { logger } from "sc-common";
 import mongoose from "mongoose";
 import cron from "cron";
@@ -40,6 +41,7 @@ describe("gameCron", () => {
     const exchangeRatesRepository = stubMongoose(mongoose.Model);
     const partnerConfigRepository = stubMongoose(mongoose.Model);
     const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
+    const boardGenerator = stub(BoardGenerator);
 
     let gameCron;
 
@@ -64,6 +66,7 @@ describe("gameCron", () => {
             partnerConfigRepository,
             currencyRepository,
             totalMultiplierConsumer,
+            boardGenerator,
         });
     });
 

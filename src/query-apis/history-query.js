@@ -1,7 +1,7 @@
 export default class HistoryQuery {
-    constructor(roundsRepository, totalMultipliersRepository) {
+    constructor(roundsRepository, totalMultiplierRepository) {
         this.roundsRepository = roundsRepository;
-        this.totalMultipliersRepository = totalMultipliersRepository;
+        this.totalMultiplierRepository = totalMultiplierRepository;
     }
 
     async queryHistory(player, page, pageSize) {
@@ -38,7 +38,7 @@ export default class HistoryQuery {
             .lean()
             .exec();
 
-        const totalMultipliers = (await this.totalMultipliersRepository.find({ uid: player.UID }).lean().exec()) ?? [];
+        const totalMultipliers = (await this.totalMultiplierRepository.find({ uid: player.UID }).lean().exec()) ?? [];
 
         const betLogs = rawBetLogs.map((rawBetLog) => {
             const betLog = { ...rawBetLog };
