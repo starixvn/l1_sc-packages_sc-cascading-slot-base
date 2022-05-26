@@ -49,6 +49,8 @@ describe("service-container-registry", () => {
                 settleGameRoundConsumer: expect.any(Function),
                 totalMultiplierConsumer: expect.any(Object),
                 freeSpinsConsumer: expect.any(Object),
+                userSignInConsumer: expect.any(Object),
+                inGameConsumer: expect.any(Object),
             });
         });
     });

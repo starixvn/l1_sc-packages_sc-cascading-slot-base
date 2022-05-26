@@ -2,7 +2,7 @@ import { asClass, asValue } from "awilix";
 import { SlotContainerRegistry } from "sc-slot-game-base";
 import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
-import { FreeSpinsConsumer, PlaceBetConsumer, TotalMultiplierConsumer, SettleGameRoundConsumer } from "./event-consumers";
+import { FreeSpinsConsumer, PlaceBetConsumer, TotalMultiplierConsumer, SettleGameRoundConsumer, InGameConsumer } from "./event-consumers";
 import HttpRouter from "./routers/cascading-http-router";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
@@ -50,6 +50,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             totalMultiplierConsumer: asClass(TotalMultiplierConsumer).singleton(),
             freeSpinsConsumer: asClass(FreeSpinsConsumer).singleton(),
             userSignInConsumer: asClass(Table.EventConsumers.TableUserSignInConsumer).singleton(),
+            inGameConsumer: asClass(InGameConsumer).singleton(),
         });
     }
 
