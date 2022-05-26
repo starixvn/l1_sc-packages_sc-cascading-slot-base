@@ -68,14 +68,11 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
 
     composeBetAmountValidationCriteria(player, payload) {
         const { betLevel, coinValue } = payload;
-        const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId) ?? {
-            betLevels: [],
-            coinValues: [],
-        };
+        const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId) ?? { coinValues: [] };
 
         return [
             {
-                failure: !payload.freeSpin && settings.betLevels.indexOf(betLevel) === -1,
+                failure: !payload.freeSpin && this.gameData.gameConfigs.cascadingSlotsConfig.betLevels.indexOf(betLevel) === -1,
                 notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
             },
             {
