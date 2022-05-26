@@ -7,6 +7,7 @@ export default new mongoose.Schema({
     uid: { type: String },
 
     coinValue: { type: Number, default: 0 },
+    betLevel: { type: Number, default: 0 },
     betMultiplier: { type: Number, default: 0 },
     multiplier: { type: Number, default: 0 },
     totalAmount: { type: Number, default: 0 },
