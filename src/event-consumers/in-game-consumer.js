@@ -12,7 +12,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             maxWinPerRound,
             betLevels,
             betMultiplier,
-            odds: { symbols: oddsByCounts, freespin: freeSpinsConfig },
+            odds: { symbols: oddsByCounts, freeSpins: freeSpinsConfig },
         };
 
         const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);

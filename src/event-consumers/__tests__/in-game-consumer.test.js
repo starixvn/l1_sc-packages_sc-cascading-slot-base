@@ -91,7 +91,7 @@ describe("InGameConsumer", () => {
 
                         odds: {
                             symbols: [{ from: 8, to: 9, odds: 1 }],
-                            freespin: {
+                            freeSpins: {
                                 initialOdds: [],
                                 additionalOdds: [],
                             },
@@ -129,7 +129,7 @@ describe("InGameConsumer", () => {
 
                         odds: {
                             symbols: [{ from: 8, to: 9, odds: 1 }],
-                            freespin: {
+                            freeSpins: {
                                 initialOdds: [],
                                 additionalOdds: [],
                             },

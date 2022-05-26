@@ -50,7 +50,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             totalMultiplierConsumer: asClass(TotalMultiplierConsumer).singleton(),
             freeSpinsConsumer: asClass(FreeSpinsConsumer).singleton(),
             userSignInConsumer: asClass(Table.EventConsumers.TableUserSignInConsumer).singleton(),
-            inGameConsumer: asClass(InGameConsumer).singleton(),
+            inGameConsumer: asClass(InGameConsumer).singleton().proxy(),
         });
     }
 
