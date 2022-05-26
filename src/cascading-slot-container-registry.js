@@ -8,6 +8,7 @@ import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
 import { HistoryQuery } from "./query-apis";
 import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
+import { Table } from "sc-game-base";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     /**
@@ -48,6 +49,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             settleGameRoundConsumer: asClass(SettleGameRoundConsumer).singleton().proxy(),
             totalMultiplierConsumer: asClass(TotalMultiplierConsumer).singleton(),
             freeSpinsConsumer: asClass(FreeSpinsConsumer).singleton(),
+            userSignInConsumer: asClass(Table.EventConsumers.TableUserSignInConsumer).singleton(),
         });
     }
 
