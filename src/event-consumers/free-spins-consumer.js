@@ -19,7 +19,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             expiryTime,
             betLevel,
             coinValue,
-            betMultiplier: this.gameData.gameConfigs.cascadingSlotsConfigs.betMultiplier,
+            betMultiplier: this.gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
         };
 
         const gainedFreeSpin = {

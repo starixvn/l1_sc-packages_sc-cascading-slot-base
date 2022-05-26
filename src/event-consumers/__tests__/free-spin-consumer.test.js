@@ -68,7 +68,7 @@ describe("freeSpinsConsumer", () => {
                 expiryTime: new Date(mockDate.getTime()).setSeconds(mockDate.getSeconds() + timeToLive),
                 betLevel: freeSpinData.betLevel,
                 coinValue: freeSpinData.coinValue,
-                betMultiplier: gameData.gameConfigs.cascadingSlotsConfigs.betMultiplier,
+                betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
             });
         });
 
@@ -94,7 +94,7 @@ describe("freeSpinsConsumer", () => {
                     expiryTime: new Date(mockDate.getTime()).setSeconds(mockDate.getSeconds() + timeToLive),
                     betLevel: freeSpinData.betLevel,
                     coinValue: freeSpinData.coinValue,
-                    betMultiplier: gameData.gameConfigs.cascadingSlotsConfigs.betMultiplier,
+                    betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
                 },
             ]);
         });
@@ -109,7 +109,7 @@ function stubGameData() {
         enabled: true,
         minbet: 1,
         maxbet: 1000,
-        cascadingSlotsConfigs: {
+        cascadingSlotsConfig: {
             betMultiplier: 20,
         },
     };

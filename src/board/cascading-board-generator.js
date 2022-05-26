@@ -8,7 +8,7 @@ export default class CascadingBoardGenerator {
     }
 
     initialize() {
-        const { multiplierBonus } = this.gameData.gameConfigs.cascadingSlotsConfigs;
+        const { multiplierBonus } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
         this.boardGenerator = new BoardGenerator(this.boardSettings, {
             symbol: defaultDefinition.specialSymbols.multiplier,

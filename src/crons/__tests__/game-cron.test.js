@@ -22,7 +22,7 @@ describe("gameCron", () => {
     const gameData = {
         roundId: chance.natural(),
         gameConfigs: {
-            cascadingSlotsConfigs: {},
+            cascadingSlotsConfig: {},
         },
     };
     const bot = stub(Crons.SlotGameBot);

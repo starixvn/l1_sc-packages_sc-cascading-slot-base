@@ -53,10 +53,10 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
 
     async generateBetInfo(payload, freeSpinInfo, player) {
         const betInfo = { ...payload };
-        const { cascadingSlotsConfigs } = this.gameData.gameConfigs;
-        const contributionRate = cascadingSlotsConfigs.jackpot ? cascadingSlotsConfigs.jackpot.playerContributionRatio : 0;
+        const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+        const contributionRate = cascadingSlotsConfig.jackpot ? cascadingSlotsConfig.jackpot.playerContributionRatio : 0;
 
-        betInfo.betMultiplier = cascadingSlotsConfigs.betMultiplier;
+        betInfo.betMultiplier = cascadingSlotsConfig.betMultiplier;
 
         if (freeSpinInfo) {
             const { betLevel, coinValue, betMultiplier } = freeSpinInfo;
@@ -81,7 +81,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     }
 
     async upsertBet(player, roundId, bet, rate) {
-        const { cascadingSlotsConfigs } = this.gameData.gameConfigs;
+        const { cascadingSlotsConfig } = this.gameData.gameConfigs;
 
         const newBet = {
             id: roundId,
@@ -98,8 +98,8 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             rate: rate,
             exchangeRateId: this.gameData.exchangeRates.exId,
             odds: {
-                oddsByCounts: cascadingSlotsConfigs.oddsByCounts,
-                freeSpins: cascadingSlotsConfigs.freeSpins,
+                oddsByCounts: cascadingSlotsConfig.oddsByCounts,
+                freeSpins: cascadingSlotsConfig.freeSpins,
             },
         };
 
