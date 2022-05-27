@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import defaultDefinition from "../../board/default-definition";
 import TotalMultiplierConsumer from "../total-multiplier-consumer";
 import RoundCalculator from "../../board/round-calculator";
+import FreeSpinsConsumer from "../free-spins-consumer";
 
 const currencyGroupSetting = {
     groupId: "g1",
@@ -29,9 +30,7 @@ const boardGenerator = {
     explodeAndRefill: jest.fn(),
 };
 
-const freeSpinsConsumer = {
-    gainFreeSpin: jest.fn(),
-};
+const freeSpinsConsumer = stub(FreeSpinsConsumer);
 
 const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
 

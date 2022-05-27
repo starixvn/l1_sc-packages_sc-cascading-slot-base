@@ -41,7 +41,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
             await round.save();
             await this.callEndGame(round, roundId, round.endTime, betResult);
-            await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(round, betResult));
+            await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(player, round, betResult));
             await this.processFreeSpins(player, round);
         }
     }
@@ -98,7 +98,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         return betResult;
     }
 
-    collectRoundResult(round, betResult) {
+    collectRoundResult(player, round, betResult) {
         return {
             finish: {
                 roundId: round.id,
@@ -106,6 +106,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 win: round.betwin,
                 bigWin: betResult.bigWin,
                 freeSpins: round.settlementResult.freeSpins.odds,
+                totalFreeSpins: this.freeSpinsConsumer.getTotalAvaiableFreeSpins(player),
                 tumbles: round.settlementResult.tumbles.map((tumble) => ({
                     icons: tumble.icons,
                     win: tumble.win,
