@@ -8,13 +8,18 @@ export default class CascadingBoardGenerator {
     }
 
     initialize() {
-        const { multiplierBonus } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
-        this.boardGenerator = new BoardGenerator(this.boardSettings, {
-            symbol: defaultDefinition.specialSymbols.multiplier,
-            min: multiplierBonus.min,
-            max: multiplierBonus.max,
-        });
+        this.boardGenerator = new BoardGenerator(
+            this.boardSettings,
+            {
+                symbol: defaultDefinition.specialSymbols.multiplier,
+                min: multiplierBonus.min,
+                max: multiplierBonus.max,
+            },
+            null,
+            difficulty
+        );
     }
 
     generate() {
@@ -25,8 +30,9 @@ export default class CascadingBoardGenerator {
         return this.boardGenerator.explodeAndRefill(board, winSymbols, multipliers);
     }
 
-    updateMultiplierConfig(min, max) {
-        this.boardGenerator.updateMultiplierConfig(min, max);
+    updateBoardConfig(difficulty, minBetMultiplier, maxBetMultiplier) {
+        this.boardGenerator.setDifficulty(difficulty);
+        this.boardGenerator.updateMultiplierConfig(minBetMultiplier, maxBetMultiplier);
     }
 
     setRefillSymbols(newSymbols, multipliers) {
