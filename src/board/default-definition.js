@@ -1,7 +1,7 @@
 export default {
     boardSettings: {
-        reels: 5,
-        symbolsOnReel: 6,
+        reels: 6,
+        symbolsOnReel: 5,
         numberOfSymbols: 11,
         numberOfShuffles: 3,
     },
