@@ -74,7 +74,7 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
             const lastTumble = preGeneratedResult[preGeneratedResult.length - 1];
             this.boardGenerator.setRefillSymbols(tumble.newSymbols, tumble.multipliers);
 
-            const refilledResult = this.boardGenerator.explodeAndRefill(,
+            const refilledResult = this.boardGenerator.explodeAndRefill(
                 lastTumble.newBoard,
                 Object.keys(lastTumble.icons).map((x) => parseInt(x)),
                 lastTumble.multipliers
