@@ -30,7 +30,7 @@ describe("freeSpinsConsumer", () => {
         };
         const freeSpinData = {
             roundId: chance.natural(),
-            bet: chance.natural(),
+            totalAmount: chance.natural(),
             betLevel: chance.pickone([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
             coinValue: chance.floating({ min: 1, max: 20, fixed: 1 }),
             numberOfFreeSpins: chance.pickone([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
@@ -61,7 +61,7 @@ describe("freeSpinsConsumer", () => {
                 playerId: player.session?.memberId,
                 id: gameData.freeSpinId,
                 roundId: freeSpinData.roundId,
-                bet: freeSpinData.bet,
+                bet: freeSpinData.totalAmount,
                 total: freeSpinData.numberOfFreeSpins,
                 available: freeSpinData.numberOfFreeSpins,
                 time: mockDate,
@@ -87,7 +87,7 @@ describe("freeSpinsConsumer", () => {
                 {
                     id: 2,
                     roundId: freeSpinData.roundId,
-                    bet: freeSpinData.bet,
+                    bet: freeSpinData.totalAmount,
                     total: freeSpinData.numberOfFreeSpins,
                     available: freeSpinData.numberOfFreeSpins,
                     time: mockDate,
