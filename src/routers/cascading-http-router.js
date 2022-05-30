@@ -65,7 +65,7 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
         const firstTumble = {
             newBoard: base.board,
             multipliers: base.multipliers,
-            icons: this.tumbleCalculator.calculateIconOdds(base.board, cascadingSlotsConfig.oddsByCounts),
+            icons: this.tumbleCalculator.calculateIconOdds(base.board, cascadingSlotsConfig),
         };
 
         const preGeneratedResult = [firstTumble];
@@ -74,12 +74,13 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
             const lastTumble = preGeneratedResult[preGeneratedResult.length - 1];
             this.boardGenerator.setRefillSymbols(tumble.newSymbols, tumble.multipliers);
 
-            const refilledResult = this.boardGenerator.explodeAndRefill(
+            const refilledResult = this.boardGenerator.explodeAndRefill(,
+                lastTumble.newBoard,
                 Object.keys(lastTumble.icons).map((x) => parseInt(x)),
                 lastTumble.multipliers
             );
 
-            refilledResult.icons = this.tumbleCalculator.calculateIconOdds(refilledResult.newBoard, cascadingSlotsConfig.oddsByCounts);
+            refilledResult.icons = this.tumbleCalculator.calculateIconOdds(refilledResult.newBoard, cascadingSlotsConfig);
             preGeneratedResult.push(refilledResult);
         }
 
