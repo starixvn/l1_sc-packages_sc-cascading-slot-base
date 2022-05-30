@@ -19,7 +19,6 @@ export default class HistoryQuery {
             bet: false,
             betMultiplier: false,
             result: false,
-            betwin: false,
             paid: false,
             uid: false,
             name: false,
