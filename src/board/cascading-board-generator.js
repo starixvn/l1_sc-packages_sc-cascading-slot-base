@@ -18,7 +18,7 @@ export default class CascadingBoardGenerator {
                 max: multiplierBonus.max,
             },
             null,
-            boardSettings.difficulty ?? difficulty
+            this.boardSettings.difficulty ?? difficulty
         );
     }
 
