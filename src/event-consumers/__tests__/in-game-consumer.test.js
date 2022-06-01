@@ -14,6 +14,7 @@ const roundQuery = stub(RoundQuery);
 
 const userInfosRepository = stubMongoose(mongoose.Model);
 const currencyGroupGamesRepository = stubMongoose(mongoose.Model);
+const totalMultiplierRepository = stubMongoose(mongoose.Model);
 const freeSpinsConsumer = stub(FreeSpinsConsumer);
 const getBalance = jest.fn();
 
@@ -64,6 +65,7 @@ describe("InGameConsumer", () => {
             getBalance,
             userInfosRepository,
             currencyGroupGamesRepository,
+            totalMultiplierRepository,
         });
 
         freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValueOnce(10);
@@ -100,6 +102,7 @@ describe("InGameConsumer", () => {
                     freeSpins: {
                         total: 10,
                     },
+                    totalMultiplier: 0,
                     user: {
                         rate: 4,
                         multiplier: 2,
@@ -138,6 +141,90 @@ describe("InGameConsumer", () => {
                     freeSpins: {
                         total: 10,
                     },
+                    totalMultiplier: 0,
+                    user: {
+                        rate: 4,
+                        multiplier: 2,
+                    },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when player not have running totalMultipliers", () => {
+            it("should return info with last totalMultiplier", async () => {
+                // Arrange
+                const realPlayer = { session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 } };
+                totalMultiplierRepository.findOne().lean().exec.mockReturnValueOnce(null);
+
+                // Arrange
+                const expectedValue = {
+                    gameConfigs: {
+                        coinValues: [1, 2, 5, 10, 50, 100],
+                        maxWinPerRound: 5000,
+                        betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                        betMultiplier: 20,
+
+                        odds: {
+                            symbols: [{ from: 8, to: 9, odds: 1 }],
+                            freeSpins: {
+                                initialOdds: [],
+                                additionalOdds: [],
+                            },
+                        },
+                    },
+                    freeSpins: {
+                        total: 10,
+                    },
+                    totalMultiplier: 0,
+                    user: {
+                        rate: 4,
+                        multiplier: 2,
+                    },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when player have running totalMultipliers", () => {
+            it("should return info with last totalMultiplier", async () => {
+                // Arrange
+                const realPlayer = { session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 } };
+                totalMultiplierRepository
+                    .findOne()
+                    .lean()
+                    .exec.mockReturnValueOnce({ rounds: [{ totalMultiplier: 10 }] });
+
+                // Arrange
+                const expectedValue = {
+                    gameConfigs: {
+                        coinValues: [1, 2, 5, 10, 50, 100],
+                        maxWinPerRound: 5000,
+                        betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                        betMultiplier: 20,
+
+                        odds: {
+                            symbols: [{ from: 8, to: 9, odds: 1 }],
+                            freeSpins: {
+                                initialOdds: [],
+                                additionalOdds: [],
+                            },
+                        },
+                    },
+                    freeSpins: {
+                        total: 10,
+                    },
+                    totalMultiplier: 10,
                     user: {
                         rate: 4,
                         multiplier: 2,
