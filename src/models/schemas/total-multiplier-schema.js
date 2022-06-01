@@ -5,7 +5,7 @@ export default new mongoose.Schema({
     uid: { type: String },
     playerId: { type: Number },
     name: { type: String, required: true },
-    end: { type: Boolean, default: false },
+    ended: { type: Boolean, default: false },
     time: { type: Date },
     endTime: { type: Date },
     rounds: { type: [RoundTotalMultiplierSchema] },
