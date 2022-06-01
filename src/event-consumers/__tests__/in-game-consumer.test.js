@@ -124,7 +124,7 @@ describe("InGameConsumer", () => {
                 // Arrange
                 const realPlayer = {
                     session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
-                    profile: { name: "player1" },
+                    profile: { name: "player2" },
                 };
 
                 // Arrange
@@ -146,7 +146,7 @@ describe("InGameConsumer", () => {
                     freeSpins: {
                         total: 10,
                     },
-                    totalMultiplier: 10,
+                    totalMultiplier: 0,
                     user: {
                         rate: 4,
                         multiplier: 2,

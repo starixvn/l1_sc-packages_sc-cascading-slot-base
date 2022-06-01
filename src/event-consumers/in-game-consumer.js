@@ -28,7 +28,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         return {
             gameConfigs,
             freeSpins,
-            totalMultiplier: this.gameData.ingame[realPlayer.profile.name].totalMultiplier,
+            totalMultiplier: this.gameData.ingame[realPlayer.profile.name]?.totalMultiplier ?? 0,
             user: {
                 ...user,
                 rate,
