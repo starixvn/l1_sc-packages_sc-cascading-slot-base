@@ -7458,13 +7458,6 @@ process-nextick-args@~2.0.0:
   resolved "http://npm.lumigame.com/process-nextick-args/-/process-nextick-args-2.0.1.tgz"
   integrity sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==
 
-prom-client@14.0.1:
-  version "14.0.1"
-  resolved "http://npm.lumigame.com/prom-client/-/prom-client-14.0.1.tgz"
-  integrity sha512-HxTArb6fkOntQHoRGvv4qd/BkorjliiuO2uSWC2KC17MUTKYttWdDoXX/vxOhQdkoECEM9BBH0pj2l8G8kev6w==
-  dependencies:
-    tdigest "^0.1.1"
-
 prom-client@^11.2.1:
   version "11.5.3"
   resolved "http://npm.lumigame.com/prom-client/-/prom-client-11.5.3.tgz"
@@ -8051,13 +8044,6 @@ sc-base-database@1.10.0:
     mongoose "^5.9.25"
     sc-common "1.8.1"
 
-sc-cascading-slot-base@1.0.1-beta.5:
-  version "1.0.1-beta.5"
-  resolved "http://npm.lumigame.com/sc-cascading-slot-base/-/sc-cascading-slot-base-1.0.1-beta.5.tgz"
-  integrity sha512-JMVushE+PkEDSiGWehyek/Knn4sn0Cphdd+KHdX9MF4BSyVqyO6Tdh6NBLD4ND6pfHHzc+E4ho7lxk1HjFS1zg==
-  dependencies:
-    sc-slot-game-base "1.4.1-beta.0"
-
 sc-common@1.8.1:
   version "1.8.1"
   resolved "http://npm.lumigame.com/sc-common/-/sc-common-1.8.1.tgz"
@@ -8068,30 +8054,6 @@ sc-common@1.8.1:
     jwks-rsa "^1.8.1"
     mongoose-long "^0.3.0"
     numeral "^2.0.6"
-
-sc-game-base@2.9.0:
-  version "2.9.0"
-  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-2.9.0.tgz"
-  integrity sha512-FOiufIto7xkgwDfVd4ONDDeDkH3kmIVgrjsbFlI9ElIdcsdS0geXCbfZBB5SmOuImXSMeFLgkE/zVRcFcWNIbQ==
-  dependencies:
-    awilix "^4.3.1"
-    axios "^0.20.0"
-    body-parser "^1.19.0"
-    chance "^1.1.7"
-    cors "^2.8.5"
-    cron "^1.8.2"
-    express "^4.17.1"
-    helmet "^3.23.3"
-    lodash "^4.17.19"
-    mongoose "^5.9.25"
-    morgan "^1.10.0"
-    openid-client "^4.2.0"
-    sc-base-apis "1.17.0"
-    sc-base-database "1.10.0"
-    sc-common "1.8.1"
-    socket.io "^4.1.2"
-    socket.io-msgpack-parser "^3.0.1"
-    socket.io-prom-metrics "^1.0.3"
 
 sc-game-base@3.0.1-beta.1:
   version "3.0.1-beta.1"
@@ -8122,25 +8084,13 @@ sc-semantic-release@^1.2.0:
   resolved "http://npm.lumigame.com/sc-semantic-release/-/sc-semantic-release-1.2.0.tgz"
   integrity sha512-izZqZiS8hL05cGzYbcR3+GZ1Oktr9rU1nIL05S9mZnEBm5nZfqzRkSpR2OHVJARjYsMI5dps0oUX1HjFV9x47w==
 
-sc-slot-board-generator@0.0.2-beta.8:
-  version "0.0.2-beta.8"
-  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-0.0.2-beta.8.tgz#814b2d36a1c370a8ede3bb3280daaac484170bcc"
-  integrity sha512-HEr3bkJXvyK5W1qyM0VP+zDEJJClRYm+huChM4KB8QiH+F9Cag4ysivLcu5OfKDQ3zLw0F12x9/MsHhTMdiJvQ==
+sc-slot-board-generator@0.0.2-beta.12:
+  version "0.0.2-beta.12"
+  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-0.0.2-beta.12.tgz#7f06b50ef63f30ca609e0a4b7274146df7b823bf"
+  integrity sha512-WsCkPfU6XBimQZMkRhhx9sXoCfqK2Gew9Zea5kQ4BcvDSR13KgwqVao4JIJmw1NB/HMfqfkf4U1OfwnZ6A8Ykw==
   dependencies:
     chance "^1.1.7"
     ramda "^0.28.0"
-  optionalDependencies:
-    prom-client "14.0.1"
-    sc-cascading-slot-base "1.0.1-beta.5"
-
-sc-slot-game-base@1.4.1-beta.0:
-  version "1.4.1-beta.0"
-  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-1.4.1-beta.0.tgz"
-  integrity sha512-VAWqlKXuu5HQBfAmazsNofM4Hh+VKHji+Wra6X037dYaNy72jaiC/GU9GTZQ23a5CByuzXEhgaJ34xeqfn+GIA==
-  dependencies:
-    chance "^1.1.7"
-    lodash "^4.17.20"
-    sc-game-base "2.9.0"
 
 sc-slot-game-base@1.4.3-beta.2:
   version "1.4.3-beta.2"
