@@ -99,6 +99,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     collectRoundResult(player, round, betResult) {
+        const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
+
         return {
             finish: {
                 roundId: round.id,
@@ -119,6 +121,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 })),
                 multiplier: round.multiplier,
                 totalMultiplier: round.totalMultiplier,
+                isFreeSpin: round.freeSpin,
+                reachMaxWin: round.betwin === currencyGroupSettings.maxWinPerRound,
             },
         };
     }
@@ -132,7 +136,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             operatorId: bet.operatorId,
             playerId: bet.playerId,
             partnerId: bet.operatorId,
-            memberId: bet.playerId
+            memberId: bet.playerId,
         };
         const settlementInfo = {
             redPlay: betResult.totalBetAmount,
