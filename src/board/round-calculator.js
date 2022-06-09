@@ -33,14 +33,18 @@ export default class RoundCalculator {
             lastTumble.explodedSymbols = refilledResult.explodedSymbols;
             lastTumble.newSymbols = refilledResult.newSymbols;
 
-            const nextTumble = {
-                originalBoard: lastTumble.newBoard,
-                newBoard: lastTumble.newBoard,
-                multipliers: refilledResult.multipliers,
-                win: 0,
-            };
+            if (round.betwin < maxWinPerRound) {
+                const nextTumble = {
+                    originalBoard: lastTumble.newBoard,
+                    newBoard: lastTumble.newBoard,
+                    multipliers: refilledResult.multipliers,
+                    win: 0,
+                };
 
-            tumbles.push(nextTumble);
+                tumbles.push(nextTumble);
+            } else {
+                break;
+            }
         }
 
         this.countFreeSpin(round);
@@ -54,7 +58,7 @@ export default class RoundCalculator {
 
         this.updateRound(round, totalMultiplier, maxWinPerRound);
 
-        return lastTumble.win > 0 && round.betwin < maxWinPerRound;
+        return lastTumble.win > 0;
     }
 
     updateRound(round, totalMultiplier, maxWinPerRound) {
