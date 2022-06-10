@@ -1,6 +1,56 @@
 import { Crons } from "sc-slot-game-base";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
+    /**
+     * @param {SlotGameDefinition} definition
+     * @param {SlotGameData} gameData
+     * @param {Core.BaseEventPublishers.PlaceBetPublisher} placeBetPublisher
+     * @param {FreeSpinsConsumer} freeSpinsConsumer
+     * @param {SettleGameRoundConsumer} settleGameRoundConsumer
+     * @param {placeBetApi} dependencies.placeBet
+     * @param {logger} dependencies.logService
+     * @param {mongoose.Model} dependencies.roundsRepository
+     * @param {mongoose.Model} dependencies.betsRepository
+     * @param {mongoose.Model} dependencies.betLogsRepository
+     * @param {mongoose.Model} dependencies.userInfosRepository
+     * @param {EventConsumers.IdCountersConsumer} dependencies.idCountersConsumer
+     * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
+     */
+    constructor({
+        definition,
+        gameData,
+        placeBetPublisher,
+        freeSpinsConsumer,
+        settleGameRoundConsumer,
+        placeBet,
+        logService,
+        roundsRepository,
+        betsRepository,
+        betLogsRepository,
+        userInfosRepository,
+        idCountersConsumer,
+        baseMetrics,
+        totalMultiplierConsumer,
+    }) {
+        super({
+            definition,
+            gameData,
+            placeBetPublisher,
+            placeBet,
+            logService,
+            betsRepository,
+            betLogsRepository,
+            userInfosRepository,
+            baseMetrics,
+            freeSpinsConsumer,
+            settleGameRoundConsumer,
+            roundsRepository,
+            idCountersConsumer,
+        });
+
+        this.totalMultiplierConsumer = totalMultiplierConsumer;
+    }
+
     async generateBetInfo(payload, freeSpinInfo) {
         const betInfo = { ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
@@ -58,5 +108,22 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         }
 
         await this.roundsRepository.create(newBet);
+    }
+
+    async handleSuccessBet(player, balance, roundId, bet) {
+        if (bet.freeSpin) {
+            await this.freeSpinsConsumer.useFreeSpin(player);
+
+            const totalAvailableFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(player);
+
+            if (!totalAvailableFreeSpins) await this.totalMultiplierConsumer.stopChain(player);
+        }
+
+        const rate = this.calculateCurrencyRate(player.session);
+
+        await this.upsertBet(player, roundId, bet, rate);
+        this.notifyPlacingBetResult(player, balance, bet, rate);
+
+        await this.settleGameRoundConsumer.settleRound(player, roundId);
     }
 }

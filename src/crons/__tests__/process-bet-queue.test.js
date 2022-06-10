@@ -13,6 +13,7 @@ describe("cascadingProcessBetQueue", () => {
     const chance = new Chance();
     const freeSpinsConsumer = stub(FreeSpinConsumer);
     const settleGameRoundConsumer = stub(SettleGameRoundConsumer);
+    const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
     const placeBet = jest.fn();
     const roundsRepository = stubMongoose(mongoose.Model);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
@@ -38,6 +39,7 @@ describe("cascadingProcessBetQueue", () => {
             idCountersConsumer,
             placeBetPublisher,
             baseMetrics,
+            totalMultiplierConsumer,
         });
     });
 
@@ -129,6 +131,84 @@ describe("cascadingProcessBetQueue", () => {
                 partnerId: player.session.partnerId,
                 operatorId: player.session.partnerId,
             });
+        });
+    });
+
+    describe("handleSuccessBet", () => {
+        const balance = chance.natural();
+        const roundId = chance.natural();
+        const bet = {};
+        const rate = chance.natural();
+
+        beforeEach(() => {
+            consumer.calculateCurrencyRate = jest.fn().mockReturnValueOnce(rate);
+            consumer.upsertBet = jest.fn();
+            consumer.notifyPlacingBetResult = jest.fn();
+        });
+
+        describe("when bet is using freeSpin", () => {
+            const freeSpinBet = { freeSpin: true };
+
+            it("should call freeSpinsConsumer.userFreeSpin", async () => {
+                // Act
+                await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
+
+                // Assert
+                expect(freeSpinsConsumer.useFreeSpin).toBeCalledWith(player);
+            });
+
+            it("should call freeSpinConsumer.getTotalAvaiableFreeSpins", async () => {
+                // Act
+                await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
+
+                // Assert
+                expect(freeSpinsConsumer.getTotalAvaiableFreeSpins).toBeCalledWith(player);
+            });
+
+            describe("when having no available freeSpins left", () => {
+                it("should call totalMultiplierConsumer.stopChain", async () => {
+                    // Arrange
+                    freeSpinsConsumer.getTotalAvaiableFreeSpins = jest.fn().mockReturnValueOnce(0);
+
+                    // Act
+                    await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
+
+                    // Assert
+                    expect(totalMultiplierConsumer.stopChain).toBeCalledWith(player);
+                });
+            });
+        });
+
+        it("should call calculateCurrencyRate", async () => {
+            // Act
+            await consumer.handleSuccessBet(player, balance, roundId, bet);
+
+            // Assert
+            expect(consumer.calculateCurrencyRate).toBeCalledWith(player.session);
+        });
+
+        it("should call upsertBet", async () => {
+            // Act
+            await consumer.handleSuccessBet(player, balance, roundId, bet);
+
+            // Assert
+            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate);
+        });
+
+        it("should call notifyPlacingBetResult", async () => {
+            // Act
+            await consumer.handleSuccessBet(player, balance, roundId, bet);
+
+            // Assert
+            expect(consumer.notifyPlacingBetResult).toBeCalledWith(player, balance, bet, rate);
+        });
+
+        it("should call settleGameRoundConsumer.settleRound", async () => {
+            // Act
+            await consumer.handleSuccessBet(player, balance, roundId, bet);
+
+            // Assert
+            expect(settleGameRoundConsumer.settleRound).toBeCalledWith(player, roundId);
         });
     });
 

@@ -109,68 +109,6 @@ describe("freeSpinsConsumer", () => {
             ]);
         });
     });
-
-    describe("useFreeSpin", () => {
-        beforeEach(() => {
-            consumer.getSoonestExpiredFreeSpinSet = jest.fn();
-            consumer.getTotalAvaiableFreeSpins = jest.fn();
-        });
-
-        it("should call getSoonestExpiredFreeSpinSet", async () => {
-            // Act
-            await consumer.useFreeSpin(player);
-
-            // Assert
-            expect(consumer.getSoonestExpiredFreeSpinSet).toBeCalledWith(player);
-        });
-        it("should call getTotalAvaiableFreeSpins", async () => {
-            // Act
-            await consumer.useFreeSpin(player);
-
-            // Assert
-            expect(consumer.getTotalAvaiableFreeSpins).toBeCalledWith(player);
-        });
-
-        describe("when having freeSpin", () => {
-            const freeSpin = { id: chance.guid(), available: chance.natural() };
-
-            beforeEach(() => {
-                consumer.getSoonestExpiredFreeSpinSet = jest.fn().mockReturnValueOnce(freeSpin);
-            });
-
-            it("should call freeSpinsRepository.updateOne", async () => {
-                // Act
-                await consumer.useFreeSpin(player);
-
-                // Assert
-                expect(freeSpinsRepository.updateOne).toBeCalledWith({ id: freeSpin.id }, { $inc: { available: -1 } });
-            });
-
-            it("should deduct available freeSpins by one", async () => {
-                // Arrange
-                const currentAvailableFreeSpin = freeSpin.available;
-
-                // Act
-                await consumer.useFreeSpin(player);
-
-                // Assert
-                expect(freeSpin.available).toBe(currentAvailableFreeSpin - 1);
-            });
-        });
-
-        describe("when having no freeSpins left", () => {
-            it("should call totalMultiplierConsumer.stopChain", async () => {
-                // Arrange
-                consumer.getTotalAvaiableFreeSpins = jest.fn().mockReturnValueOnce(0);
-
-                // Act
-                await consumer.useFreeSpin(player);
-
-                // Assert
-                expect(totalMultiplierConsumer.stopChain).toBeCalledWith(player);
-            });
-        });
-    });
 });
 
 function stubGameData() {
