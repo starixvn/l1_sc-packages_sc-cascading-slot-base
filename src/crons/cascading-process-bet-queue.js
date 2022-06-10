@@ -1,57 +1,7 @@
 import { Crons } from "sc-slot-game-base";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
-    /**
-     * @param {SlotGameDefinition} definition
-     * @param {SlotGameData} gameData
-     * @param {Core.BaseEventPublishers.PlaceBetPublisher} placeBetPublisher
-     * @param {FreeSpinsConsumer} freeSpinsConsumer
-     * @param {SettleGameRoundConsumer} settleGameRoundConsumer
-     * @param {placeBetApi} dependencies.placeBet
-     * @param {logger} dependencies.logService
-     * @param {mongoose.Model} dependencies.roundsRepository
-     * @param {mongoose.Model} dependencies.betsRepository
-     * @param {mongoose.Model} dependencies.betLogsRepository
-     * @param {mongoose.Model} dependencies.userInfosRepository
-     * @param {EventConsumers.IdCountersConsumer} dependencies.idCountersConsumer
-     * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
-     */
-    constructor({
-        definition,
-        gameData,
-        placeBetPublisher,
-        freeSpinsConsumer,
-        settleGameRoundConsumer,
-        placeBet,
-        logService,
-        roundsRepository,
-        betsRepository,
-        betLogsRepository,
-        userInfosRepository,
-        idCountersConsumer,
-        baseMetrics,
-        totalMultiplierConsumer,
-    }) {
-        super({
-            definition,
-            gameData,
-            placeBetPublisher,
-            placeBet,
-            logService,
-            betsRepository,
-            betLogsRepository,
-            userInfosRepository,
-            baseMetrics,
-            freeSpinsConsumer,
-            settleGameRoundConsumer,
-            roundsRepository,
-            idCountersConsumer,
-        });
-
-        this.totalMultiplierConsumer = totalMultiplierConsumer;
-    }
-
-    async generateBetInfo(payload, freeSpinInfo, player) {
+    async generateBetInfo(payload, freeSpinInfo) {
         const betInfo = { ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
         const contributionRate = cascadingSlotsConfig.jackpot ? cascadingSlotsConfig.jackpot.playerContributionRatio : 0;
@@ -64,12 +14,6 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.betLevel = betLevel;
             betInfo.coinValue = coinValue;
             betInfo.betMultiplier = betMultiplier;
-        } else {
-            const currentMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
-
-            if (currentMultiplier) {
-                await this.totalMultiplierConsumer.stopChain(player);
-            }
         }
 
         betInfo.amount = betInfo.betLevel * betInfo.coinValue;

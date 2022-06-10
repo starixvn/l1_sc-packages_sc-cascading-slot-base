@@ -16,7 +16,6 @@ describe("cascadingProcessBetQueue", () => {
     const placeBet = jest.fn();
     const roundsRepository = stubMongoose(mongoose.Model);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
-    const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
     const placeBetPublisher = { publishGameFailedBet: jest.fn() };
     const gameData = stubGameData();
     const player = stubPlayer();
@@ -37,7 +36,6 @@ describe("cascadingProcessBetQueue", () => {
             loggerService: logger,
             roundsRepository,
             idCountersConsumer,
-            totalMultiplierConsumer,
             placeBetPublisher,
             baseMetrics,
         });
@@ -67,27 +65,6 @@ describe("cascadingProcessBetQueue", () => {
 
         describe("when bet is NOT free spin", () => {
             const payload = { freeBet: false, betLevel: chance.natural(), coinValue: chance.natural() };
-
-            it("should call totalMultiplierConsumer.getCurrentMultiplier", async () => {
-                // Act
-                await consumer.generateBetInfo(payload, undefined, player);
-
-                // Assert
-                expect(totalMultiplierConsumer.getCurrentMultiplier).toBeCalledWith(player);
-            });
-
-            describe("when player is having total multiplier", () => {
-                it("should call totalMultiplier.stopChain", async () => {
-                    // Arrange
-                    totalMultiplierConsumer.getCurrentMultiplier.mockReturnValueOnce(chance.natural());
-
-                    // Act
-                    await consumer.generateBetInfo(payload, undefined, player);
-
-                    // Assert
-                    expect(totalMultiplierConsumer.stopChain).toBeCalled();
-                });
-            });
 
             it("should return correct bet info", async () => {
                 // Act

@@ -1,6 +1,12 @@
 import { EventConsumers } from "sc-slot-game-base";
 
 export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer {
+    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer, totalMultiplierConsumer) {
+        super(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
+
+        this.totalMultiplierConsumer = totalMultiplierConsumer;
+    }
+
     async gainFreeSpin(player, { roundId, totalAmount, betLevel, coinValue, numberOfFreeSpins }, timeToLive) {
         const createdTime = new Date();
         const expiryTime = new Date(createdTime.getTime()).setSeconds(createdTime.getSeconds() + timeToLive);
@@ -37,6 +43,21 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[memberName].freeSpins = this.gameData.ingame[memberName].freeSpins ?? [];
 
             this.gameData.ingame[memberName].freeSpins.push(newlyCachedFreeSpin);
+        }
+    }
+
+    async useFreeSpin(player) {
+        const firstAvailableFreeSpinSet = this.getSoonestExpiredFreeSpinSet(player);
+        const totalAvailableFreeSpins = this.getTotalAvaiableFreeSpins(player);
+
+        if (firstAvailableFreeSpinSet) {
+            await this.freeSpinsRepository.updateOne({ id: firstAvailableFreeSpinSet.id }, { $inc: { available: -1 } });
+
+            firstAvailableFreeSpinSet.available--;
+        }
+
+        if (!totalAvailableFreeSpins) {
+            await this.totalMultiplierConsumer.stopChain(player);
         }
     }
 }

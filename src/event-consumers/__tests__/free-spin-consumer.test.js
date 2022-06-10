@@ -1,7 +1,7 @@
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import Chance from "chance";
-import { FreeSpinsConsumer } from "../index";
+import { FreeSpinsConsumer, TotalMultiplierConsumer } from "../index";
 import { SlotGameData, EventConsumers } from "sc-slot-game-base";
 
 describe("freeSpinsConsumer", () => {
@@ -17,17 +17,27 @@ describe("freeSpinsConsumer", () => {
 
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
 
+    const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
+
+    const player = {
+        profile: { name: chance.name_suffix() },
+    };
+
     let consumer;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        consumer = new FreeSpinsConsumer(chance.natural(), gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
+        consumer = new FreeSpinsConsumer(
+            chance.natural(),
+            gameData,
+            freeSpinsRepository,
+            gameNotificationsRepository,
+            idCountersConsumer,
+            totalMultiplierConsumer
+        );
     });
 
     describe("gainFreeSpin", () => {
-        const player = {
-            profile: { name: chance.name_suffix() },
-        };
         const freeSpinData = {
             roundId: chance.natural(),
             totalAmount: chance.natural(),
@@ -97,6 +107,68 @@ describe("freeSpinsConsumer", () => {
                     betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
                 },
             ]);
+        });
+    });
+
+    describe("useFreeSpin", () => {
+        beforeEach(() => {
+            consumer.getSoonestExpiredFreeSpinSet = jest.fn();
+            consumer.getTotalAvaiableFreeSpins = jest.fn();
+        });
+
+        it("should call getSoonestExpiredFreeSpinSet", async () => {
+            // Act
+            await consumer.useFreeSpin(player);
+
+            // Assert
+            expect(consumer.getSoonestExpiredFreeSpinSet).toBeCalledWith(player);
+        });
+        it("should call getTotalAvaiableFreeSpins", async () => {
+            // Act
+            await consumer.useFreeSpin(player);
+
+            // Assert
+            expect(consumer.getTotalAvaiableFreeSpins).toBeCalledWith(player);
+        });
+
+        describe("when having freeSpin", () => {
+            const freeSpin = { id: chance.guid(), available: chance.natural() };
+
+            beforeEach(() => {
+                consumer.getSoonestExpiredFreeSpinSet = jest.fn().mockReturnValueOnce(freeSpin);
+            });
+
+            it("should call freeSpinsRepository.updateOne", async () => {
+                // Act
+                await consumer.useFreeSpin(player);
+
+                // Assert
+                expect(freeSpinsRepository.updateOne).toBeCalledWith({ id: freeSpin.id }, { $inc: { available: -1 } });
+            });
+
+            it("should deduct available freeSpins by one", async () => {
+                // Arrange
+                const currentAvailableFreeSpin = freeSpin.available;
+
+                // Act
+                await consumer.useFreeSpin(player);
+
+                // Assert
+                expect(freeSpin.available).toBe(currentAvailableFreeSpin - 1);
+            });
+        });
+
+        describe("when having no freeSpins left", () => {
+            it("should call totalMultiplierConsumer.stopChain", async () => {
+                // Arrange
+                consumer.getTotalAvaiableFreeSpins = jest.fn().mockReturnValueOnce(0);
+
+                // Act
+                await consumer.useFreeSpin(player);
+
+                // Assert
+                expect(totalMultiplierConsumer.stopChain).toBeCalledWith(player);
+            });
         });
     });
 });
