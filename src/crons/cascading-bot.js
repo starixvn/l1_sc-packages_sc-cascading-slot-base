@@ -5,7 +5,8 @@ export default class CascadingBot extends Core.Crons.BaseBot {
 
         this.idCountersConsumer = idCountersConsumer;
     }
-    async run() {
+
+    async placeBet() {
         await this.idCountersConsumer.consume("round");
         this.gameData.roundId++;
     }
