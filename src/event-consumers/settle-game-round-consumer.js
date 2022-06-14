@@ -128,9 +128,32 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     formatEndGameInfo(bet, roundId, time, betResult) {
-        const { gameInfo, settlementInfo } = super.formatEndGameInfo(bet, roundId, time, betResult);
+        const gameInfo = {
+            gameId: this.definition.id,
+            gameRoundId: roundId,
+            siteId: bet.siteId,
+            time: time,
+            operatorId: bet.operatorId,
+            playerId: bet.playerId,
+            partnerId: bet.operatorId,
+            memberId: bet.playerId,
+        };
+        const settlementInfo = {
+            redPlay: bet.freeSpin ? 0 : betResult.totalBetAmount,
+            freeBet: bet.freeBet,
+        };
 
-        settlementInfo.redPlay = bet.freeSpin ? 0 : settlementInfo.redPlay;
+        if (betResult.totalWin > 0) {
+            settlementInfo.red = betResult.totalWin;
+        }
+
+        if (betResult.netWin > 0) {
+            settlementInfo.redWin = betResult.netWin;
+        }
+
+        if (betResult.totalLost > 0) {
+            settlementInfo.redLost = betResult.totalLost;
+        }
 
         return { gameInfo, settlementInfo };
     }
