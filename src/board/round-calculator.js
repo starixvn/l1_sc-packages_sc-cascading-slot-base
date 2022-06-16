@@ -47,7 +47,7 @@ export default class RoundCalculator {
             }
         }
 
-        this.countFreeSpin(round);
+        this.countFreeSpin(round, maxWinPerRound);
         return round;
     }
 
@@ -76,7 +76,7 @@ export default class RoundCalculator {
         }
     }
 
-    countFreeSpin(round) {
+    countFreeSpin(round, maxWinPerRound) {
         const { settlementResult } = round;
         const { tumbles } = settlementResult;
         const lastBoard = tumbles[tumbles.length - 1].originalBoard.split(",").map((x) => parseInt(x));
@@ -87,8 +87,8 @@ export default class RoundCalculator {
         const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
 
         settlementResult.freeSpins = {
-            count: freeSpinCount,
-            odds: Math.max(0, ...freeSpinOdds),
+            count: round.betwin === maxWinPerRound ? 0 : freeSpinCount,
+            odds: round.betwin === maxWinPerRound ? 0 : Math.max(0, ...freeSpinOdds),
         };
     }
 }
