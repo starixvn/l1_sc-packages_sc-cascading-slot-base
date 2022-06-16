@@ -52,7 +52,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         round = this.roundCalculator.processSpinning(
             round,
             currentTotalMultiplier,
-            currencyGroupSettings.maxWinPerRound,
+            currencyGroupSettings.maxWinPerRound * round.totalAmount,
             this.gameData.settlementResultFromAdmin[player.profile.name]
         );
 
