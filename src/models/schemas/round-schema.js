@@ -14,6 +14,7 @@ export default new mongoose.Schema({
     totalTumbleWin: { type: Number, default: 0 },
     totalMultiplier: { type: Number, default: 0 },
     freeSpin: { type: Boolean, default: false },
+    reachMaxWin: { type: Boolean, default: false },
 
     result: { type: String },
     settlementResult: { type: Object },

@@ -1,4 +1,5 @@
 import defaultDefinition from "./default-definition";
+import { round as mathRound } from "mathjs";
 
 export default class RoundCalculator {
     constructor({ boardGenerator, tumbleCalculator }) {
@@ -33,29 +34,31 @@ export default class RoundCalculator {
             lastTumble.explodedSymbols = refilledResult.explodedSymbols;
             lastTumble.newSymbols = refilledResult.newSymbols;
 
-            if (round.betwin < maxWinPerRound) {
-                const nextTumble = {
-                    originalBoard: lastTumble.newBoard,
-                    newBoard: lastTumble.newBoard,
-                    multipliers: refilledResult.multipliers,
-                    win: 0,
-                };
+            const nextTumble = {
+                icons: {},
+                originalBoard: lastTumble.newBoard,
+                newBoard: lastTumble.newBoard,
+                multipliers: refilledResult.multipliers,
+                win: 0,
+            };
 
-                tumbles.push(nextTumble);
-            } else {
+            tumbles.push(nextTumble);
+
+            if (round.betwin >= maxWinPerRound) {
+                round.reachMaxWin = true;
                 break;
             }
         }
 
-        this.countFreeSpin(round, maxWinPerRound);
+        this.countFreeSpin(round);
         return round;
     }
 
     settleTumble(round, totalMultiplier, maxWinPerRound) {
         const { tumbles } = round.settlementResult;
         const lastTumble = tumbles[tumbles.length - 1];
-        this.tumbleCalculator.calculate(lastTumble, round.coinValue * round.betLevel, round.odds);
 
+        this.tumbleCalculator.calculate(lastTumble, round.coinValue * round.betLevel, round.odds);
         this.updateRound(round, totalMultiplier, maxWinPerRound);
 
         return lastTumble.win > 0;
@@ -70,13 +73,19 @@ export default class RoundCalculator {
 
         if (round.freeSpin) {
             round.totalMultiplier = round.totalTumbleWin > 0 ? totalMultiplier + round.multiplier : totalMultiplier;
-            round.betwin = Math.min(round.multiplier > 0 ? round.totalTumbleWin * round.totalMultiplier : round.totalTumbleWin, maxWinPerRound);
+            round.betwin = Math.min(
+                round.multiplier > 0 ? mathRound(round.totalTumbleWin * round.totalMultiplier, 2) : round.totalTumbleWin,
+                maxWinPerRound
+            );
         } else {
-            round.betwin = Math.min(round.multiplier > 0 ? round.totalTumbleWin * round.multiplier : round.totalTumbleWin, maxWinPerRound);
+            round.betwin = Math.min(
+                round.multiplier > 0 ? mathRound(round.totalTumbleWin * round.multiplier, 2) : round.totalTumbleWin,
+                maxWinPerRound
+            );
         }
     }
 
-    countFreeSpin(round, maxWinPerRound) {
+    countFreeSpin(round) {
         const { settlementResult } = round;
         const { tumbles } = settlementResult;
         const lastBoard = tumbles[tumbles.length - 1].originalBoard.split(",").map((x) => parseInt(x));
@@ -87,8 +96,8 @@ export default class RoundCalculator {
         const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
 
         settlementResult.freeSpins = {
-            count: round.betwin === maxWinPerRound ? 0 : freeSpinCount,
-            odds: round.betwin === maxWinPerRound ? 0 : Math.max(0, ...freeSpinOdds),
+            count: round.reachMaxWin ? 0 : freeSpinCount,
+            odds: round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds),
         };
     }
 }

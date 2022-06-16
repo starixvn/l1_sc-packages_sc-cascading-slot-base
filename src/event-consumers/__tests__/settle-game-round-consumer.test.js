@@ -67,6 +67,7 @@ function initRoundDocument({ id = 1, playerId, coinValue, betLevel, betMultiplie
         coinValue,
         betLevel,
         betMultiplier,
+        totalAmount: coinValue * betLevel * betMultiplier,
         paid: false,
         rate: 1,
         exchangeRateId: 1,
@@ -110,14 +111,18 @@ describe("settle round", () => {
             it("betwin should be max win per round when it exceeds the value", async () => {
                 //Arange
                 const consumer = initConsumer();
-                const round = initRoundDocument({ playerId: 1, coinValue: 1, betLevel: 100, betMultiplier: 20 });
+                const round = initRoundDocument({ playerId: 1, coinValue: 1, betLevel: 10, betMultiplier: 20 });
                 roundsRepository.findOne().exec.mockReturnValueOnce(round);
+                currencyGroupSetting.maxWinPerRound = 0.3;
 
                 //Act
                 await consumer.settleRound(player, 1);
 
                 //Assert
-                expect(round.betwin).toEqual(currencyGroupSetting.maxWinPerRound);
+                console.log(round.betwin);
+                expect(round.betwin).toEqual(currencyGroupSetting.maxWinPerRound * round.totalAmount);
+                expect(round.reachMaxWin).toBeTrue();
+                currencyGroupSetting.maxWinPerRound = 100;
             });
 
             afterAll(() => {

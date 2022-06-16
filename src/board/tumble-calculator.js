@@ -1,3 +1,4 @@
+import { round } from "mathjs";
 import defaultDefinition from "./default-definition";
 
 export default class TumbleCalculator {
@@ -13,7 +14,7 @@ export default class TumbleCalculator {
     calculateWinAmount(tumble, baseBet) {
         let totalWin = 0;
         Object.values(tumble.icons).forEach((icon) => {
-            icon.win = baseBet * icon.odds;
+            icon.win = round(baseBet * icon.odds, 2);
             totalWin += icon.win;
         });
 
@@ -27,7 +28,7 @@ export default class TumbleCalculator {
 
         const { oddsByCounts } = gameOdds;
         const icons = {};
-        
+
         occurences.forEach((value, key) => {
             const iconOdds = oddsByCounts[key].find((x) => x.from <= value && x.to >= value)?.odds;
 

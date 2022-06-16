@@ -1,4 +1,5 @@
 import { Core } from "sc-game-base";
+import { round as mathRound } from "mathjs";
 
 export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.SettleGameRoundConsumer {
     constructor({
@@ -49,10 +50,12 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async processSpinning(player, round) {
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
+        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * round.totalAmount, 2);
+
         round = this.roundCalculator.processSpinning(
             round,
             currentTotalMultiplier,
-            currencyGroupSettings.maxWinPerRound * round.totalAmount,
+            maxWinPerRound,
             this.gameData.settlementResultFromAdmin[player.profile.name]
         );
 
@@ -99,8 +102,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     collectRoundResult(player, round, betResult) {
-        const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
-
         return {
             finish: {
                 roundId: round.id,
@@ -122,7 +123,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 multiplier: round.multiplier,
                 totalMultiplier: round.totalMultiplier,
                 isFreeSpin: round.freeSpin,
-                reachMaxWin: round.betwin === currencyGroupSettings.maxWinPerRound,
+                reachMaxWin: round.reachMaxWin,
             },
         };
     }
