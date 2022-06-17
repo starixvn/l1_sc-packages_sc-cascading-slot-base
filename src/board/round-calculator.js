@@ -73,16 +73,12 @@ export default class RoundCalculator {
 
         if (round.freeSpin) {
             round.totalMultiplier = round.totalTumbleWin > 0 ? totalMultiplier + round.multiplier : totalMultiplier;
-            round.betwin = Math.min(
-                round.multiplier > 0 ? mathRound(round.totalTumbleWin * round.totalMultiplier, 2) : round.totalTumbleWin,
-                maxWinPerRound
-            );
+            round.actualBetwin = round.multiplier > 0 ? mathRound(round.totalTumbleWin * round.totalMultiplier, 2) : round.totalTumbleWin;
         } else {
-            round.betwin = Math.min(
-                round.multiplier > 0 ? mathRound(round.totalTumbleWin * round.multiplier, 2) : round.totalTumbleWin,
-                maxWinPerRound
-            );
+            round.actualBetwin = round.multiplier > 0 ? mathRound(round.totalTumbleWin * round.multiplier, 2) : round.totalTumbleWin;
         }
+
+        round.betwin = Math.min(round.actualBetwin, maxWinPerRound);
     }
 
     countFreeSpin(round) {

@@ -125,7 +125,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 totalMultiplier: round.totalMultiplier,
                 isFreeSpin: round.freeSpin,
                 reachMaxWin: round.reachMaxWin,
-                maxWin: round.maxWin,
+                actualBetwin: round.actualBetwin,
             },
         };
     }
