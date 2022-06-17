@@ -51,6 +51,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
         const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * round.totalAmount, 2);
+        round.maxWin = maxWinPerRound;
 
         round = this.roundCalculator.processSpinning(
             round,
@@ -124,6 +125,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 totalMultiplier: round.totalMultiplier,
                 isFreeSpin: round.freeSpin,
                 reachMaxWin: round.reachMaxWin,
+                maxWin: round.maxWin,
             },
         };
     }
