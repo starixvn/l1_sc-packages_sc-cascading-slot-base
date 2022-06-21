@@ -84,6 +84,7 @@ describe("InGameConsumer", () => {
             it("should return info without coinValues and maxWinPerRound", async () => {
                 // Arrange
                 const realPlayer = { session: { currencyGroupId: "1", currencyCode: "UUS", multiplier: 2 }, profile: { name: "player1" } };
+                freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce(null);
 
                 // Arrange
                 const expectedValue = {
@@ -103,6 +104,8 @@ describe("InGameConsumer", () => {
                     },
                     freeSpins: {
                         total: 10,
+                        betLevel: undefined,
+                        coinValue: undefined,
                     },
                     totalMultiplier: 10,
                     user: {
@@ -122,6 +125,7 @@ describe("InGameConsumer", () => {
         describe("when player have currency group game settings", () => {
             it("should return info coinValues and maxWinPerRound", async () => {
                 // Arrange
+                freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce({ betLevel: 2, coinValue: 10 });
                 const realPlayer = {
                     session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
                     profile: { name: "player2" },
@@ -145,6 +149,8 @@ describe("InGameConsumer", () => {
                     },
                     freeSpins: {
                         total: 10,
+                        betLevel: 2,
+                        coinValue: 10,
                     },
                     totalMultiplier: 0,
                     user: {
