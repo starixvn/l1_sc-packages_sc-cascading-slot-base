@@ -22,6 +22,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             total: totalOfFreeSpins,
             betLevel: soonestExpiredFreeSpin?.betLevel,
             coinValue: soonestExpiredFreeSpin?.coinValue,
+            betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
         };
 
         await this.getBalance(realPlayer, true);
