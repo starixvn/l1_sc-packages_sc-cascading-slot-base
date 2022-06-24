@@ -190,13 +190,29 @@ describe("totalMultiplierConsumer", () => {
         });
 
         describe("when player does NOT have free spin", () => {
-            it("should call totalMultiplier.updateOne", async () => {
-                // Arrange
-                const totalMultiplier = chance.natural();
-                const records = [{ name: player.profile.name, uid: chance.guid(), rounds: [{ totalMultiplier }] }];
+            const totalMultiplier = chance.natural();
+            const records = [{ name: player.profile.name, uid: chance.guid(), rounds: [{ totalMultiplier }] }];
+
+            beforeEach(() => {
                 totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
                 freeSpinConsumer.hasFreeSpin = jest.fn().mockReturnValue(false);
+            });
 
+            describe("when ingame has player info", () => {
+                it("should reset total multiplier of play on ingame data", async () => {
+                    // Arrange
+                    const totalMultiplier = chance.natural();
+                    gameData.ingame[player.profile.name] = { totalMultiplier };
+
+                    // Act
+                    await consumer.reload();
+
+                    // Assert
+                    expect(gameData.ingame[player.profile.name].totalMultiplier).toBe(0);
+                });
+            });
+
+            it("should call totalMultiplier.updateOne", async () => {
                 // Act
                 await consumer.reload();
 

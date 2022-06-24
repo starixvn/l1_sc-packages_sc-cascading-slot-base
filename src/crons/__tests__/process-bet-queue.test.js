@@ -156,27 +156,6 @@ describe("cascadingProcessBetQueue", () => {
                 // Assert
                 expect(freeSpinsConsumer.useFreeSpin).toBeCalledWith(player);
             });
-
-            it("should call freeSpinConsumer.getTotalAvaiableFreeSpins", async () => {
-                // Act
-                await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
-
-                // Assert
-                expect(freeSpinsConsumer.getTotalAvaiableFreeSpins).toBeCalledWith(player);
-            });
-
-            describe("when having no available freeSpins left", () => {
-                it("should call totalMultiplierConsumer.stopChain", async () => {
-                    // Arrange
-                    freeSpinsConsumer.getTotalAvaiableFreeSpins = jest.fn().mockReturnValueOnce(0);
-
-                    // Act
-                    await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
-
-                    // Assert
-                    expect(totalMultiplierConsumer.stopChain).toBeCalledWith(player);
-                });
-            });
         });
 
         it("should call calculateCurrencyRate", async () => {

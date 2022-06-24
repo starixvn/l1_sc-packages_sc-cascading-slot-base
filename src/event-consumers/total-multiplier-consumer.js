@@ -71,11 +71,8 @@ export default class TotalMultiplierConsumer {
                 this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
                 this.gameData.ingame[totalMultiplier.name].totalMultiplier = latestTotalMultiplier;
             } else {
-                !this.gameData.ingame[totalMultiplier.name]?.finish &&
-                    (await this.totalMultiplierRepository.updateOne(
-                        { uid: totalMultiplier.uid, ended: false },
-                        { ended: true, endTime: new Date() }
-                    ));
+                this.gameData.ingame[totalMultiplier.name] && (this.gameData.ingame[totalMultiplier.name].totalMultiplier = 0);
+                await this.totalMultiplierRepository.updateOne({ uid: totalMultiplier.uid, ended: false }, { ended: true, endTime: new Date() });
             }
         });
     }
