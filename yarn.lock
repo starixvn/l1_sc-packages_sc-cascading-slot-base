@@ -8126,10 +8126,10 @@ sc-semantic-release@^1.2.0:
   resolved "http://npm.lumigame.com/sc-semantic-release/-/sc-semantic-release-1.2.0.tgz"
   integrity sha512-izZqZiS8hL05cGzYbcR3+GZ1Oktr9rU1nIL05S9mZnEBm5nZfqzRkSpR2OHVJARjYsMI5dps0oUX1HjFV9x47w==
 
-sc-slot-board-generator@0.0.2-beta.12:
-  version "0.0.2-beta.12"
-  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-0.0.2-beta.12.tgz#7f06b50ef63f30ca609e0a4b7274146df7b823bf"
-  integrity sha512-WsCkPfU6XBimQZMkRhhx9sXoCfqK2Gew9Zea5kQ4BcvDSR13KgwqVao4JIJmw1NB/HMfqfkf4U1OfwnZ6A8Ykw==
+sc-slot-board-generator@0.0.2-beta.13:
+  version "0.0.2-beta.13"
+  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-0.0.2-beta.13.tgz#d8a4bc4ba58ba6f4a8ef6fa960e75ac22399f817"
+  integrity sha512-TfUlZQCQaFldeTyZRECuHn8M871QBPvWTtNR/o2VtkulrorxmqZhfg3s3MUrQS4FesfHGuzKL9FWtjwmRDFWeQ==
   dependencies:
     chance "^1.1.7"
     ramda "^0.28.0"
