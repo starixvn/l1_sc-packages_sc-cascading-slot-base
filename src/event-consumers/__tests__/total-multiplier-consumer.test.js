@@ -33,83 +33,73 @@ describe("totalMultiplierConsumer", () => {
     describe("increaseTotalMultiplier", () => {
         const data = { roundId: chance.natural(), multiplier: chance.natural() };
 
-        it("should call freeSpinConsumer.hasFreeSpin", async () => {
+        beforeEach(() => {
+            freeSpinConsumer.hasFreeSpin.mockReturnValueOnce(true);
+        });
+
+        it("should assign total multiplier value to ingame data", async () => {
             // Act
             await consumer.increaseTotalMultiplier(player, data);
 
             // Assert
-            expect(freeSpinConsumer.hasFreeSpin).toBeCalledWith(player);
+            expect(gameData.ingame[player.profile.name].totalMultiplier).toBe(data.multiplier);
         });
 
-        describe("when having free spins", () => {
-            beforeEach(() => {
-                freeSpinConsumer.hasFreeSpin.mockReturnValueOnce(true);
-            });
+        describe("when current total multiplier is 0", () => {
+            it("should call totalMultiplierRepository.create", async () => {
+                // Arrange
+                const newRoundRecord = {
+                    time: mockDate,
+                    roundId: data.roundId,
+                    prevTotalMultiplier: 0,
+                    totalMultiplier: data.multiplier,
+                    multiplier: data.multiplier,
+                };
 
-            it("should assign total multiplier value to ingame data", async () => {
                 // Act
                 await consumer.increaseTotalMultiplier(player, data);
 
                 // Assert
-                expect(gameData.ingame[player.profile.name].totalMultiplier).toBe(data.multiplier);
+                expect(totalMultiplierRepository.create).toBeCalledWith({
+                    uid: player.UID,
+                    playerId: player.session?.memberId,
+                    name: player.profile.name,
+                    ended: false,
+                    time: mockDate,
+                    rounds: [newRoundRecord],
+                });
             });
+        });
 
-            describe("when current total multiplier is 0", () => {
-                it("should call totalMultiplierRepository.create", async () => {
-                    // Arrange
-                    const newRoundRecord = {
-                        time: mockDate,
-                        roundId: data.roundId,
-                        prevTotalMultiplier: 0,
-                        totalMultiplier: data.multiplier,
-                        multiplier: data.multiplier,
-                    };
+        describe("when current total multiplier is NOT 0", () => {
+            it("should call totalMultiplierRepository.updateOne", async () => {
+                // Arrange
+                const currentTotalMultiplier = chance.natural();
+                gameData.ingame[player.profile.name].totalMultiplier = currentTotalMultiplier;
 
-                    // Act
-                    await consumer.increaseTotalMultiplier(player, data);
+                const newRoundRecord = {
+                    time: mockDate,
+                    roundId: data.roundId,
+                    prevTotalMultiplier: currentTotalMultiplier,
+                    totalMultiplier: data.multiplier + currentTotalMultiplier,
+                    multiplier: data.multiplier,
+                };
 
-                    // Assert
-                    expect(totalMultiplierRepository.create).toBeCalledWith({
+                // Act
+                await consumer.increaseTotalMultiplier(player, data);
+
+                // Assert
+                expect(totalMultiplierRepository.updateOne).toBeCalledWith(
+                    {
                         uid: player.UID,
-                        playerId: player.session?.memberId,
-                        name: player.profile.name,
                         ended: false,
-                        time: mockDate,
-                        rounds: [newRoundRecord],
-                    });
-                });
-            });
-
-            describe("when current total multiplier is NOT 0", () => {
-                it("should call totalMultiplierRepository.updateOne", async () => {
-                    // Arrange
-                    const currentTotalMultiplier = chance.natural();
-                    gameData.ingame[player.profile.name].totalMultiplier = currentTotalMultiplier;
-
-                    const newRoundRecord = {
-                        time: mockDate,
-                        roundId: data.roundId,
-                        prevTotalMultiplier: currentTotalMultiplier,
-                        totalMultiplier: data.multiplier + currentTotalMultiplier,
-                        multiplier: data.multiplier,
-                    };
-
-                    // Act
-                    await consumer.increaseTotalMultiplier(player, data);
-
-                    // Assert
-                    expect(totalMultiplierRepository.updateOne).toBeCalledWith(
-                        {
-                            uid: player.UID,
-                            ended: false,
+                    },
+                    {
+                        $push: {
+                            rounds: newRoundRecord,
                         },
-                        {
-                            $push: {
-                                rounds: newRoundRecord,
-                            },
-                        }
-                    );
-                });
+                    }
+                );
             });
         });
     });

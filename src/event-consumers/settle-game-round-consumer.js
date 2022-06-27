@@ -33,7 +33,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const round = await this.queryRound(roundId);
 
         if (round) {
-            this.processSpinning(player, round);
+            await this.processSpinning(player, round);
 
             round.paid = true;
             round.endTime = new Date();

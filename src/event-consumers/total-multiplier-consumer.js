@@ -11,10 +11,6 @@ export default class TotalMultiplierConsumer {
     }
 
     async increaseTotalMultiplier(player, { roundId, multiplier }) {
-        if (!this.freeSpinsConsumer.hasFreeSpin(player)) {
-            return;
-        }
-
         const memberName = player.profile.name;
         const currentTotalMultiplier = this.gameData.ingame[memberName].totalMultiplier ?? 0;
         const newTotalMultiplier = currentTotalMultiplier + multiplier;
