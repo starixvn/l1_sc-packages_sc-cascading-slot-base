@@ -86,7 +86,9 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         const totalAvailableFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(player);
 
-        if (!totalAvailableFreeSpins) await this.totalMultiplierConsumer.stopChain(player);
+        if (!totalAvailableFreeSpins) {
+            await this.totalMultiplierConsumer.stopChain(player);
+        }
     }
 
     queryRound(roundId) {
