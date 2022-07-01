@@ -93,6 +93,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
         this.boardGenerator.initialize();
+        this.initTrialMode();
 
         const job = new cron.CronJob(
             "* * * * * *",
@@ -145,4 +146,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             this.boardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
         }
     }
+
+    initTrialMode() {}
 }

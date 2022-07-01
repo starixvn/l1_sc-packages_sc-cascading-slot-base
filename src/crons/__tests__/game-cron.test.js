@@ -166,6 +166,25 @@ describe("gameCron", () => {
             expect(totalMultiplierConsumer.reload).toBeCalled();
         });
 
+        it("should call boardGenerator.initialize", async () => {
+            // Act
+            await gameCron.start();
+
+            // Assert
+            expect(boardGenerator.initialize).toBeCalled();
+        });
+
+        it("should call initTrialMode", async () => {
+            // Arrange
+            gameCron.initTrialMode = jest.fn();
+
+            // Act
+            await gameCron.start();
+
+            // Assert
+            expect(gameCron.initTrialMode).toBeCalled();
+        });
+
         it("should get setting for new round", async () => {
             // Act
             await gameCron.start();
