@@ -1,4 +1,4 @@
-import { BoardGenerator, Difficulty } from "sc-slot-board-generator";
+import { BoardGenerator } from "sc-slot-board-generator";
 import defaultDefinition from "./default-definition";
 
 export default class CascadingBoardGenerator {
@@ -8,14 +8,13 @@ export default class CascadingBoardGenerator {
         this.gameData = gameData;
         this.logService = logService;
         this.multiplierBonus = {};
-        this.difficulty = Difficulty.Medium;
     }
 
     initialize() {
         const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
         this.multiplierBonus = multiplierBonus;
-        this.difficulty = difficulty ?? this.difficulty;
+        this.difficulty = difficulty;
 
         this.boardGenerator = new BoardGenerator(
             this.boardSettings,

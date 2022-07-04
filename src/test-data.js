@@ -65,7 +65,7 @@ const gameConfigs = {
             ],
         },
         multiplierBonus: {
-            symbol: 9,
+            symbol: 10,
             min: 2,
             max: 25,
         },
