@@ -1,14 +1,21 @@
-import { BoardGenerator } from "sc-slot-board-generator";
+import { BoardGenerator, Difficulty } from "sc-slot-board-generator";
 import defaultDefinition from "./default-definition";
 
 export default class CascadingBoardGenerator {
-    constructor(boardSettings, gameData) {
+    constructor(definition, gameData, boardSettings, logService) {
+        this.definition = definition;
         this.boardSettings = boardSettings;
         this.gameData = gameData;
+        this.logService = logService;
+        this.multiplierBonus = {};
+        this.difficulty = Difficulty.Medium;
     }
 
     initialize() {
         const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
+
+        this.multiplierBonus = multiplierBonus;
+        this.difficulty = difficulty ?? this.difficulty;
 
         this.boardGenerator = new BoardGenerator(
             this.boardSettings,
@@ -18,7 +25,7 @@ export default class CascadingBoardGenerator {
                 max: multiplierBonus.max,
             },
             null,
-            this.boardSettings.difficulty ?? difficulty
+            difficulty
         );
     }
 
@@ -30,9 +37,19 @@ export default class CascadingBoardGenerator {
         return this.boardGenerator.explodeAndRefill(board, winSymbols, multipliers);
     }
 
-    updateBoardConfig(difficulty, minBetMultiplier, maxBetMultiplier) {
-        this.boardGenerator.setDifficulty(difficulty);
-        this.boardGenerator.updateMultiplierConfig(minBetMultiplier, maxBetMultiplier);
+    updateBoardConfig(difficulty, minMultiplierBonus, maxMultiplierBonus) {
+        if (difficulty !== this.difficulty || this.multiplierBonus.min !== minMultiplierBonus || this.multiplierBonus.max !== maxMultiplierBonus) {
+            this.difficulty = difficulty;
+            this.multiplierBonus.min = minMultiplierBonus;
+            this.multiplierBonus.max = maxMultiplierBonus;
+
+            this.logService.logError(
+                `${this.definition.name} updated board configuration!!! Mode: ${difficulty}, Multipler: ${minMultiplierBonus} - ${maxMultiplierBonus}`
+            );
+
+            this.boardGenerator.setDifficulty(difficulty);
+            this.boardGenerator.updateMultiplierConfig(minMultiplierBonus, maxMultiplierBonus);
+        }
     }
 
     setRefillSymbols(newSymbols, multipliers) {

@@ -1,5 +1,6 @@
 const gameConfigs = {
     cascadingSlotsConfig: {
+        mode: 1,
         oddsByCounts: {
             0: [
                 { from: 8, to: 9, odds: 1 },
@@ -62,6 +63,11 @@ const gameConfigs = {
                 { count: 5, odds: 1 },
                 { count: 6, odds: 2 },
             ],
+        },
+        multiplierBonus: {
+            symbol: 9,
+            min: 2,
+            max: 25,
         },
     },
 };
