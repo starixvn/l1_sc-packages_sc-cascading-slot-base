@@ -42,12 +42,12 @@ export default class CascadingBoardGenerator {
             this.multiplierBonus.min = minMultiplierBonus;
             this.multiplierBonus.max = maxMultiplierBonus;
 
+            this.boardGenerator.setDifficulty(difficulty);
+            this.boardGenerator.updateMultiplierConfig(minMultiplierBonus, maxMultiplierBonus);
+
             this.logService.logError(
                 `${this.definition.name} updated board configuration!!! Mode: ${difficulty}, Multipler: ${minMultiplierBonus} - ${maxMultiplierBonus}`
             );
-
-            this.boardGenerator.setDifficulty(difficulty);
-            this.boardGenerator.updateMultiplierConfig(minMultiplierBonus, maxMultiplierBonus);
         }
     }
 

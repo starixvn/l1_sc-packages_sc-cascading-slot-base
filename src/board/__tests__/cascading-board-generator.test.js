@@ -15,6 +15,7 @@ describe("CascadingBoardGenerator", () => {
     const chance = new Chance();
 
     const definition = {
+        name: "cascading",
         durations: {
             wholeRound: 60,
         },
@@ -106,6 +107,67 @@ describe("CascadingBoardGenerator", () => {
 
             // Assert
             expect(stubSlotBoardGenerator.setRefillSymbols).toBeCalledWith([1], [2]);
+        });
+    });
+
+    describe("updateBoardConfig", () => {
+        beforeEach(() => {
+            cascadingBoardGenerator.initialize();
+            cascadingBoardGenerator.boardGenerator = stubSlotBoardGenerator;
+        });
+
+        describe("when configurations are not changed", () => {
+            describe("when difficulty NOT changed", () => {
+                it("should not update difficulty", () => {
+                    // Arrange
+                    const { mode: difficulty, multiplierBonus } = gameConfigs.cascadingSlotsConfig;
+
+                    // Act
+                    cascadingBoardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
+
+                    // Assert
+                    expect(stubSlotBoardGenerator.setDifficulty).not.toBeCalled();
+                });
+            });
+
+            describe("when multiplier bonus NOT changed", () => {
+                it("should not update multiplier config", () => {
+                    // Arrange
+                    const { mode: difficulty, multiplierBonus } = gameConfigs.cascadingSlotsConfig;
+
+                    // Act
+                    cascadingBoardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
+
+                    // Assert
+                    expect(stubSlotBoardGenerator.updateMultiplierConfig).not.toBeCalled();
+                });
+            });
+        });
+
+        describe("when configurations are changed", () => {
+            it("should update difficulty", () => {
+                // Arrange
+                const { multiplierBonus } = gameConfigs.cascadingSlotsConfig;
+                const newDifficulty = 2;
+
+                // Act
+                cascadingBoardGenerator.updateBoardConfig(newDifficulty, multiplierBonus.min, multiplierBonus.max);
+
+                // Assert
+                expect(stubSlotBoardGenerator.setDifficulty).toBeCalledWith(newDifficulty);
+            });
+
+            it("should update multiplier config", () => {
+                // Arrange
+                const { mode: difficulty } = gameConfigs.cascadingSlotsConfig;
+                const newMultiplier = { min: 30, max: 100 };
+
+                // Act
+                cascadingBoardGenerator.updateBoardConfig(difficulty, newMultiplier.min, newMultiplier.max);
+
+                // Assert
+                expect(stubSlotBoardGenerator.updateMultiplierConfig).toBeCalledWith(newMultiplier.min, newMultiplier.max);
+            });
         });
     });
 });
