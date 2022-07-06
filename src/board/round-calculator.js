@@ -44,8 +44,7 @@ export default class RoundCalculator {
 
             tumbles.push(nextTumble);
 
-            if (round.betwin >= maxWinPerRound) {
-                round.reachMaxWin = true;
+            if (round.reachMaxWin) {
                 break;
             }
         }
@@ -79,6 +78,7 @@ export default class RoundCalculator {
         }
 
         round.betwin = Math.min(round.actualBetwin, maxWinPerRound);
+        round.reachMaxWin = round.betwin >= maxWinPerRound;
     }
 
     countFreeSpin(round) {
