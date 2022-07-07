@@ -1,5 +1,5 @@
 import { stubMongoose, stub } from "jest-micro-auto-stub";
-import { gameConfigs } from "../../test-data";
+import { gameConfigs, definition } from "../../test-data";
 import SettleGameRoundConsumer from "../settle-game-round-consumer";
 import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
 import TumbleCalculator from "../../board/tumble-calculator";
@@ -19,10 +19,6 @@ const gameData = {
     settlementResultFromAdmin: {},
 };
 
-const definition = {
-    id: "",
-    name: "treasureland",
-};
 
 const userBetResultPublisher = stub(UserBetResultPublisher);
 const boardGenerator = {

@@ -72,4 +72,10 @@ const gameConfigs = {
     },
 };
 
-export { gameConfigs };
+const definition = {
+    id: 47,
+    name: "cascadinggame",
+};
+
+
+export { gameConfigs, definition };

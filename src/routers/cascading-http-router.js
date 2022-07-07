@@ -30,29 +30,33 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
 
     handleSetBoard(params, res) {
         try {
-            if (!params || !params.name || !params.result) {
-                this.logService.logError("receives a result cheating call with invalid params.");
-                res.send({ error: true });
+            if (this.appConfigs.sentry.env !== "PROD") {
+                if (!params || !params.name || !params.result) {
+                    this.logService.logError("receives a result cheating call with invalid params.");
+                    res.send({ error: true });
 
-                return;
+                    return;
+                }
+
+                this.logService.logWarning(`receives a result cheating call for ${params?.name} with the board as ${params.result}.`);
+
+                const preGeneratedResult = this.generateResultFromAdmin(params.result);
+                this.gameData.settlementResultFromAdmin[params.name] = preGeneratedResult;
+
+                res.send(
+                    preGeneratedResult.map((x) => ({
+                        icons: Object.entries(x.icons).map(([key, value]) => ({
+                            index: parseInt(key),
+                            ...value,
+                        })),
+                        multipliers: x.multipliers,
+                        board: x.newBoard,
+                        freeSpinCount: x.newBoard.filter((symbol) => symbol === defaultDefinition.specialSymbols.freeSpins).length,
+                    }))
+                );
+            } else {
+                res.send({ noPermission: true });
             }
-
-            this.logService.logWarning(`receives a result cheating call for ${params?.name} with the board as ${params.result}.`);
-
-            const preGeneratedResult = this.generateResultFromAdmin(params.result);
-            this.gameData.settlementResultFromAdmin[params.name] = preGeneratedResult;
-
-            res.send(
-                preGeneratedResult.map((x) => ({
-                    icons: Object.entries(x.icons).map(([key, value]) => ({
-                        index: parseInt(key),
-                        ...value,
-                    })),
-                    multipliers: x.multipliers,
-                    board: x.newBoard,
-                    freeSpinCount: x.newBoard.filter((symbol) => symbol === defaultDefinition.specialSymbols.freeSpins).length,
-                }))
-            );
         } catch (error) {
             this.logService.logError(error);
             res.send({ error: true });

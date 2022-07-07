@@ -70,6 +70,50 @@ describe("settle tumble", () => {
                 expect(result).toBeTrue();
             });
         });
+
+        describe("when reach max win", () => {
+            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+            round.settlementResult = {
+                tumbles: [
+                    {
+                        originalBoard: "9,8,8,3,0,8,8,9,8,0,0,10,9,0,8,3,10,0,0,8,8,8,8,3,3,8,0,8,9,0",
+                        newBoard: "1,2,2,9,3,1,0,1,2,9,2,1,0,10,9,0,10,1,3,10,0,2,0,3,3,1,0,0,1,9",
+                        multipliers: [1, 1],
+                        win: 500,
+                    },
+                    {
+                        originalBoard: "1,2,2,9,3,1,0,1,2,9,2,1,0,10,9,0,10,1,3,10,0,2,0,3,3,1,0,0,1,9",
+                        newBoard: "1,2,2,9,3,1,0,1,2,9,2,1,0,10,9,0,10,1,3,10,0,2,0,3,3,1,0,0,1,9",
+                        multipliers: [1, 15, 1],
+                    },
+                ],
+            };
+
+            it("should set reachMaxWin = true", () => {
+                //Arrange
+
+                const calculator = initCalculator();
+
+                //Act
+                calculator.settleTumble(round, 0, 1000);
+
+                //Assert
+                expect(round.reachMaxWin).toBeTrue();
+            });
+
+
+            it("betwin should be equal to max win per round", () => {
+                //Arrange
+
+                const calculator = initCalculator();
+
+                //Act
+                calculator.settleTumble(round, 0, 1000);
+
+                //Assert
+                expect(round.betwin).toEqual(1000);
+            });
+        });
     });
 
     describe("free spin", () => {
