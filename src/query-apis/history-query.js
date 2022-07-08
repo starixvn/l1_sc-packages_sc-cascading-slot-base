@@ -33,7 +33,7 @@ export default class HistoryQuery {
         };
 
         const rawBetLogs = await this.roundsRepository
-            .find(filter, roundProjection, { sort: { _id: -1 }, skip: numberOfSkippedBets, limit: pageSize })
+            .find(filter, roundProjection, { sort: { id: -1 }, skip: numberOfSkippedBets, limit: pageSize })
             .lean()
             .exec();
 
