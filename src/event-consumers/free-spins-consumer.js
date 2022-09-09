@@ -24,9 +24,8 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         const gainedFreeSpin = {
             uid: player.UID,
-            memberId: player.session?.memberId,
             name: memberName,
-            playerId: player.session?.memberId,
+            playerId: player.session?.playerId,
             ...newlyCachedFreeSpin,
         };
 

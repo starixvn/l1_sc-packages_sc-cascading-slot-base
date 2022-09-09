@@ -66,7 +66,6 @@ describe("freeSpinsConsumer", () => {
             // Assert
             expect(freeSpinsRepository.create).toBeCalledWith({
                 uid: player.UID,
-                memberId: player.session?.memberId,
                 name: player.profile.name,
                 playerId: player.session?.memberId,
                 id: gameData.freeSpinId,

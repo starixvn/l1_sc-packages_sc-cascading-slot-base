@@ -35,7 +35,7 @@
     "dependencies": {
         "mathjs": "^10.6.1",
         "sc-slot-board-generator": "1.0.0",
-        "sc-slot-game-base": "1.4.5"
+        "sc-slot-game-base": "1.4.7-beta.4"
     },
     "devDependencies": {
         "@babel/preset-env": "^7.12.11",

@@ -124,11 +124,9 @@ describe("cascadingProcessBetQueue", () => {
                     oddsByCounts: gameData.gameConfigs.cascadingSlotsConfig.oddsByCounts,
                     freeSpins: gameData.gameConfigs.cascadingSlotsConfig.freeSpins,
                 },
-                memberId: player.session.memberId,
                 playerId: player.session.memberId,
                 siteId: player.session.siteId,
                 currency: player.session.currencyName,
-                partnerId: player.session.partnerId,
                 operatorId: player.session.partnerId,
             });
         });
@@ -215,7 +213,10 @@ describe("cascadingProcessBetQueue", () => {
     function stubPlayer() {
         const userInfo = UserInfo();
         const userSession = UserSession();
-
+        userSession.operatorId = userSession.partnerId;
+        userSession.playerId = userSession.memberId;
+        userSession.playerName = userSession.memberName;
+        
         return {
             UID: userInfo.UID,
             profile: userInfo,
