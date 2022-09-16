@@ -11,9 +11,6 @@ import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./cro
 import { Table } from "sc-game-base";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
-    /**
-     * @param {Object} appConfigs
-     */
     register(appConfigs, definition, gameData) {
         this.registerBoardUtilities();
         super.register(appConfigs, definition, gameData);
