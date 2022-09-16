@@ -143,8 +143,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             time: time,
             operatorId: bet.operatorId,
             playerId: bet.playerId,
-            partnerId: bet.operatorId,
-            memberId: bet.playerId,
         };
         const settlementInfo = {
             redPlay: bet.freeSpin ? 0 : betResult.totalBetAmount,

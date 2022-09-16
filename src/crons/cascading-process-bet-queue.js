@@ -48,13 +48,11 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         };
 
         if (player.session) {
-            newBet.memberId = player.session.memberId;
             newBet.siteId = player.session.siteId;
-            newBet.partnerId = player.session.partnerId;
             newBet.currency = player.session.currencyName;
 
-            newBet.operatorId = player.session.partnerId;
-            newBet.playerId = player.session.memberId;
+            newBet.operatorId = player.session.operatorId;
+            newBet.playerId = player.session.playerId;
         }
 
         await this.roundsRepository.create(newBet);

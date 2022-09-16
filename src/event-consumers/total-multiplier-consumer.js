@@ -35,7 +35,7 @@ export default class TotalMultiplierConsumer {
         } else {
             await this.totalMultiplierRepository.create({
                 uid: player.UID,
-                playerId: player.session?.memberId,
+                playerId: player.session?.playerId,
                 name: player.profile.name,
                 ended: false,
                 time: new Date(),

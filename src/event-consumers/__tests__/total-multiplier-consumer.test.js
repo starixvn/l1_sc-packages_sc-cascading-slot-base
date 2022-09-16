@@ -218,6 +218,9 @@ describe("totalMultiplierConsumer", () => {
     function stubPlayer() {
         const userInfo = UserInfo();
         const userSession = UserSession();
+        userSession.operatorId = userSession.partnerId;
+        userSession.playerId = userSession.memberId;
+        userSession.playerName = userSession.memberName;
 
         return {
             UID: userInfo.UID,

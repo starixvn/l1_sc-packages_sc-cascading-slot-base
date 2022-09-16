@@ -24,7 +24,6 @@ export default class HistoryQuery {
             name: false,
             rate: false,
             exchangeRateId: false,
-            memberId: false,
             siteId: false,
             playerId: false,
             operatorId: false,
