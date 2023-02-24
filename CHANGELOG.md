@@ -1,3 +1,10 @@
+## [1.0.2](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.0.1...v1.0.2) (2023-02-24)
+
+
+### Bug Fixes
+
+* upgrade stable version ([ef5dd1e](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/ef5dd1e0085de27b760ac1f8286731962857d0c7))
+
 ## [1.0.1](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.0.0...v1.0.1) (2022-09-16)
 
 
