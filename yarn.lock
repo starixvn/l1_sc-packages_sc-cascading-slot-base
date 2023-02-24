@@ -7937,10 +7937,10 @@ sc-common@1.8.1:
     mongoose-long "^0.3.0"
     numeral "^2.0.6"
 
-sc-game-base@3.2.7-beta.10:
-  version "3.2.7-beta.10"
-  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-3.2.7-beta.10.tgz#047fa64c470edb2563111fb36a1cf82d5f1cd8d3"
-  integrity sha512-C9gpLtSEmXGn+tLI29w4tmkljZJ6f9McNUBwHmteGX+GC/ojDIX1hsK2pVXmrXTRsFHLKJc1sDm9Lbi8Uljj2w==
+sc-game-base@3.3.0:
+  version "3.3.0"
+  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-3.3.0.tgz#54bc50bd598c3f06f86fcd5359c85a0af2cbf5f6"
+  integrity sha512-T8UpNZV4m6QcSdVfYBOSkTJnns2qmliBuvf9S6x+DV6QxNyaM0dQWaHZE0P+CWceXIWgd7tiA7AiKk8Art7yUg==
   dependencies:
     awilix "^4.3.1"
     axios "^0.20.0"
@@ -7974,14 +7974,14 @@ sc-slot-board-generator@1.0.0:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@1.5.3-beta.0:
-  version "1.5.3-beta.0"
-  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-1.5.3-beta.0.tgz#22a5f327685fa2ceee73ed3a30c4b4e9f1fb8340"
-  integrity sha512-n2TUhNLfSUO7ex0Gm4mmeda2FpDkoiDr92Dd69lIuKa3MtaJ8CV4NeS0JKMf/qBvBvhn2UXcj5CJD1HsE47cpg==
+sc-slot-game-base@1.6.0:
+  version "1.6.0"
+  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-1.6.0.tgz#d5ee3ed1a21c3486929381358f0d7841315b0b91"
+  integrity sha512-7wGXSkCejY4DZonH/2uTELuN6Bh1Yq2101YySvlkPE95BCmYjjlfCniYcqE+at4iV6BJqKXhW+BvhRTUfpWRZg==
   dependencies:
     chance "^1.1.7"
     lodash "^4.17.20"
-    sc-game-base "3.2.7-beta.10"
+    sc-game-base "3.3.0"
 
 seedrandom@^3.0.5:
   version "3.0.5"
