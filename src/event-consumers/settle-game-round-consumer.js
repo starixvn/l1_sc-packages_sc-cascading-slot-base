@@ -1,5 +1,5 @@
-import { Core } from "sc-game-base";
 import { round as mathRound } from "mathjs";
+import { Core } from "sc-game-base";
 
 export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.SettleGameRoundConsumer {
     constructor({
@@ -102,7 +102,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         betResult.totalWin = round.betwin;
         betResult.netWin = round.betwin > 0 ? round.betwin - round.totalAmount : 0;
         betResult.totalLost = betResult.totalBetAmount > betResult.totalWin ? betResult.totalBetAmount - betResult.totalWin : 0;
-        betResult.bigWin = betResult.totalWin / bigWinRatio > betResult.totalBetAmount;
+        betResult.bigWin = betResult.totalWin / bigWinRatio >= betResult.totalBetAmount;
 
         return betResult;
     }
