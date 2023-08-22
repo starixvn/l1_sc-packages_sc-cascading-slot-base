@@ -1,5 +1,6 @@
 variables:
   PROJECT_NAME: sc-cascading-slot-base
+  DOCKER_REG_LOCAL_URL: hub.lumigame.com
 
 stages:
   - test
