@@ -1,3 +1,15 @@
+# [1.1.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.0.6...v1.1.0) (2023-08-22)
+
+
+### Bug Fixes
+
+* bigwin condition ([70a9e6b](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/70a9e6bc2cfbf3b68fa14202ea302933cbc26bf4))
+
+
+### Features
+
+* update sc-slot-board-generater ([66d4742](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/66d474296fbb965b89dc0f83c1fde20a045ef1ca))
+
 ## [1.0.6](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.0.5...v1.0.6) (2023-02-24)
 
 
