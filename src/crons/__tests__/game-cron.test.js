@@ -25,7 +25,6 @@ describe("gameCron", () => {
             cascadingSlotsConfig: {},
         },
     };
-    const bot = stub(Crons.SlotGameBot);
     const settleGameRoundConsumer = stub(EventConsumers.SettleGameRoundConsumer);
     const freeSpinsConsumer = stub(FreeSpinsConsumer);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
@@ -49,7 +48,6 @@ describe("gameCron", () => {
         gameCron = new CascadingGameCron({
             definition,
             gameData,
-            bot,
             settleGameRoundConsumer,
             freeSpinsConsumer,
             idCountersConsumer,
@@ -311,16 +309,6 @@ describe("gameCron", () => {
                 // Assert
                 expect(gameCron.checkGameStatus).toBeCalled();
             });
-
-            describe("when having bot", () => {
-                it("should reset bot", async () => {
-                    // Act
-                    await gameCron.proceed();
-
-                    // Assert
-                    expect(bot.reset).toBeCalled();
-                });
-            });
         });
 
         describe("when game is not disabled", () => {
@@ -333,16 +321,6 @@ describe("gameCron", () => {
 
                 // Assert
                 expect(gameData.remainingTime).toBe(4);
-            });
-
-            describe("when having bot", () => {
-                it("should call bot.run", async () => {
-                    // Act
-                    await gameCron.proceed();
-
-                    // Assert
-                    expect(bot.run).toBeCalled();
-                });
             });
         });
 

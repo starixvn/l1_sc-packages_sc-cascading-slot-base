@@ -6,7 +6,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
      * @param {Object} dependencies
      * @param {SlotGameDefinition} dependencies.definition
      * @param {SlotGameData} dependencies.gameData
-     * @param {SlotGameBot} dependencies.bot
      * @param {EventConsumers.SettleGameRoundConsumer} dependencies.settleGameRoundConsumer
      * @param {EventConsumers.FreeSpinsConsumer} dependencies.freeSpinsConsumer
      * @param {EventConsumers.IdCountersConsumer} dependencies.idCountersConsumer
@@ -24,7 +23,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
     constructor({
         definition,
         gameData,
-        bot,
         settleGameRoundConsumer,
         freeSpinsConsumer,
         idCountersConsumer,
@@ -46,7 +44,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         super({
             definition,
             gameData,
-            bot,
             settleGameRoundConsumer,
             gameStatusPublisher,
             runningRoundInfoPublisher,
@@ -114,12 +111,10 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
 
         if (this.gameData.remainingTime === durations.wholeRound) {
             await this.checkGameStatus();
-            this.bot && (await this.bot.reset());
         }
 
         if (!this.gameData.disabled) {
             this.gameData.remainingTime--;
-            this.bot && (await this.bot.run());
         }
 
         if (this.gameData.remainingTime < 0) {

@@ -16,9 +16,7 @@ const currencyGroupSetting = {
 const gameData = {
     gameConfigs,
     currencyGroupGames: [currencyGroupSetting],
-    settlementResultFromAdmin: {},
 };
-
 
 const userBetResultPublisher = stub(UserBetResultPublisher);
 const boardGenerator = {

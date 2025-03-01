@@ -3,11 +3,10 @@ import { SlotContainerRegistry } from "sc-slot-game-base";
 import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
 import { FreeSpinsConsumer, PlaceBetConsumer, TotalMultiplierConsumer, SettleGameRoundConsumer, InGameConsumer } from "./event-consumers";
-import HttpRouter from "./routers/cascading-http-router";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
 import { HistoryQuery } from "./query-apis";
-import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
+import { CascadingGameCron, CascadingProcessBetQueue } from "./crons";
 import { Table } from "sc-game-base";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
@@ -27,14 +26,6 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             tumbleCalculator: asClass(TumbleCalculator),
             roundCalculator: asClass(RoundCalculator).proxy(),
             boardGenerator: asClass(CascadingBoardGenerator).singleton(),
-        });
-    }
-
-    registerRouters() {
-        super.registerRouters();
-
-        this.container.register({
-            httpRouter: asClass(HttpRouter),
         });
     }
 
@@ -63,7 +54,6 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         super.registerCrons();
 
         this.container.register({
-            bot: asClass(CascadingBot).singleton().proxy(),
             gameCron: asClass(CascadingGameCron).singleton().proxy(),
             processBetQueue: asClass(CascadingProcessBetQueue).singleton().proxy(),
         });
