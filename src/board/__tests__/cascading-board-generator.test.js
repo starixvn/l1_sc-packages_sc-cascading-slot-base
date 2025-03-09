@@ -8,6 +8,7 @@ import Chance from "chance";
 import defaultDefinition from "../../board/default-definition";
 
 jest.mock("sc-common");
+jest.mock("node:crypto", () => require("crypto"), { virtual: true });
 
 describe("CascadingBoardGenerator", () => {
     let cascadingBoardGenerator;

@@ -11,6 +11,7 @@ import { when } from "jest-when";
 
 jest.mock("cron");
 jest.mock("sc-common");
+jest.mock("node:crypto", () => require("crypto"), { virtual: true });
 const chance = new Chance();
 
 describe("gameCron", () => {

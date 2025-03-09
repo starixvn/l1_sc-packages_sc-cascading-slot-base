@@ -4,6 +4,7 @@ import RoundCalculator from "../round-calculator";
 import TumbleCalculator from "../tumble-calculator";
 import { gameConfigs } from "../../test-data";
 
+jest.mock("node:crypto", () => require("crypto"), { virtual: true });
 const boardGenerator = stub(CascadingBoardGenerator);
 
 const tumbleCalculator = new TumbleCalculator();
@@ -100,7 +101,6 @@ describe("settle tumble", () => {
                 //Assert
                 expect(round.reachMaxWin).toBeTrue();
             });
-
 
             it("betwin should be equal to max win per round", () => {
                 //Arrange
