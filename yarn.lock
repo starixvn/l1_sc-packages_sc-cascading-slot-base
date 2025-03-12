@@ -8765,6 +8765,11 @@ sc-common@1.8.1:
     mongoose-long "^0.3.0"
     numeral "^2.0.6"
 
+sc-core-rng@^1.0.2:
+  version "1.0.2"
+  resolved "http://npm.lumigame.com/sc-core-rng/-/sc-core-rng-1.0.2.tgz"
+  integrity sha512-A/+UT9tTmLFvj8Eg9AbVIliNOPlVwQ2OYaQ3pbH1S7LFlVcbKTCLeqBG/9O0fZcDLDOO9e8aaJbaeyr4wLymEg==
+
 sc-game-base@9.0.0-beta.0:
   version "9.0.0-beta.0"
   resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-9.0.0-beta.0.tgz"
@@ -8793,12 +8798,13 @@ sc-semantic-release@^1.2.0:
   resolved "http://npm.lumigame.com/sc-semantic-release/-/sc-semantic-release-1.2.0.tgz"
   integrity sha512-izZqZiS8hL05cGzYbcR3+GZ1Oktr9rU1nIL05S9mZnEBm5nZfqzRkSpR2OHVJARjYsMI5dps0oUX1HjFV9x47w==
 
-sc-slot-board-generator@1.0.2-beta.1:
-  version "1.0.2-beta.1"
-  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-1.0.2-beta.1.tgz"
-  integrity sha512-0VM5gmWP+XQI3zVKfiWcOKCDktJNy+Hb73nseP/DTgvI0z7TLbbth/dtn2JararKoIV2ilNiE1M4fXU1wQnUxA==
+sc-slot-board-generator@1.0.2-beta.2:
+  version "1.0.2-beta.2"
+  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-1.0.2-beta.2.tgz"
+  integrity sha512-iVH2c7bMxInMVCwKcZCIxNC4dQFqk1/50wff2NfOlbNn6vbWINuibY8X3ZePZzSpsOjKrKyPeZm84I65yQWdqQ==
   dependencies:
     ramda "^0.28.0"
+    sc-core-rng "^1.0.2"
 
 sc-slot-game-base@9.0.0-beta.1:
   version "9.0.0-beta.1"

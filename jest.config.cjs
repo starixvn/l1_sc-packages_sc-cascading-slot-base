@@ -6,7 +6,7 @@ module.exports = async () => {
             "^.+\\.(js|ts)$": "babel-jest",
         },
         transformIgnorePatterns: [
-            "node_modules/(?!(sc-base-database|sc-common|sc-game-base|sc-base-apis|sc-api-client|jest-auto-fixture|sc-slot-game-base|sc-slot-board-generator|axios)/)",
+            "node_modules/(?!(sc-base-database|sc-common|sc-game-base|sc-base-apis|sc-api-client|jest-auto-fixture|sc-slot-game-base|sc-slot-board-generator|axios|sc-core-rng)/)",
         ],
         moduleNameMapper: {
             "^node:(.*)$": "$1",
