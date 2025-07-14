@@ -1,8 +1,9 @@
+import Chance from "chance";
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
-import Chance from "chance";
-import { FreeSpinsConsumer, TotalMultiplierConsumer } from "../index";
-import { SlotGameData, EventConsumers } from "sc-slot-game-base";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
+import { EventConsumers, SlotGameData } from "sc-slot-game-base";
+import { FreeSpinsConsumer } from "../index";
 
 describe("freeSpinsConsumer", () => {
     const chance = new Chance();
@@ -12,29 +13,26 @@ describe("freeSpinsConsumer", () => {
     /** @type {mongoose.Model}*/
     const freeSpinsRepository = stubMongoose(mongoose.Model);
 
-    /** @type {mongoose.Model}*/
-    const gameNotificationsRepository = stubMongoose(mongoose.Model);
-
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
-
-    const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
 
     const player = {
         profile: { name: chance.name_suffix() },
     };
 
+    const gameManagementApiClientFactory = stub(GameManagementApiClientFactory);
+    const gameManagementApiClient = {
+        gameNotifications: {
+            clearGameNotification: jest.fn(() => Promise.resolve({})),
+            updateGameNotification: jest.fn(() => Promise.resolve({})),
+        },
+    };
+    gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
+
     let consumer;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        consumer = new FreeSpinsConsumer(
-            chance.natural(),
-            gameData,
-            freeSpinsRepository,
-            gameNotificationsRepository,
-            idCountersConsumer,
-            totalMultiplierConsumer
-        );
+        consumer = new FreeSpinsConsumer(chance.natural(), gameData, freeSpinsRepository, idCountersConsumer, gameManagementApiClientFactory);
     });
 
     describe("gainFreeSpin", () => {

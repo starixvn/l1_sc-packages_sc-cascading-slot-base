@@ -1,11 +1,12 @@
-import CascadingProcessBetQueue from "../cascading-process-bet-queue";
-import { SlotGameData, EventConsumers } from "sc-slot-game-base";
-import { FreeSpinConsumer, SettleGameRoundConsumer, TotalMultiplierConsumer } from "../../event-consumers";
-import { stub, stubMongoose } from "jest-micro-auto-stub";
-import { logger } from "sc-common";
-import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
-import mongoose from "mongoose";
 import Chance from "chance";
+import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
+import { stub, stubMongoose } from "jest-micro-auto-stub";
+import mongoose from "mongoose";
+import { logger } from "sc-common";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
+import { EventConsumers, SlotGameData } from "sc-slot-game-base";
+import { FreeSpinConsumer, SettleGameRoundConsumer } from "../../event-consumers";
+import CascadingProcessBetQueue from "../cascading-process-bet-queue";
 
 describe("cascadingProcessBetQueue", () => {
     jest.mock("sc-common");
@@ -13,7 +14,6 @@ describe("cascadingProcessBetQueue", () => {
     const chance = new Chance();
     const freeSpinsConsumer = stub(FreeSpinConsumer);
     const settleGameRoundConsumer = stub(SettleGameRoundConsumer);
-    const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
     const placeBet = jest.fn();
     const roundsRepository = stubMongoose(mongoose.Model);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
@@ -22,6 +22,10 @@ describe("cascadingProcessBetQueue", () => {
     const player = stubPlayer();
     const definition = { id: chance.natural() };
     const baseMetrics = {};
+
+    const gameManagementApiClientFactory = stub(GameManagementApiClientFactory);
+    const gameManagementApiClient = {};
+    gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
     let consumer;
 
@@ -39,7 +43,7 @@ describe("cascadingProcessBetQueue", () => {
             idCountersConsumer,
             placeBetPublisher,
             baseMetrics,
-            totalMultiplierConsumer,
+            gameManagementApiClientFactory,
         });
     });
 
@@ -216,7 +220,7 @@ describe("cascadingProcessBetQueue", () => {
         userSession.operatorId = userSession.partnerId;
         userSession.playerId = userSession.memberId;
         userSession.playerName = userSession.memberName;
-        
+
         return {
             UID: userInfo.UID,
             profile: userInfo,

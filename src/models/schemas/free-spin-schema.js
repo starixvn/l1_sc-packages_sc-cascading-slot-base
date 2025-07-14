@@ -10,7 +10,7 @@ export default new mongoose.Schema({
     available: { type: Number, default: 0 },
     time: { type: Date, required: true },
     expiryTime: { type: Date, required: true },
-    playerId: { type: Number, required: true },
+    playerId: { type: String, required: true },
     betLevel: { type: Number, required: true },
     coinValue: { type: Number, require: true },
     betMultiplier: { type: Number, require: true },

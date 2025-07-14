@@ -1,6 +1,6 @@
-import { stub, stubMongoose } from "jest-micro-auto-stub";
-import mongoose from "mongoose";
+import { stub } from "jest-micro-auto-stub";
 import { BaseEventPublishers, RoundQuery } from "sc-game-base/src/core";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
 import { EventConsumers } from "sc-slot-game-base";
 import { FreeSpinsConsumer } from "sc-slot-game-base/src/event-consumers/free-spins-consumer";
 import SlotGameData from "sc-slot-game-base/src/slot-game-data";
@@ -12,11 +12,16 @@ const gameData = stubGameData();
 const publisher = stub(BaseEventPublishers);
 const roundQuery = stub(RoundQuery);
 
-const userInfosRepository = stubMongoose(mongoose.Model);
-const currencyGroupGamesRepository = stubMongoose(mongoose.Model);
-const totalMultiplierRepository = stubMongoose(mongoose.Model);
 const freeSpinsConsumer = stub(FreeSpinsConsumer);
 const getBalance = jest.fn();
+const gameManagementApiClientFactory = stub(GameManagementApiClientFactory);
+const gameManagementApiClient = {
+    users: {
+        setBalance: jest.fn(() => Promise.resolve({ isOk: true })),
+        getUserInfo: jest.fn(() => Promise.resolve({ isOk: true })),
+    },
+};
+gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
 function stubGameDefinition() {
     return new SlotGameDefinition({ id: 47 });
@@ -65,13 +70,10 @@ describe("InGameConsumer", () => {
             publisher,
             freeSpinsConsumer,
             getBalance,
-            userInfosRepository,
-            currencyGroupGamesRepository,
-            totalMultiplierRepository,
+            gameManagementApiClientFactory,
         });
 
         freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValueOnce(10);
-        userInfosRepository.findOne().lean().exec.mockReturnValueOnce({});
     });
 
     it("should inherit EventConsumers.InGameConsumer", async () => {
@@ -85,7 +87,7 @@ describe("InGameConsumer", () => {
                 // Arrange
                 const realPlayer = { session: { currencyGroupId: "1", currencyCode: "UUS", multiplier: 2 }, profile: { name: "player1" } };
                 freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce(null);
-
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
                 // Arrange
                 const expectedValue = {
                     gameConfigs: {
@@ -131,6 +133,8 @@ describe("InGameConsumer", () => {
                     session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
                     profile: { name: "player2" },
                 };
+
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
 
                 // Arrange
                 const expectedValue = {

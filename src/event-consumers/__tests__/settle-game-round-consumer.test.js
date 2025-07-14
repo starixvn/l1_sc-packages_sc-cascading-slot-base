@@ -1,13 +1,14 @@
-import { stubMongoose, stub } from "jest-micro-auto-stub";
-import { gameConfigs, definition } from "../../test-data";
-import SettleGameRoundConsumer from "../settle-game-round-consumer";
-import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
-import TumbleCalculator from "../../board/tumble-calculator";
+import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
+import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
 import defaultDefinition from "../../board/default-definition";
-import TotalMultiplierConsumer from "../total-multiplier-consumer";
 import RoundCalculator from "../../board/round-calculator";
+import TumbleCalculator from "../../board/tumble-calculator";
+import { definition, gameConfigs } from "../../test-data";
 import FreeSpinsConsumer from "../free-spins-consumer";
+import SettleGameRoundConsumer from "../settle-game-round-consumer";
+import TotalMultiplierConsumer from "../total-multiplier-consumer";
 
 const currencyGroupSetting = {
     groupId: "g1",
@@ -18,7 +19,6 @@ const gameData = {
     currencyGroupGames: [currencyGroupSetting],
     settlementResultFromAdmin: {},
 };
-
 
 const userBetResultPublisher = stub(UserBetResultPublisher);
 const boardGenerator = {
@@ -44,6 +44,14 @@ const player = {
 const roundsRepository = stubMongoose(mongoose.Model);
 const roundCalculator = new RoundCalculator({ boardGenerator, tumbleCalculator });
 
+const gameManagementApiClientFactory = stub(GameManagementApiClientFactory);
+const gameManagementApiClient = {
+    users: {
+        updateBalance: jest.fn(() => Promise.resolve({ isOk: true })),
+    },
+};
+gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
+
 function initConsumer() {
     return new SettleGameRoundConsumer({
         definition,
@@ -54,6 +62,7 @@ function initConsumer() {
         totalMultiplierConsumer,
         endGame,
         roundCalculator,
+        gameManagementApiClientFactory,
     });
 }
 
@@ -115,7 +124,6 @@ describe("settle round", () => {
                 await consumer.settleRound(player, 1);
 
                 //Assert
-                console.log(round.betwin);
                 expect(round.betwin).toEqual(currencyGroupSetting.maxWinPerRound * round.totalAmount);
                 expect(round.reachMaxWin).toBeTrue();
                 currencyGroupSetting.maxWinPerRound = 100;

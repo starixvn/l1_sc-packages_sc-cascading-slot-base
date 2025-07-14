@@ -25,9 +25,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
         };
 
-        await this.getBalance(realPlayer, true);
-
-        const user = await this.getUserInfo(realPlayer.UID);
+        const user = await this.getUserInfo(realPlayer);
         const { exchangeRates } = this.gameData;
         const { session } = realPlayer;
         const rate = exchangeRates.code[session.currencyCode] * session.multiplier;

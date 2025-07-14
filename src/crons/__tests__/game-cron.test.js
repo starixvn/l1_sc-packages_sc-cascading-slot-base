@@ -1,13 +1,14 @@
-import CascadingGameCron from "../cascading-game-cron";
-import { Crons, EventConsumers } from "sc-slot-game-base";
-import { stub, stubMongoose } from "jest-micro-auto-stub";
-import { FreeSpinsConsumer, TotalMultiplierConsumer } from "../../event-consumers";
-import { CascadingBoardGenerator } from "../../board";
-import { logger } from "sc-common";
-import mongoose from "mongoose";
-import cron from "cron";
 import Chance from "chance";
+import cron from "cron";
+import { stub, stubMongoose } from "jest-micro-auto-stub";
 import { when } from "jest-when";
+import mongoose from "mongoose";
+import { logger } from "sc-common";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
+import { Crons, EventConsumers } from "sc-slot-game-base";
+import { CascadingBoardGenerator } from "../../board";
+import { FreeSpinsConsumer, TotalMultiplierConsumer } from "../../event-consumers";
+import CascadingGameCron from "../cascading-game-cron";
 
 jest.mock("cron");
 jest.mock("sc-common");
@@ -42,6 +43,19 @@ describe("gameCron", () => {
     const partnerConfigRepository = stubMongoose(mongoose.Model);
     const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
     const boardGenerator = stub(CascadingBoardGenerator);
+    const gameManagementApiClientFactory = stub(GameManagementApiClientFactory);
+    const gameManagementApiClient = {
+        archiveStatus: {
+            getArchiveStatus: jest.fn(),
+        },
+        aggregation: {
+            getSettingForNewRound: jest.fn(),
+        },
+        exchangeRates: {
+            getExchangeRates: jest.fn(),
+        },
+    };
+    gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
     let gameCron;
 
@@ -67,6 +81,7 @@ describe("gameCron", () => {
             currencyRepository,
             totalMultiplierConsumer,
             boardGenerator,
+            gameManagementApiClientFactory,
         });
     });
 
