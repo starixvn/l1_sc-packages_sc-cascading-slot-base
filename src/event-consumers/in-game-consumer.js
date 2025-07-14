@@ -5,6 +5,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === realPlayer.session.currencyGroupId);
         const coinValues = settings?.coinValues;
         const maxWinPerRound = settings?.maxWinPerRound;
+        const defaultCoinValue = settings?.defaultCoinValue;
 
         const { betLevels, betMultiplier, oddsByCounts, freeSpins: freeSpinsConfig } = this.gameData.gameConfigs.cascadingSlotsConfig;
         const gameConfigs = {
@@ -13,6 +14,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             betLevels,
             betMultiplier,
             odds: { symbols: oddsByCounts, freeSpins: freeSpinsConfig },
+            defaultCoinValue,
         };
 
         const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);

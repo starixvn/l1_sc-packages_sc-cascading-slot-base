@@ -118,13 +118,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         }
     }
 
-    async updateCurrencyGroupGames() {
-        this.gameData.currencyGroupGames = await this.currencyGroupGamesRepository
-            .find({ gameId: this.definition.id, enabled: true }, "groupId minBet maxBet maxBetPerChoices chips coinValues maxWinPerRound")
-            .lean()
-            .exec();
-    }
-
     async checkGameStatus() {
         await super.checkGameStatus();
 
