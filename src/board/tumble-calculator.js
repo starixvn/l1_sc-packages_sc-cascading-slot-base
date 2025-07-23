@@ -23,7 +23,7 @@ export default class TumbleCalculator {
 
     calculateIconOdds(boardArray, gameOdds) {
         const occurences = boardArray
-            .filter((x) => x !== defaultDefinition.specialSymbols.multiplier)
+            .filter((x) => x !== defaultDefinition.specialSymbols.multiplier && x !== defaultDefinition.specialSymbols.freeSpins)
             .reduce((map, current) => map.set(current, (map.get(current) || 0) + 1), new Map());
 
         const { oddsByCounts } = gameOdds;

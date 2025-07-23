@@ -81,19 +81,26 @@ export default class RoundCalculator {
         round.reachMaxWin = round.betwin >= maxWinPerRound;
     }
 
-    countFreeSpin(round) {
+    countFreeSpin(round, maxWinPerRound = Number.MAX_VALUE) {
         const { settlementResult } = round;
         const { tumbles } = settlementResult;
         const lastBoard = tumbles[tumbles.length - 1].originalBoard.split(",").map((x) => parseInt(x));
         const freeSpinCount = lastBoard.filter((x) => x === defaultDefinition.specialSymbols.freeSpins).length;
 
-        const { freeSpins } = round.odds;
+        const { freeSpins, oddsByCounts } = round.odds;
         const freeSpinOddsConfig = round.freeSpin ? freeSpins.additionalOdds : freeSpins.initialOdds;
         const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
+        const freeSpinOddsByCounts = oddsByCounts.find((x) => freeSpinCount >= x.count && freeSpinCount <= x.to)?.odds;
+        const winAmount = freeSpinOddsByCounts ? freeSpinOddsByCounts * round.coinValue * round.betLevel : 0;
+
+        round.actualBetwin += winAmount;
+        round.betwin = Math.min(round.actualBetwin, maxWinPerRound);
+        round.reachMaxWin = round.betwin >= maxWinPerRound;
 
         settlementResult.freeSpins = {
-            count: round.reachMaxWin ? 0 : freeSpinCount,
-            odds: round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds),
+            count: freeSpinCount,
+            odds: Math.max(0, ...freeSpinOdds),
+            win: winAmount,
         };
     }
 }
