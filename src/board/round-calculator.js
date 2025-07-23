@@ -90,8 +90,9 @@ export default class RoundCalculator {
         const { freeSpins, oddsByCounts } = round.odds;
         const freeSpinOddsConfig = round.freeSpin ? freeSpins.additionalOdds : freeSpins.initialOdds;
         const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
-        const freeSpinOddsByCounts = oddsByCounts.find((x) => freeSpinCount >= x.count && freeSpinCount <= x.to)?.odds;
-        const winAmount = freeSpinOddsByCounts ? freeSpinOddsByCounts * round.coinValue * round.betLevel : 0;
+        const freeSpinOddsByCounts =
+            oddsByCounts[defaultDefinition.specialSymbols.freeSpins]?.find((x) => freeSpinCount >= x.count && freeSpinCount <= x.to)?.odds ?? 0;
+        const winAmount = freeSpinOddsByCounts * round.coinValue * round.betLevel;
 
         round.actualBetwin += winAmount;
         round.betwin = Math.min(round.actualBetwin, maxWinPerRound);
