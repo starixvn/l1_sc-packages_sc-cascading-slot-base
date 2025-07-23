@@ -1,7 +1,27 @@
 import { helpers } from "sc-common";
-import { Core } from "sc-game-base";
 
 export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
+    handlePromotionLogic(player, payload) {
+        const currentDateTime = new Date();
+        const freeSpinsOfPlayer = this.gameData.ingame[player.profile.name]?.freeSpins ?? [];
+        const soonestExpiredFreeSpinSet = freeSpinsOfPlayer.find((freeSpin) => freeSpin.available > 0 && freeSpin.expiryTime > currentDateTime);
+        const freeSpinExtra = soonestExpiredFreeSpinSet && soonestExpiredFreeSpinSet.promotionId ? true : false;
+        const hasPromotion = player.promotion !== null && player.promotion && player.promotion.isClaimed;
+        const hasFreeSpin = freeSpinExtra || !soonestExpiredFreeSpinSet;
+        const usePromotion = hasPromotion && payload.freeSpin && hasFreeSpin;
+        player.usePromotion = usePromotion;
+
+        if (usePromotion) {
+            const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+            Object.assign(payload, {
+                betLevel: cascadingSlotsConfig.betLevels[0],
+                coinValue: player.promotion.coinValue,
+                promotionId: player.promotion.promotionId,
+                usePromotion: true,
+            });
+        }
+    }
+
     consume(player, payload) {
         Object.assign(payload, {
             roundId: payload.roundId ?? this.gameData.roundId,
@@ -9,6 +29,8 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
             coinValue: payload.coinValue,
             freeSpin: payload.freeSpin ?? false,
         });
+
+        this.handlePromotionLogic(player, payload);
 
         const name = player.profile.name;
         if (!this.validateBetRequest(player, payload)) {
@@ -31,11 +53,6 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
     }
 
     validateBetRequest(player, payload) {
-        const isValid = payload.freeSpin || (payload.betLevel && payload.coinValue);
-        if (!isValid) {
-            return false;
-        }
-
         const criteria = this.composeValidationCriteria(player, payload);
         const failedCriterion = criteria.find((criterion) => criterion.failure);
 
@@ -51,7 +68,9 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
     composeValidationCriteria(player, payload) {
         const bettingTimeValidationCriteria = this.composeBettingTimeValidationCriteria();
         const betAmountValidationCriteria = this.composeBetAmountValidationCriteria(player, payload);
-        return bettingTimeValidationCriteria.concat(betAmountValidationCriteria);
+        const promotionValidationCriteria = this.composePromotionValidationCriteria(player);
+
+        return bettingTimeValidationCriteria.concat(betAmountValidationCriteria, promotionValidationCriteria);
     }
 
     composeBettingTimeValidationCriteria() {

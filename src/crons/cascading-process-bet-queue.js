@@ -1,3 +1,4 @@
+import { round } from "mathjs";
 import { Crons } from "sc-slot-game-base";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
@@ -16,15 +17,14 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.betMultiplier = betMultiplier;
         }
 
-        betInfo.amount = betInfo.betLevel * betInfo.coinValue;
-        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier).toFixed(2));
-        betInfo.contributionRate = parseFloat(contributionRate.toFixed(4));
-        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount).toFixed(4));
+        betInfo.totalAmount = round(betInfo.betLevel * betInfo.coinValue * betInfo.betMultiplier, 2);
+        betInfo.contributionRate = round(contributionRate, 4);
+        betInfo.contributionAmount = round(contributionRate * betInfo.totalAmount, 4);
 
         return betInfo;
     }
 
-    async upsertBet(player, roundId, bet, rate) {
+    async upsertBet(player, roundId, bet, rate, applicableInterceptors) {
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
 
         const newBet = {
@@ -36,7 +36,6 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             freeSpin: bet.freeSpin,
             betLevel: bet.betLevel,
             coinValue: bet.coinValue,
-            bet: bet.amount,
             betMultiplier: bet.betMultiplier,
             totalAmount: bet.totalAmount,
             rate: rate,
@@ -47,12 +46,21 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             },
         };
 
+        if (applicableInterceptors) {
+            newBet = this.executeInterceptorTransform("enhanceBetRecord", applicableInterceptors, {
+                betRecord: newBet,
+                bet,
+            });
+        }
+
         if (player.session) {
             newBet.siteId = player.session.siteId;
             newBet.currency = player.session.currencyName;
 
             newBet.operatorId = player.session.operatorId;
             newBet.playerId = player.session.playerId;
+            newBet.appType = player.session.system;
+            newBet.siteName = player.session.siteName;
         }
 
         await this.roundsRepository.create(newBet);

@@ -4,6 +4,7 @@ export default new mongoose.Schema({
     id: { type: Number, required: true },
     name: { type: String, required: true },
     siteId: { type: String },
+    siteName: { type: String },
     uid: { type: String },
 
     coinValue: { type: Number, default: 0 },
@@ -31,4 +32,6 @@ export default new mongoose.Schema({
 
     operatorId: { type: String, require: true },
     playerId: { type: String },
+    promotionId: { type: String },
+    appType: { type: Number },
 });

@@ -20,6 +20,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             betLevel,
             coinValue,
             betMultiplier: this.gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
+            ...(player.promotion && player.promotion.isClaimed && { promotionId: player.promotion.promotionId }),
         };
 
         const gainedFreeSpin = {
@@ -36,6 +37,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[memberName].freeSpins = this.gameData.ingame[memberName].freeSpins ?? [];
 
             this.gameData.ingame[memberName].freeSpins.push(newlyCachedFreeSpin);
+            this.updatePromotionFreeSpins(player, newlyCreatedFreeSpin);
         }
     }
 }
