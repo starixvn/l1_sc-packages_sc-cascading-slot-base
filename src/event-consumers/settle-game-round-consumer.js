@@ -50,14 +50,14 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async processSpinning(player, round) {
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
-        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * round.totalAmount, 2);
+        const baseBetAmount = round.coinValue * round.betLevel * round.betMultiplier;
+        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * baseBetAmount, 2);
 
-        round = this.roundCalculator.processSpinning(
-            round,
-            currentTotalMultiplier,
-            maxWinPerRound,
-            this.gameData.settlementResultFromAdmin[player.profile.name]
-        );
+        const presetBoard = round.buyFreeSpin
+            ? this.freeSpinsConsumer.getBuyFreeSpinBoard()
+            : this.gameData.settlementResultFromAdmin[player.profile.name];
+
+        round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, presetBoard);
 
         if (round.freeSpin && round.betwin > 0 && round.multiplier > 0 && round.settlementResult.tumbles.length > 1) {
             await this.totalMultiplierConsumer.increaseTotalMultiplier(player, { roundId: round.id, multiplier: round.multiplier });
@@ -67,16 +67,16 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     async processFreeSpins(player, round) {
-        const { id, settlementResult } = round;
+        const { id, settlementResult, coinValue, betLevel, betMultiplier } = round;
         if (settlementResult.freeSpins?.odds > 0) {
             await this.freeSpinsConsumer.gainFreeSpin(
                 player,
                 {
                     roundId: id,
-                    totalAmount: round.totalAmount,
-                    coinValue: round.coinValue,
-                    betLevel: round.betLevel,
-                    betMultiplier: round.betMultiplier,
+                    totalAmount: coinValue * betLevel * betMultiplier,
+                    coinValue,
+                    betLevel,
+                    betMultiplier,
                     numberOfFreeSpins: settlementResult.freeSpins.odds,
                 },
                 this.definition.freeSpinLiveSeconds

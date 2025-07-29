@@ -1,6 +1,15 @@
+import Chance from "chance";
 import { EventConsumers } from "sc-slot-game-base";
+import defaultDefinition from "../board/default-definition";
 
 export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer {
+    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer) {
+        super(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
+
+        this.chance = new Chance();
+        this.buyFreeSpinSymbols = [0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((symbol) => Array(7).fill(symbol));
+    }
+
     async gainFreeSpin(player, { roundId, totalAmount, betLevel, coinValue, numberOfFreeSpins }, timeToLive) {
         const createdTime = new Date();
         const expiryTime = new Date(createdTime.getTime()).setSeconds(createdTime.getSeconds() + timeToLive);
@@ -37,5 +46,23 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
             this.gameData.ingame[memberName].freeSpins.push(newlyCachedFreeSpin);
         }
+    }
+
+    getBuyFreeSpinBoard() {
+        return [
+            {
+                newBoard: this.chance.shuffle(
+                    this.chance
+                        .pickset(this.buyFreeSpinSymbols, 26)
+                        .concat([
+                            defaultDefinition.specialSymbols.freeSpins,
+                            defaultDefinition.specialSymbols.freeSpins,
+                            defaultDefinition.specialSymbols.freeSpins,
+                            defaultDefinition.specialSymbols.freeSpins,
+                        ])
+                ),
+                multipliers: [],
+            },
+        ];
     }
 }

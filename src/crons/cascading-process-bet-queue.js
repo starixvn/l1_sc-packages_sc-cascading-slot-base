@@ -1,6 +1,14 @@
 import { Crons } from "sc-slot-game-base";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
+    async proceedBet(player, payload) {
+        if (payload.buyFreeSpin && this.freeSpinsConsumer.hasFreeSpin(player)) {
+            this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.cannotPlaceBet } });
+        } else {
+            await super.proceedBet(player, payload);
+        }
+    }
+
     async generateBetInfo(payload, freeSpinInfo) {
         const betInfo = { ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
@@ -16,10 +24,12 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.betMultiplier = betMultiplier;
         }
 
+        const buyFreeSpinRate = payload.buyFreeSpin ? cascadingSlotsConfig.buyFreeSpinRate : 1;
+
         betInfo.amount = betInfo.betLevel * betInfo.coinValue;
-        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier).toFixed(2));
+        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier * buyFreeSpinRate).toFixed(2));
         betInfo.contributionRate = parseFloat(contributionRate.toFixed(4));
-        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount).toFixed(4));
+        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount * buyFreeSpinRate).toFixed(4));
 
         return betInfo;
     }
@@ -39,6 +49,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             bet: bet.amount,
             betMultiplier: bet.betMultiplier,
             totalAmount: bet.totalAmount,
+            buyFreeSpin: bet.buyFreeSpin,
             rate: rate,
             exchangeRateId: this.gameData.exchangeRates.exId,
             odds: {
