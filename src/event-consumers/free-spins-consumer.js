@@ -37,7 +37,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[memberName].freeSpins = this.gameData.ingame[memberName].freeSpins ?? [];
 
             this.gameData.ingame[memberName].freeSpins.push(newlyCachedFreeSpin);
-            this.updatePromotionFreeSpins(player, newlyCreatedFreeSpin);
+            this.updatePlayerPromotionFreeSpins(player, newlyCreatedFreeSpin);
         }
     }
 }

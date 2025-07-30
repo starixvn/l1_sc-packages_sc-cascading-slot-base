@@ -1,24 +1,34 @@
 import { helpers } from "sc-common";
+import { EventConsumers } from "sc-slot-game-base";
 
-export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
+export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
     handlePromotionLogic(player, payload) {
         const currentDateTime = new Date();
         const freeSpinsOfPlayer = this.gameData.ingame[player.profile.name]?.freeSpins ?? [];
-        const soonestExpiredFreeSpinSet = freeSpinsOfPlayer.find((freeSpin) => freeSpin.available > 0 && freeSpin.expiryTime > currentDateTime);
+        const soonestExpiredFreeSpinSet = freeSpinsOfPlayer.find(
+            (freeSpin) => freeSpin.available > 0 && new Date(freeSpin.expiryTime) > currentDateTime
+        );
         const freeSpinExtra = soonestExpiredFreeSpinSet && soonestExpiredFreeSpinSet.promotionId ? true : false;
-        const hasPromotion = player.promotion !== null && player.promotion && player.promotion.isClaimed;
-        const hasFreeSpin = freeSpinExtra || !soonestExpiredFreeSpinSet;
-        const usePromotion = hasPromotion && payload.freeSpin && hasFreeSpin;
-        player.usePromotion = usePromotion;
 
-        if (usePromotion) {
-            const { cascadingSlotsConfig } = this.gameData.gameConfigs;
-            Object.assign(payload, {
-                betLevel: cascadingSlotsConfig.betLevels[0],
-                coinValue: player.promotion.coinValue,
-                promotionId: player.promotion.promotionId,
-                usePromotion: true,
-            });
+        if (player.promotion) {
+            this.updatePlayerPromotionFreeSpins(player, soonestExpiredFreeSpinSet);
+        }
+
+        if (payload.freeSpin && (freeSpinExtra || !soonestExpiredFreeSpinSet)) {
+            const usePromotion = player.promotion && player.promotion.isClaimed;
+            player.usePromotion = usePromotion;
+
+            if (usePromotion) {
+                const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+                Object.assign(payload, {
+                    betLevel: cascadingSlotsConfig.betLevels[0],
+                    coinValue: player.promotion.betLevel,
+                    promotionId: player.promotion.promotionId,
+                    usePromotion: true,
+                });
+            }
+        } else {
+            player.usePromotion = false;
         }
     }
 

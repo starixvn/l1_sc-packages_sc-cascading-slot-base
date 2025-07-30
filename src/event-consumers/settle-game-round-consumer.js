@@ -14,6 +14,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         totalMultiplierConsumer,
         roundCalculator,
         gameManagementApiClientFactory,
+        promotionBetInterceptor,
     }) {
         super({
             definition,
@@ -29,6 +30,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         this.freeSpinsConsumer = freeSpinsConsumer;
         this.totalMultiplierConsumer = totalMultiplierConsumer;
         this.roundCalculator = roundCalculator;
+        this.promotionBetInterceptor = promotionBetInterceptor;
     }
 
     async settleRound(player, roundId) {
@@ -43,9 +45,12 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             const betResult = this.calculateBetResult(round);
 
             await round.save();
-            await this.callEndGame(round, roundId, round.endTime, betResult);
+
+            const metaData = this.createMetadata({ bet: round, settlementResult: round.settlementResult, result: round.result });
+            await this.callEndGame(round, roundId, round.endTime, betResult, metaData);
             await this.processFreeSpins(player, round);
             await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(player, round, betResult));
+            await this.promotionBetInterceptor.endPromotionEvent({ player });
         }
     }
 

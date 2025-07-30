@@ -1,9 +1,9 @@
-import { Core } from "sc-game-base";
-import { UserInfo, UserSession, GameConfig } from "jest-auto-fixture/src/models";
-import { stub } from "jest-micro-auto-stub";
 import Chance from "chance";
-import { PlaceBetConsumer } from "../index";
+import { GameConfig, UserInfo, UserSession } from "jest-auto-fixture/src/models";
+import { stub } from "jest-micro-auto-stub";
 import { helpers } from "sc-common";
+import { Core } from "sc-game-base";
+import { PlaceBetConsumer } from "../index";
 
 describe("PlaceBetConsumer", () => {
     const chance = new Chance();
@@ -24,7 +24,7 @@ describe("PlaceBetConsumer", () => {
         const defaultGameData = new Core.GameData();
         defaultGameData.remainingTime = 20;
         defaultGameData.gameConfigs = GameConfig();
-        defaultGameData.gameConfigs.cascadingSlotsConfig = {};
+        defaultGameData.gameConfigs.cascadingSlotsConfig = { betLevels: [] };
         defaultGameData.currencyGroupGames = [
             {
                 groupId: "1",

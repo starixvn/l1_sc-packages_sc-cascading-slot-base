@@ -32,7 +32,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         const { session } = realPlayer;
         const rate = exchangeRates.code[session.currencyCode] * session.multiplier;
 
-        return {
+        const payload = {
             gameConfigs,
             freeSpins,
             totalMultiplier: this.gameData.ingame[realPlayer.profile.name]?.totalMultiplier ?? 0,
@@ -42,5 +42,24 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
                 multiplier: session.multiplier,
             },
         };
+
+        if (realPlayer.promotion && !realPlayer.promotionTOProgress) {
+            payload.promotion = realPlayer.promotion;
+        }
+
+        if (realPlayer.promotionTOProgress) {
+            payload.promotionTOProgress = {
+                totalTO: realPlayer.promotionTOProgress.totalTurnover,
+                minTO: realPlayer.promotionTOProgress.minRequiredTurnover,
+                remainTO: realPlayer.promotionTOProgress.remainingTO,
+                progress: realPlayer.promotionTOProgress.progressPercentage,
+                canClaim: realPlayer.promotionTOProgress.canClaim,
+                win: realPlayer.promotionTOProgress.totalWinAmount,
+                expire: realPlayer.promotionTOProgress.claimExpirationDate,
+                promotionId: realPlayer.promotion.promotionId,
+            };
+        }
+
+        return payload;
     }
 }
