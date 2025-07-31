@@ -22,7 +22,7 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
                 const { cascadingSlotsConfig } = this.gameData.gameConfigs;
                 Object.assign(payload, {
                     betLevel: cascadingSlotsConfig.betLevels[0],
-                    coinValue: player.promotion.betLevel,
+                    coinValue: player.promotion.coinValue,
                     promotionId: player.promotion.promotionId,
                     usePromotion: true,
                 });
