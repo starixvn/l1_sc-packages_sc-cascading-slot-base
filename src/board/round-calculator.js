@@ -99,8 +99,8 @@ export default class RoundCalculator {
         round.reachMaxWin = round.betwin >= maxWinPerRound;
 
         settlementResult.freeSpins = {
-            count: freeSpinCount,
-            odds: Math.max(0, ...freeSpinOdds),
+            count: round.reachMaxWin ? 0 : freeSpinCount,
+            odds: round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds),
             win: winAmount,
         };
     }
