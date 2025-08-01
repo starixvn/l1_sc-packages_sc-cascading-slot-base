@@ -97,10 +97,11 @@ export default class RoundCalculator {
         round.actualBetwin += winAmount;
         round.betwin = Math.min(round.actualBetwin, maxWinPerRound);
         round.reachMaxWin = round.betwin >= maxWinPerRound;
+        const winFreeSpin = round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds);
 
         settlementResult.freeSpins = {
-            count: round.reachMaxWin ? 0 : freeSpinCount,
-            odds: round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds),
+            count: winAmount > 0 || winFreeSpin > 0 ? freeSpinCount : 0,
+            odds: winFreeSpin,
             win: winAmount,
         };
     }
