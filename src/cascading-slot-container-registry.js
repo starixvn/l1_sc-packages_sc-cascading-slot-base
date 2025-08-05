@@ -5,7 +5,14 @@ import defaultDefinition from "./board/default-definition";
 import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
 import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
-import { FreeSpinsConsumer, InGameConsumer, PlaceBetConsumer, SettleGameRoundConsumer, TotalMultiplierConsumer } from "./event-consumers";
+import {
+    FreeSpinsConsumer,
+    InGameConsumer,
+    PlaceBetConsumer,
+    SettleGameRoundConsumer,
+    TotalMultiplierConsumer,
+    UserSignInConsumer,
+} from "./event-consumers";
 import { HistoryQuery } from "./query-apis";
 import HttpRouter from "./routers/cascading-http-router";
 
@@ -46,6 +53,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             totalMultiplierConsumer: asClass(TotalMultiplierConsumer).singleton(),
             freeSpinsConsumer: asClass(FreeSpinsConsumer).singleton(),
             inGameConsumer: asClass(InGameConsumer).singleton().proxy(),
+            userSignInConsumer: asClass(UserSignInConsumer).singleton().proxy(),
         });
     }
 
