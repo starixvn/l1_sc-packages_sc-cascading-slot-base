@@ -2284,6 +2284,13 @@
   dependencies:
     axios "^1.6.0"
 
+"@sc/game-promotion-api-client@^1.0.1-beta.24":
+  version "1.0.1-beta.24"
+  resolved "https://npm.lumigame.com/@sc/game-promotion-api-client/-/game-promotion-api-client-1.0.1-beta.24.tgz#87d335199c8bd2d397439d34bd9c0cf372fb8919"
+  integrity sha512-CNL6RuDIkvl62JBYgEW7qsrTPei1zDauPuCB7WscNtk8PNYw6sPjyQj0+pFFk5tW9pxNss7eooQAvO0o6mcwqQ==
+  dependencies:
+    axios "^1.6.0"
+
 "@semantic-release/changelog@^5.0.1":
   version "5.0.1"
   resolved "http://npm.lumigame.com/@semantic-release%2fchangelog/-/changelog-5.0.1.tgz"
@@ -9366,12 +9373,12 @@ sc-common@1.8.1:
     mongoose-long "^0.3.0"
     numeral "^2.0.6"
 
-sc-game-base@6.0.0-beta.86:
-  version "6.0.0-beta.86"
-  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.0.0-beta.86.tgz#ce26fb35d50152e645942e67c5e08bd3975831ed"
-  integrity sha512-ymHbuQ98m9ekXe8pV+i4MSwK/XW2kqgw32HsXxsk/u0FW+NteLUowbGgER8ZeRWhX1EVfVMIkgvxItsYRDXJ+Q==
+sc-game-base@6.0.0-beta.92:
+  version "6.0.0-beta.92"
+  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.0.0-beta.92.tgz#d45f2f5eeead6672961529761898ea54ae68b78c"
+  integrity sha512-WQ2o6aAYr7szGTazIbaNWBiYiE0LhiUS0ZD07wrbnXUf/27azf6OYpCziciZdM3Vgh3yPs6Lg9WTGRU7pRPmrQ==
   dependencies:
-    "@sc/game-promotion-api-client" "^1.0.1-beta.23"
+    "@sc/game-promotion-api-client" "^1.0.1-beta.24"
     awilix "^8.0.0"
     axios "^1.0.0"
     chance "^1.1.7"
@@ -9456,15 +9463,15 @@ sc-slot-board-generator@1.0.1:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@2.3.0-beta.123:
-  version "2.3.0-beta.123"
-  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-2.3.0-beta.123.tgz#efc14716f7a1075fea83eeec206f32bf83ee2295"
-  integrity sha512-1H0Qz+q2Vuy6WkOVxK1rRzktaOCy7Qffrrn6xLpus6WgTSHi5x4XE7jC6PHcbZsGRcldIoPoc8Cappb/qObQHw==
+sc-slot-game-base@2.3.0-beta.129:
+  version "2.3.0-beta.129"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-2.3.0-beta.129.tgz#c83c927387d6b2a8d2b470f76e20512fefd29bd0"
+  integrity sha512-3Q5JBQsZpRraygxmCvBRAPIIx3I3JZPuJqxHSyJAVMLRKUJtoBF1yX3t4U0UB3qh+Cf1+Wb32WqsdnEsrwMDuw==
   dependencies:
     "@sc/game-promotion-api-client" "^1.0.1-beta.23"
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "6.0.0-beta.86"
+    sc-game-base "6.0.0-beta.92"
 
 seedrandom@^3.0.5:
   version "3.0.5"
