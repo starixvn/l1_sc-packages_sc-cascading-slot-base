@@ -1,6 +1,6 @@
-import { Core } from "sc-game-base";
+import { Table } from "sc-game-base";
 
-export default class UserSignInConsumer extends Core.BaseEventConsumers.UserSignInConsumer {
+export default class UserSignInConsumer extends Table.EventConsumers.TableUserSignInConsumer {
     createClaimedPromotionData(promotion, totalWin, promotionTOProgress = null) {
         const data = super.createClaimedPromotionData(promotion, totalWin, promotionTOProgress);
         data.promotion.betLevel = this.getDefaultBetLevel();
