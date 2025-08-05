@@ -71,6 +71,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             );
         }
 
+        this.checkPromotionReadiness();
         await this.loadUnsettledBetsToIngame();
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload();
