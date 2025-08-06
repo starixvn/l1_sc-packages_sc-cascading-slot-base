@@ -3,8 +3,6 @@ import { Crons } from "sc-slot-game-base";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
     async generateBetInfo(payload, freeSpinInfo) {
-        console.log("payload", payload);
-
         const betInfo = { ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
         const contributionRate = cascadingSlotsConfig.jackpot ? cascadingSlotsConfig.jackpot.playerContributionRatio : 0;
@@ -68,16 +66,27 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         await this.roundsRepository.create(newBet);
     }
 
-    async handleSuccessBet(player, balance, roundId, bet) {
+    async handleSuccessBet(player, balance, roundId, bet, applicableInterceptors) {
         if (bet.freeSpin) {
             await this.freeSpinsConsumer.useFreeSpin(player);
         }
 
         const rate = this.calculateCurrencyRate(player.session);
 
-        await this.upsertBet(player, roundId, bet, rate);
+        await this.upsertBet(player, roundId, bet, rate, applicableInterceptors);
         this.notifyPlacingBetResult(player, balance, bet, rate);
 
         await this.settleGameRoundConsumer.settleRound(player, roundId);
+
+        if (applicableInterceptors) {
+            bet.roundId = roundId;
+            bet.betWin = betWin;
+
+            await this.executeInterceptorEvent("afterSuccessEvent", applicableInterceptors, {
+                player,
+                bet,
+                balance,
+            });
+        }
     }
 }
