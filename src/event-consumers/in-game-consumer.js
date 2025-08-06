@@ -17,15 +17,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             defaultCoinValue,
         };
 
-        const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);
-        const soonestExpiredFreeSpin = this.freeSpinsConsumer.getSoonestExpiredFreeSpinSet(realPlayer);
-
-        const freeSpins = {
-            total: totalOfFreeSpins,
-            betLevel: soonestExpiredFreeSpin?.betLevel,
-            coinValue: soonestExpiredFreeSpin?.coinValue,
-            betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
-        };
+        const freeSpins = this.getAvailableFreeSpins(realPlayer);
 
         const user = await this.getUserInfo(realPlayer);
         const { exchangeRates } = this.gameData;
@@ -61,5 +53,19 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         }
 
         return payload;
+    }
+
+    getAvailableFreeSpins(realPlayer) {
+        const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);
+        const soonestExpiredFreeSpin = this.freeSpinsConsumer.getSoonestExpiredFreeSpinSet(realPlayer);
+        const freeSpin = this.freeSpinsConsumer.getLatestExpiredFreeSpinSet(realPlayer);
+
+        return {
+            total: totalOfFreeSpins,
+            betLevel: soonestExpiredFreeSpin?.betLevel,
+            coinValue: soonestExpiredFreeSpin?.coinValue,
+            betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
+            ...(freeSpin && freeSpin.promotionId && { promotionId: freeSpin.promotionId }),
+        };
     }
 }
