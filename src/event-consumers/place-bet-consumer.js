@@ -8,7 +8,7 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
         const soonestExpiredFreeSpinSet = freeSpinsOfPlayer.find(
             (freeSpin) => freeSpin.available > 0 && new Date(freeSpin.expiryTime) > currentDateTime
         );
-        const freeSpinExtra = soonestExpiredFreeSpinSet && soonestExpiredFreeSpinSet.promotionId ? true : false;
+        const freeSpinExtra = soonestExpiredFreeSpinSet && soonestExpiredFreeSpinSet.promotionId;
 
         if (player.promotion) {
             this.updatePlayerPromotionFreeSpins(player, soonestExpiredFreeSpinSet);
@@ -20,6 +20,7 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
 
             if (usePromotion) {
                 const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+
                 Object.assign(payload, {
                     betLevel: cascadingSlotsConfig.betLevels[0],
                     coinValue: player.promotion.coinValue,

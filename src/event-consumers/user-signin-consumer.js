@@ -1,22 +1,13 @@
 import { Table } from "sc-game-base";
 
 export default class UserSignInConsumer extends Table.EventConsumers.TableUserSignInConsumer {
-    createClaimedPromotionData(promotion, totalWin, promotionTOProgress = null) {
-        const data = super.createClaimedPromotionData(promotion, totalWin, promotionTOProgress);
-        data.promotion.betLevel = this.getDefaultBetLevel();
-        data.promotion.coinValue = promotion.coinValue;
-
-        return data;
+    extendPromo(baseData, originalPromotion) {
+        return {
+            ...baseData,
+            betLevel: this.getDefaultBetLevel(),
+            coinValue: originalPromotion.coinValue,
+        };
     }
-
-    createAvailablePromotionData(promotion) {
-        const data = super.createAvailablePromotionData(promotion);
-        data.promotion.betLevel = this.getDefaultBetLevel();
-        data.promotion.coinValue = promotion.coinValue;
-
-        return data;
-    }
-
     getDefaultBetLevel() {
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
         return cascadingSlotsConfig.betLevels[0];
