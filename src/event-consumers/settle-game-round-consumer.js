@@ -48,6 +48,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             await this.callEndGame(round, roundId, round.endTime, betResult, metaData);
             await this.processFreeSpins(player, round);
             await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(player, round, betResult));
+
+            return { betwin: round.betwin };
         }
     }
 

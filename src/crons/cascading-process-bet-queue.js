@@ -76,11 +76,11 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         await this.upsertBet(player, roundId, bet, rate, applicableInterceptors);
         this.notifyPlacingBetResult(player, balance, bet, rate);
 
-        await this.settleGameRoundConsumer.settleRound(player, roundId);
+        const { betwin } = await this.settleGameRoundConsumer.settleRound(player, roundId);
 
         if (applicableInterceptors) {
             bet.roundId = roundId;
-            bet.betWin = betWin;
+            bet.betWin = betwin;
 
             await this.executeInterceptorEvent("afterSuccessEvent", applicableInterceptors, {
                 player,
