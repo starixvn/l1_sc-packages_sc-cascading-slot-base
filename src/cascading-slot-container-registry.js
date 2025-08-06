@@ -9,6 +9,7 @@ import {
     FreeSpinsConsumer,
     InGameConsumer,
     PlaceBetConsumer,
+    PromotionFreeSpinsConsumer,
     SettleGameRoundConsumer,
     TotalMultiplierConsumer,
     UserSignInConsumer,
@@ -54,6 +55,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             freeSpinsConsumer: asClass(FreeSpinsConsumer).singleton(),
             inGameConsumer: asClass(InGameConsumer).singleton().proxy(),
             userSignInConsumer: asClass(UserSignInConsumer).singleton().proxy(),
+            promotionFreeSpinsConsumer: asClass(PromotionFreeSpinsConsumer).singleton().proxy(),
         });
     }
 
