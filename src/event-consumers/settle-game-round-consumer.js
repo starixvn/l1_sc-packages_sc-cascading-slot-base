@@ -59,7 +59,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             this.gameData.settlementResultFromAdmin[player.profile.name]
         );
 
-        if (round.freeSpin && round.betwin > 0 && round.multiplier > 0) {
+        if (round.freeSpin && round.betwin > 0 && round.multiplier > 0 && round.settlementResult.tumbles.length > 0) {
             await this.totalMultiplierConsumer.increaseTotalMultiplier(player, { roundId: round.id, multiplier: round.multiplier });
         }
 
