@@ -14,6 +14,7 @@ import {
     TotalMultiplierConsumer,
     UserSignInConsumer,
 } from "./event-consumers";
+import { CascadingSlotPromotionInterceptor } from "./event-interceptors";
 import { HistoryQuery } from "./query-apis";
 import HttpRouter from "./routers/cascading-http-router";
 
@@ -74,6 +75,14 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             bot: asClass(CascadingBot).singleton().proxy(),
             gameCron: asClass(CascadingGameCron).singleton().proxy(),
             processBetQueue: asClass(CascadingProcessBetQueue).singleton().proxy(),
+        });
+    }
+
+    registerInterceptors() {
+        super.registerInterceptors();
+
+        this.container.register({
+            promotionBetInterceptor: asClass(CascadingSlotPromotionInterceptor).singleton().proxy(),
         });
     }
 }
