@@ -84,7 +84,11 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
 
             await this.executeInterceptorEvent("afterSuccessEvent", applicableInterceptors, {
                 player,
-                bet,
+                bet: {
+                    roundId,
+                    betWin: betwin,
+                    amount: bet.totalAmount,
+                },
                 balance,
             });
         }
