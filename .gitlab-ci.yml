@@ -1,19 +1,4 @@
-variables:
-  PROJECT_NAME: sc-cascading-slot-base
-  DOCKER_REG_LOCAL_URL: hub.lumigame.com
-
-stages:
-  - test
-  - post-test
-  - publish
-
 include:
-  - project: "ci/common-ci"
-    ref: master
-    file: "unit-test/js-unit-test.gitlab-ci.yml"
-  - project: "ci/common-ci"
-    ref: rocketor
-    file: "sonarqube/sonarqube.js-unittest.gitlab-ci.yml"
-  - project: "ci/common-ci"
-    ref: master
-    file: "npm/publish-npm.gitlab-ci.yml"
+  - project: ci/core-cicd
+    ref: main
+    file: luminet.gitlab-ci.yml
