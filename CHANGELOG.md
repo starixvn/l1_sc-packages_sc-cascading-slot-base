@@ -1,3 +1,23 @@
+# [1.2.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.1.0...v1.2.0) (2025-08-13)
+
+
+### Bug Fixes
+
+* calculate scatter odds ([184c190](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/184c190ef8965a19a464860e877a8daa4f173170))
+* increase multiplier on freespin round ([1684866](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/16848666fa034196cf6281568e50819ade449d89))
+* increase total multiplier condition ([421c773](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/421c7736c86c9a1a3f67084fd15e54f3023fc4c0))
+* pay for win freespin ([ea5da59](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/ea5da59da75b4b57b4709ffdd23cca66bb2b8dd0))
+* reach max win - not pay freespins ([4163159](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/416315905013d06c70600658f2ee556c7fb92a92))
+* settle win amount scatter ([d8e6bab](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/d8e6bab1a0816804c77b22819db0eb7e4b6e92a7))
+* update scatter count when win ([0601354](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/0601354bc7e1b01c6010815853e5fe7011ddb2d1))
+* win scatter ([dda72a7](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/dda72a71aa0a11aa6528a0a935d3a4f4a9160dfc))
+
+
+### Features
+
+* update new generator model ([b33cd11](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/b33cd114c4006da623be588fb147bc1fc09a9510))
+* upgrade sc-slot-board-generator 1.1.0 ([9da4426](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/9da4426ccf905c8ae99b7304e8daea0c25aaba42))
+
 # [1.1.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.0.6...v1.1.0) (2023-08-22)
 
 
