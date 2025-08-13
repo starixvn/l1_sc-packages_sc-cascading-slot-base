@@ -16,11 +16,11 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             total: numberOfFreeSpins,
             available: numberOfFreeSpins,
             time: createdTime,
-            expiryTime,
             betLevel,
             coinValue,
             betMultiplier: this.gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
-            ...(player.promotion && player.promotion.isClaimed && { promotionId: player.promotion.promotionId }),
+            expiryTime: player.usePromotion ? player.promotion.endDate : expiryTime,
+            ...(player.usePromotion && { promotionId: player.promotion.promotionId }),
         };
 
         const gainedFreeSpin = {
