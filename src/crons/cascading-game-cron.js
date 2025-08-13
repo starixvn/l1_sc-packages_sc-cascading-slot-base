@@ -101,7 +101,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         if (this.gameData.remainingTime === durations.wholeRound) {
             await this.checkGameStatus();
             this.bot && (await this.bot.reset());
-            await this.promotionFreeSpinsConsumer.handlePromotionFreeSpinsExpiry(this.gameData.gameConfigs.gameId);
         }
 
         if (!this.gameData.disabled) {
@@ -115,6 +114,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
         }
+        await this.promotionFreeSpinsConsumer.checkExpiry(this.gameData.gameConfigs.gameId);
     }
 
     async checkGameStatus() {
