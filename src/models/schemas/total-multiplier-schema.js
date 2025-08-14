@@ -9,4 +9,5 @@ export default new mongoose.Schema({
     time: { type: Date },
     endTime: { type: Date },
     rounds: { type: [RoundTotalMultiplierSchema] },
+    promotionId: { type: String },
 });
