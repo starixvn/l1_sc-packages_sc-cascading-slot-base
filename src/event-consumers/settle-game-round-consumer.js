@@ -39,6 +39,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
             round.paid = true;
             round.endTime = new Date();
+            round.sessionId = player.session?.sessionId;
 
             const betResult = this.calculateBetResult(round);
 
