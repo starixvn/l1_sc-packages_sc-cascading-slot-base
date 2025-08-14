@@ -2168,6 +2168,14 @@
   resolved "https://npm.lumigame.com/@protobufjs/utf8/-/utf8-1.1.0.tgz"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
+"@sc/user-tracking-client@0.0.2-beta.5":
+  version "0.0.2-beta.5"
+  resolved "https://npm.lumigame.com/@sc/user-tracking-client/-/user-tracking-client-0.0.2-beta.5.tgz"
+  integrity sha512-fcAt4iVLeZw1Q7ncPJbhoyvrQvmuJpkTeHYQsXeqLXLEf3YFbWGZHiznSmcFmuHHd6ieg45kQFBwKYcwvHZLHA==
+  dependencies:
+    axios "^1.11.0"
+    axios-retry "^4.0.0"
+
 "@semantic-release/changelog@^5.0.1":
   version "5.0.1"
   resolved "http://npm.lumigame.com/@semantic-release%2fchangelog/-/changelog-5.0.1.tgz"
@@ -2986,7 +2994,7 @@ axios@^0.21.1:
   dependencies:
     follow-redirects "^1.14.0"
 
-axios@^1.0.0, "axios@0.x || 1.x":
+axios@^1.0.0, axios@^1.11.0, "axios@0.x || 1.x":
   version "1.11.0"
   resolved "https://npm.lumigame.com/axios/-/axios-1.11.0.tgz"
   integrity sha512-1Lx3WLFQWm3ooKDYZD1eXmoGO9fxYQjrycfHFC8P0sCfQVXyROp0p9PFWBehewBOdCwHc+f/b8I0fMto5eSfwA==
@@ -9147,10 +9155,10 @@ sc-api-client@1.4.0:
   dependencies:
     axios "^0.19.2"
 
-sc-base-apis@2.0.0:
-  version "2.0.0"
-  resolved "https://npm.lumigame.com/sc-base-apis/-/sc-base-apis-2.0.0.tgz"
-  integrity sha512-f9UX4fuKkAW5hRY5V7aHvKTerdo7dYsnR0TcuDT4brTLuEphLFfOYakQ9414gu6/EI17qaRLvxyJhkJ5x8E9rw==
+sc-base-apis@2.2.0:
+  version "2.2.0"
+  resolved "https://npm.lumigame.com/sc-base-apis/-/sc-base-apis-2.2.0.tgz"
+  integrity sha512-KQJOFYiMPt6L/FhC/P0LKu4zj1/rqZG3+F2qQcHpP3wDKwkP+LyKdPcTZsVYplvoDJ5/wb/QkviBBkBPeCIjwA==
   dependencies:
     moment "^2.29.4"
     sc-api-client "1.4.0"
@@ -9167,11 +9175,12 @@ sc-common@1.8.1:
     mongoose-long "^0.3.0"
     numeral "^2.0.6"
 
-sc-game-base@5.4.0:
-  version "5.4.0"
-  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-5.4.0.tgz"
-  integrity sha512-yEA2KNWrXgn1Heu47J+Ie9fr3Bmw1+R2meARPXl7QaU1i//s90qCAV1hBP2y2dqOuvaZQ59ndXikum7CvXJC+g==
+sc-game-base@5.5.1-beta.11:
+  version "5.5.1-beta.11"
+  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-5.5.1-beta.11.tgz"
+  integrity sha512-aQ2X7Qttwp4BuBVhutt3FwfpHY0ljrbig0hdh6qaWIDcNIyf7A5/Nz6BpF0uYQqp2rY1D2sOKIqQnnRWx2BYRA==
   dependencies:
+    "@sc/user-tracking-client" "0.0.2-beta.5"
     awilix "^8.0.0"
     axios "^1.0.0"
     chance "^1.1.7"
@@ -9189,7 +9198,7 @@ sc-game-base@5.4.0:
     prom-client "^11.2.1"
     random-js "^2.1.0"
     randomstring "^1.3.0"
-    sc-base-apis "2.0.0"
+    sc-base-apis "2.2.0"
     sc-common "1.8.1"
     sc-game-management-client "^0.1.0"
     sc-instrument "1.1.1-beta.2"
@@ -9256,14 +9265,14 @@ sc-slot-board-generator@1.0.1:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@2.2.0:
-  version "2.2.0"
-  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-2.2.0.tgz"
-  integrity sha512-Vw3whSDbNsTnmEFun0ndxdhcEWcICt3NWRKBPxP9Q+4CJPmTp/YVd1UARDoxhRxjn2Wk5Z4jI9qi5gSnzg3xjw==
+sc-slot-game-base@2.2.4-beta.11:
+  version "2.2.4-beta.11"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-2.2.4-beta.11.tgz"
+  integrity sha512-mqWwsAtZTHQNt+4nnNbX9eZcnxI0ATAQOAWYr+LJ2ZIv2w6ldJxI8KtTxl8zgwjKh/39oyXQ8ptM24FiwIVStQ==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "5.4.0"
+    sc-game-base "5.5.1-beta.11"
     sc-game-management-client "0.1.3"
 
 seedrandom@^3.0.5:
