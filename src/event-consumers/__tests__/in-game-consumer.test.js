@@ -50,6 +50,7 @@ function stubGameData() {
             groupId: "617a650628b7a500016388f5",
             coinValues: [1, 2, 5, 10, 50, 100],
             maxWinPerRound: 5000,
+            defaultCoinValue: 1,
         },
     ];
 
@@ -103,12 +104,14 @@ describe("InGameConsumer", () => {
                                 additionalOdds: [],
                             },
                         },
+                        defaultCoinValue: undefined,
                     },
                     freeSpins: {
                         total: 10,
                         betLevel: undefined,
                         coinValue: undefined,
                         betMultiplier: undefined,
+                        promotionId: undefined,
                     },
                     totalMultiplier: 10,
                     user: {
@@ -151,12 +154,14 @@ describe("InGameConsumer", () => {
                                 additionalOdds: [],
                             },
                         },
+                        defaultCoinValue: 1,
                     },
                     freeSpins: {
                         total: 10,
                         betLevel: 2,
                         betMultiplier: 20,
                         coinValue: 10,
+                        promotionId: undefined,
                     },
                     totalMultiplier: 0,
                     user: {

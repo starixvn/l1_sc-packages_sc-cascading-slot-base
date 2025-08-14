@@ -152,6 +152,9 @@ describe("cascadingProcessBetQueue", () => {
             const freeSpinBet = { freeSpin: true };
 
             it("should call freeSpinsConsumer.userFreeSpin", async () => {
+                // Arrange
+                settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
                 // Act
                 await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
 
@@ -161,6 +164,9 @@ describe("cascadingProcessBetQueue", () => {
         });
 
         it("should call calculateCurrencyRate", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
             await consumer.handleSuccessBet(player, balance, roundId, bet);
 
@@ -169,24 +175,33 @@ describe("cascadingProcessBetQueue", () => {
         });
 
         it("should call upsertBet", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
-            await consumer.handleSuccessBet(player, balance, roundId, bet);
+            await consumer.handleSuccessBet(player, balance, roundId, bet, []);
 
             // Assert
-            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate);
+            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate, []);
         });
 
         it("should call notifyPlacingBetResult", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
-            await consumer.handleSuccessBet(player, balance, roundId, bet);
+            await consumer.handleSuccessBet(player, balance, roundId, bet, []);
 
             // Assert
             expect(consumer.notifyPlacingBetResult).toBeCalledWith(player, balance, bet, rate);
         });
 
         it("should call settleGameRoundConsumer.settleRound", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
-            await consumer.handleSuccessBet(player, balance, roundId, bet);
+            await consumer.handleSuccessBet(player, balance, roundId, bet, []);
 
             // Assert
             expect(settleGameRoundConsumer.settleRound).toBeCalledWith(player, roundId);
