@@ -29,10 +29,12 @@ describe("PlaceBetConsumer", () => {
             {
                 groupId: "1",
                 coinValues: [1, 10, 100],
+                defaultCoinValue: 1,
             },
             {
                 groupId: "2",
                 coinValues: [],
+                defaultCoinValue: undefined,
             },
         ];
 

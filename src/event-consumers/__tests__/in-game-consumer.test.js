@@ -93,9 +93,9 @@ describe("InGameConsumer", () => {
                     gameConfigs: {
                         coinValues: undefined,
                         maxWinPerRound: undefined,
+                        defaultCoinValue: undefined,
                         betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                         betMultiplier: 20,
-
                         odds: {
                             symbols: [{ from: 8, to: 9, odds: 1 }],
                             freeSpins: {
@@ -143,7 +143,7 @@ describe("InGameConsumer", () => {
                         maxWinPerRound: 5000,
                         betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                         betMultiplier: 20,
-
+                        defaultCoinValue: undefined,
                         odds: {
                             symbols: [{ from: 8, to: 9, odds: 1 }],
                             freeSpins: {
