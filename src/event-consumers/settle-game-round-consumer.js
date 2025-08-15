@@ -96,7 +96,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             if (round.buyFreeSpinRefRoundId) {
                 const buyFreeSpinResult = await this.freeSpinsConsumer.summarizeBuyFreeSpins(player, round.buyFreeSpinRefRoundId);
 
-                this.roundResultPublisher.publishToUser(round.uid, buyFreeSpinResult);
+                this.roundResultPublisher.publishToUser(round.uid, { buyFreeSpinResult: { ...buyFreeSpinResult } });
             }
         }
     }
