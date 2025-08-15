@@ -9366,10 +9366,21 @@ sc-common@1.8.1:
     mongoose-long "^0.3.0"
     numeral "^2.0.6"
 
-sc-game-base@6.0.0-beta.103:
-  version "6.0.0-beta.103"
-  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.0.0-beta.103.tgz#9caf87d0e8702023bc5acc19aa9e9cd9e71fc523"
-  integrity sha512-mqeHUbLVPaw3eiOpo1oZa7NliwRyIBvP5Ag86z/Ok7cok39CF5fEQWPsx/UCN6uz6VI+DLGgzvHunNmh4lgnvQ==
+sc-common@2.0.0:
+  version "2.0.0"
+  resolved "https://npm.lumigame.com/sc-common/-/sc-common-2.0.0.tgz#7e4f3449b0d7cd631938315677c0a1c421df7df7"
+  integrity sha512-kHDMo7r78qNMKO/nABzCiAiW0DnLrrdY9o/1sp79g9RHXg4Y3Bcm9cm9f42JJRjakJ7ZpSqmGkjkmL/CPV+s5A==
+  dependencies:
+    "@sentry/node" "^5.19.1"
+    jsonwebtoken "^8.5.1"
+    jwks-rsa "^1.8.1"
+    mongoose-long "^0.3.0"
+    numeral "^2.0.6"
+
+sc-game-base@6.0.0-beta.105:
+  version "6.0.0-beta.105"
+  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.0.0-beta.105.tgz#82c4ac3cc640cd64b945d8794d52070b01f0a33f"
+  integrity sha512-D1CrrJwpnxlpFDPeadwRYB+lat1xusItW0jRaPKF1ZkwvqzlfJjEDcOV+cpD9AJvez7BmrYQ1CPjgkTaQDO54A==
   dependencies:
     "@sc/game-promotion-api-client" "^1.0.1-beta.24"
     awilix "^8.0.0"
@@ -9390,7 +9401,7 @@ sc-game-base@6.0.0-beta.103:
     random-js "^2.1.0"
     randomstring "^1.3.0"
     sc-base-apis "3.0.0-beta.6"
-    sc-common "1.8.1"
+    sc-common "2.0.0"
     sc-game-management-client "^0.1.4"
     sc-instrument "1.1.1-beta.2"
     sc-instrument-helper "1.0.0"
@@ -9456,14 +9467,14 @@ sc-slot-board-generator@1.0.1:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@2.3.0-beta.145:
-  version "2.3.0-beta.145"
-  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-2.3.0-beta.145.tgz#94b72577a0d74029c32794533ba1daf1bbfb9eb9"
-  integrity sha512-O1trcki8PXpGtUio+KP6BF6CoDRXLv2VobGxS6K79FXF++XIL0SHeYBZ0Sm+dmaVW1wpwlsBwUUPkmsU/M7n0g==
+sc-slot-game-base@2.3.0-beta.146:
+  version "2.3.0-beta.146"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-2.3.0-beta.146.tgz#fdc635090159fbef60477f3606c18bb51c5fb1e3"
+  integrity sha512-S573zE47R4mALln8HZXcXp4gi62fPSunv7q6TCfxyvsGSfin7odgMlyF8+TACnxFvTyJB+CKpfK749P7YXWw8A==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "6.0.0-beta.103"
+    sc-game-base "6.0.0-beta.105"
 
 seedrandom@^3.0.5:
   version "3.0.5"
