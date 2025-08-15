@@ -24,7 +24,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.betMultiplier = betMultiplier;
         }
 
-        const buyFreeSpinRate = payload.buyFreeSpin ? cascadingSlotsConfig.buyFreeSpinRate : 1;
+        const buyFreeSpinRate = payload.buyFreeSpin ? cascadingSlotsConfig.features.buyFreeSpins.multiplier : 1;
 
         betInfo.amount = betInfo.betLevel * betInfo.coinValue;
         betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier * buyFreeSpinRate).toFixed(2));
