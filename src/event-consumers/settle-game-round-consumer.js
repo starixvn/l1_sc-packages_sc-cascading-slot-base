@@ -94,7 +94,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             await this.totalMultiplierConsumer.stopChain(player);
 
             if (round.buyFreeSpinRefRoundId) {
-                const buyFreeSpinResult = await this.freeSpinsConsumer.summarizeBuyFreeSpins(round.buyFreeSpinRefRoundId);
+                const buyFreeSpinResult = await this.freeSpinsConsumer.summarizeBuyFreeSpins(player, round.buyFreeSpinRefRoundId);
 
                 this.roundResultPublisher.publishToUser(round.uid, buyFreeSpinResult);
             }

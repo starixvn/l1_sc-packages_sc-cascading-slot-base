@@ -3,9 +3,10 @@ import { EventConsumers } from "sc-slot-game-base";
 import defaultDefinition from "../board/default-definition";
 
 export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer {
-    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer) {
+    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer, roundsRepository) {
         super(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
 
+        this.roundsRepository = roundsRepository;
         this.chance = new Chance();
         this.buyFreeSpinSymbols = [0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((symbol) => Array(7).fill(symbol));
     }
@@ -77,15 +78,16 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         ];
     }
 
-    async summarizeBuyFreeSpins(buyFreeSpinRefRoundId) {
+    async summarizeBuyFreeSpins(player, buyFreeSpinRefRoundId) {
         const buyFreeSpinRounds = await this.roundsRepository
             .find({
+                uid: player.UID,
                 $or: [{ buyFreeSpinRefRoundId: buyFreeSpinRefRoundId }, { id: buyFreeSpinRefRoundId }],
             })
             .lean()
             .exec();
 
-        const numberOfFreeSpins = buyFreeSpinRounds.length - 1;
+        const numberOfFreeSpins = Math.max(0, buyFreeSpinRounds.length - 1);
 
         const totalWin = buyFreeSpinRounds.reduce((sum, round) => {
             return sum + (round.betwin || 0);
