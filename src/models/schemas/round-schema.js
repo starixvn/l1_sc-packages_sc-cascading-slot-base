@@ -15,6 +15,8 @@ export default new mongoose.Schema({
     totalMultiplier: { type: Number, default: 0 },
     freeSpin: { type: Boolean, default: false },
     reachMaxWin: { type: Boolean, default: false },
+    buyFreeSpin: { type: Boolean, require: false },
+    buyFreeSpinRefRoundId: { type: Number, require: false },
 
     result: { type: String },
     settlementResult: { type: Object },

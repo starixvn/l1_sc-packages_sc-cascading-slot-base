@@ -34,7 +34,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         return betInfo;
     }
 
-    async upsertBet(player, roundId, bet, rate) {
+    async upsertBet(player, roundId, bet, rate, buyFreeSpinRefRoundId) {
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
 
         const newBet = {
@@ -52,6 +52,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             buyFreeSpin: bet.buyFreeSpin,
             rate: rate,
             exchangeRateId: this.gameData.exchangeRates.exId,
+            buyFreeSpinRefRoundId: buyFreeSpinRefRoundId,
             odds: {
                 oddsByCounts: cascadingSlotsConfig.oddsByCounts,
                 freeSpins: cascadingSlotsConfig.freeSpins,
@@ -70,13 +71,16 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     }
 
     async handleSuccessBet(player, balance, roundId, bet) {
+        let buyFreeSpinRefRoundId = null;
+
         if (bet.freeSpin) {
-            await this.freeSpinsConsumer.useFreeSpin(player);
+            const freeSpin = await this.freeSpinsConsumer.useFreeSpin(player);
+            buyFreeSpinRefRoundId = freeSpin.buyFreeSpinRefRoundId;
         }
 
         const rate = this.calculateCurrencyRate(player.session);
 
-        await this.upsertBet(player, roundId, bet, rate);
+        await this.upsertBet(player, roundId, bet, rate, buyFreeSpinRefRoundId);
         this.notifyPlacingBetResult(player, balance, bet, rate);
 
         await this.settleGameRoundConsumer.settleRound(player, roundId);

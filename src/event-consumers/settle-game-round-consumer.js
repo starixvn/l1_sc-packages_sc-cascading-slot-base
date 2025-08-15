@@ -67,8 +67,11 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     async processFreeSpins(player, round) {
-        const { id, settlementResult, coinValue, betLevel, betMultiplier } = round;
+        const { id, settlementResult, coinValue, betLevel, betMultiplier, buyFreeSpin } = round;
+
         if (settlementResult.freeSpins?.odds > 0) {
+            const buyFreeSpinRefRoundId = buyFreeSpin ? round.id : round.buyFreeSpinRefRoundId;
+
             await this.freeSpinsConsumer.gainFreeSpin(
                 player,
                 {
@@ -78,6 +81,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                     betLevel,
                     betMultiplier,
                     numberOfFreeSpins: settlementResult.freeSpins.odds,
+                    buyFreeSpin,
+                    buyFreeSpinRefRoundId,
                 },
                 this.definition.freeSpinLiveSeconds
             );
@@ -87,6 +92,12 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         if (!totalAvailableFreeSpins) {
             await this.totalMultiplierConsumer.stopChain(player);
+
+            if (round.buyFreeSpinRefRoundId) {
+                const buyFreeSpinResult = await this.freeSpinsConsumer.summarizeBuyFreeSpins(round.buyFreeSpinRefRoundId);
+
+                this.roundResultPublisher.publishToUser(round.uid, buyFreeSpinResult);
+            }
         }
     }
 

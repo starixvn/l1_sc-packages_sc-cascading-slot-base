@@ -10,7 +10,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         this.buyFreeSpinSymbols = [0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((symbol) => Array(7).fill(symbol));
     }
 
-    async gainFreeSpin(player, { roundId, totalAmount, betLevel, coinValue, numberOfFreeSpins }, timeToLive) {
+    async gainFreeSpin(player, { roundId, totalAmount, betLevel, coinValue, numberOfFreeSpins, buyFreeSpinRefRoundId }, timeToLive) {
         const createdTime = new Date();
         const expiryTime = new Date(createdTime.getTime()).setSeconds(createdTime.getSeconds() + timeToLive);
         const memberName = player.profile.name;
@@ -29,6 +29,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             betLevel,
             coinValue,
             betMultiplier: this.gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
+            buyFreeSpinRefRoundId: buyFreeSpinRefRoundId,
         };
 
         const gainedFreeSpin = {
@@ -48,6 +49,16 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         }
     }
 
+    async useFreeSpin(player) {
+        const firstAvailableFreeSpinSet = this.getSoonestExpiredFreeSpinSet(player);
+
+        if (firstAvailableFreeSpinSet) {
+            await this.freeSpinsRepository.updateOne({ id: firstAvailableFreeSpinSet.id }, { $inc: { available: -1 } });
+            firstAvailableFreeSpinSet.available--;
+        }
+
+        return firstAvailableFreeSpinSet;
+    }
     getBuyFreeSpinBoard() {
         return [
             {
@@ -64,5 +75,25 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                 multipliers: [],
             },
         ];
+    }
+
+    async summarizeBuyFreeSpins(buyFreeSpinRefRoundId) {
+        const buyFreeSpinRounds = await this.roundsRepository
+            .find({
+                $or: [{ buyFreeSpinRefRoundId: buyFreeSpinRefRoundId }, { id: buyFreeSpinRefRoundId }],
+            })
+            .lean()
+            .exec();
+
+        const numberOfFreeSpins = buyFreeSpinRounds.length - 1;
+
+        const totalWin = buyFreeSpinRounds.reduce((sum, round) => {
+            return sum + (round.betwin || 0);
+        }, 0);
+
+        return {
+            numberOfFreeSpins,
+            totalWin,
+        };
     }
 }
