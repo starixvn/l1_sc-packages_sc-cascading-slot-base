@@ -14,23 +14,22 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
             this.updatePlayerPromotionFreeSpins(player, soonestExpiredFreeSpinSet);
         }
 
-        if (payload.freeSpin && (freeSpinExtra || !soonestExpiredFreeSpinSet)) {
-            const usePromotion = player.promotion && player.promotion.isClaimed;
-            player.usePromotion = usePromotion;
-
-            if (usePromotion) {
-                const { cascadingSlotsConfig } = this.gameData.gameConfigs;
-
-                Object.assign(payload, {
-                    betLevel: cascadingSlotsConfig.betLevels[0],
-                    coinValue: player.promotion.coinValue,
-                    promotionId: player.promotion.promotionId,
-                    usePromotion: true,
-                });
-            }
+        if (freeSpinExtra || (payload.freeSpin && !soonestExpiredFreeSpinSet)) {
+            super.handlePromotionLogic(player, payload);
         } else {
             player.usePromotion = false;
         }
+    }
+
+    createPromotionPayload(player, originalPayload, promotionBetAmount) {
+        const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+
+        return {
+            betLevel: cascadingSlotsConfig.betLevels[0],
+            coinValue: player.promotion.coinValue,
+            promotionId: player.promotion.promotionId,
+            usePromotion: true,
+        };
     }
 
     consume(player, payload) {
