@@ -1,4 +1,5 @@
 import { Crons } from "sc-slot-game-base";
+import { helpers } from "sc-common";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
     async proceedBet(player, payload) {
