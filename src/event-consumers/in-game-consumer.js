@@ -1,6 +1,33 @@
 import { EventConsumers } from "sc-slot-game-base";
 
 export default class InGameConsumer extends EventConsumers.InGameConsumer {
+    constructor({
+        definition,
+        gameData,
+        roundQuery,
+        publisher,
+        freeSpinsConsumer,
+        getBalance,
+        jackpotsRepository,
+        jackpotValidator,
+        gameManagementApiClientFactory,
+        gamePromotionApiClient,
+    }) {
+        super({
+            definition,
+            gameData,
+            roundQuery,
+            publisher,
+            getBalance,
+            gameManagementApiClientFactory,
+            freeSpinsConsumer,
+            jackpotsRepository,
+            jackpotValidator,
+        });
+
+        this.promotionApiClient = gamePromotionApiClient.instance();
+    }
+
     async buildPayload(realPlayer) {
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === realPlayer.session.currencyGroupId);
         const coinValues = settings?.coinValues;
@@ -40,6 +67,8 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         }
 
         if (realPlayer.promotionTOProgress) {
+            await this.updatePromotionTOProgress(realPlayer);
+
             payload.promotionTOProgress = {
                 totalTO: realPlayer.promotionTOProgress.totalTurnover,
                 minTO: realPlayer.promotionTOProgress.minRequiredTurnover,
@@ -53,6 +82,26 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         }
 
         return payload;
+    }
+
+    async updatePromotionTOProgress(realPlayer) {
+        const { session, promotion } = realPlayer;
+        const promotionTOProgress = await this.promotionApiClient.getTOProgress({
+            promotionId: promotion.promotionId,
+            playerId: session.playerId,
+            operatorId: session.operatorId,
+            siteName: session.siteName,
+        });
+
+        realPlayer.promotionTOProgress = {
+            totalTurnover: promotionTOProgress.totalTurnover,
+            minRequiredTurnover: promotionTOProgress.minRequiredTurnover,
+            remainingTO: promotionTOProgress.remainingTO,
+            progressPercentage: promotionTOProgress.progressPercentage,
+            canClaim: promotionTOProgress.canClaim,
+            totalWinAmount: promotionTOProgress.totalWinAmount,
+            claimExpirationDate: promotionTOProgress.claimExpirationDate,
+        };
     }
 
     getAvailableFreeSpins(realPlayer) {
