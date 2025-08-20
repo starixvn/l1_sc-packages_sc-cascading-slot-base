@@ -28,6 +28,7 @@ export default new mongoose.Schema({
     endTime: { type: Date },
 
     currency: { type: String, require: true },
+    currencyCode: { type: String, require: true },
     rate: { type: Number, require: true },
     exchangeRateId: { type: Number, require: true },
 
