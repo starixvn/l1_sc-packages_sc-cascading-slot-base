@@ -63,7 +63,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         if (player.session) {
             newBet.siteId = player.session.siteId;
             newBet.currency = player.session.currencyName;
-
+            newBet.currencyCode = player.session.currencyCode;
             newBet.operatorId = player.session.operatorId;
             newBet.playerId = player.session.playerId;
         }
