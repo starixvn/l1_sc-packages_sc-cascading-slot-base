@@ -98,4 +98,111 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             totalWin,
         };
     }
+
+    async reload() {
+        const execTime = new Date();
+        await this.settleExpiredFreeSpins(execTime);
+        const freeSpins = await this.queryFreeSpins(execTime);
+
+        const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(freeSpins);
+        const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(freeSpins);
+
+        await this.cleanUpGameNotifications(freeSpinsGroupedByUIDs);
+
+        Object.entries(this.gameData.ingame).forEach(([name, ingameData]) => {
+            const loadedFreeSpins = freeSpinsGroupedByNames[name] ?? [];
+
+            delete ingameData.freeSpins;
+            delete freeSpinsGroupedByNames[name];
+
+            ingameData.freeSpins = loadedFreeSpins;
+        });
+
+        Object.entries(freeSpinsGroupedByNames).forEach(([name, loadedFreeSpins]) => {
+            this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
+            this.gameData.ingame[name].freeSpins = loadedFreeSpins ?? [];
+        });
+    }
+
+    async settleExpiredFreeSpins(execTime) {
+        const expiredFreeSpins = await this.queryExpiredFreeSpins(execTime);
+        const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(expiredFreeSpins);
+
+        Object.entries(freeSpinsGroupedByUIDs).forEach(async ([uid, loadedFreeSpins]) => {
+            const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
+            const player = {
+                UID: uid,
+                profile: {
+                    name: round.name,
+                },
+                session: {
+                    currencyName: round.currency,
+                    operatorId: round.operatorId,
+                    siteId: round.siteId,
+                    playerId: round.playerId,
+                },
+            };
+
+            this.gameData.ingame[round.name] = this.gameData.ingame[round.name] ?? { betQueue: [] };
+            this.gameData.ingame[round.name].betQueue.push({ player, payload: { freeSpin: true } });
+        });
+    }
+
+    queryFreeSpins(execTime) {
+        const filter = {
+            available: { $gt: 0 },
+            expiryTime: { $gt: execTime },
+        };
+        const projection = {
+            _id: false,
+            playerId: false,
+            __v: false,
+            __archive: false,
+        };
+
+        return this.freeSpinsRepository
+            .find(filter, projection, { sort: { expiryTime: 1 } })
+            .lean()
+            .exec();
+    }
+
+    queryExpiredFreeSpins(execTime) {
+        const filter = {
+            available: { $gt: 0 },
+            expiryTime: { $lte: execTime },
+        };
+        const projection = {
+            _id: false,
+            playerId: false,
+            __v: false,
+            __archive: false,
+        };
+
+        return this.freeSpinsRepository
+            .find(filter, projection, { sort: { expiryTime: 1 } })
+            .lean()
+            .exec();
+    }
+
+    hasFreeSpin(player) {
+        const freeSpinsOfPlayer = this.gameData.ingame[player.profile.name]?.freeSpins;
+
+        if (freeSpinsOfPlayer && freeSpinsOfPlayer.length > 0) {
+            return freeSpinsOfPlayer.some((freeSpin) => freeSpin.available > 0);
+        }
+
+        return false;
+    }
+
+    getSoonestExpiredFreeSpinSet(player) {
+        const freeSpinsOfPlayer = this.gameData.ingame[player.profile.name]?.freeSpins ?? [];
+
+        return freeSpinsOfPlayer.find((freeSpin) => freeSpin.available > 0);
+    }
+
+    getLatestExpiredFreeSpinSet(player) {
+        const freeSpinsOfPlayer = this.gameData.ingame[player.profile.name]?.freeSpins ?? [];
+
+        return freeSpinsOfPlayer.reverse().find((freeSpin) => freeSpin.available > 0);
+    }
 }
