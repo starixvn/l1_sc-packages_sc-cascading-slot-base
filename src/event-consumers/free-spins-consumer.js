@@ -100,12 +100,12 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
     }
 
     async reload() {
-        const execTime = new Date();
-        await this.settleExpiredFreeSpins(execTime);
-        const freeSpins = await this.queryFreeSpins(execTime);
+        const freeSpins = await this.queryFreeSpins();
+        const activeFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime > new Date());
+        const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= new Date());
 
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(freeSpins);
-        const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(freeSpins);
+        const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(activeFreeSpins);
 
         await this.cleanUpGameNotifications(freeSpinsGroupedByUIDs);
 
@@ -122,55 +122,38 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
             this.gameData.ingame[name].freeSpins = loadedFreeSpins ?? [];
         });
+
+        await this.settleExpiredFreeSpins(expiredFreeSpins);
     }
 
-    async settleExpiredFreeSpins(execTime) {
-        const expiredFreeSpins = await this.queryExpiredFreeSpins(execTime);
-        const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(expiredFreeSpins);
+    async settleExpiredFreeSpins(expiredFreeSpins) {
+        const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(expiredFreeSpins);
 
-        Object.entries(freeSpinsGroupedByUIDs).forEach(async ([uid, loadedFreeSpins]) => {
-            const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
-            const player = {
-                UID: uid,
-                profile: {
-                    name: round.name,
-                },
-                session: {
-                    currencyName: round.currency,
-                    operatorId: round.operatorId,
-                    siteId: round.siteId,
-                    playerId: round.playerId,
-                },
-            };
+        await Promise.all(
+            Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
+                const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
+                const player = {
+                    UID: round.playerId,
+                    profile: {
+                        name: round.name,
+                    },
+                    session: {
+                        currencyName: round.currency,
+                        operatorId: round.operatorId,
+                        siteId: round.siteId,
+                        playerId: round.playerId,
+                    },
+                };
 
-            this.gameData.ingame[round.name] = this.gameData.ingame[round.name] ?? { betQueue: [] };
-            this.gameData.ingame[round.name].freeSpins = loadedFreeSpins ?? [];
-            this.gameData.ingame[round.name].betQueue.push({ player, payload: { freeSpin: true } });
-        });
+                this.gameData.ingame[round.name] = this.gameData.ingame[round.name] ?? { betQueue: [] };
+                this.gameData.ingame[round.name].betQueue.push({ player, payload: { freeSpin: true } });
+            })
+        );
     }
 
-    queryFreeSpins(execTime) {
+    queryFreeSpins() {
         const filter = {
             available: { $gt: 0 },
-            expiryTime: { $gt: execTime },
-        };
-        const projection = {
-            _id: false,
-            playerId: false,
-            __v: false,
-            __archive: false,
-        };
-
-        return this.freeSpinsRepository
-            .find(filter, projection, { sort: { expiryTime: 1 } })
-            .lean()
-            .exec();
-    }
-
-    queryExpiredFreeSpins(execTime) {
-        const filter = {
-            available: { $gt: 0 },
-            expiryTime: { $lte: execTime },
         };
         const projection = {
             _id: false,
