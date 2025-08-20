@@ -142,6 +142,8 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                         operatorId: round.operatorId,
                         siteId: round.siteId,
                         playerId: round.playerId,
+                        multiplier: round.multiplier,
+                        currencyCode: round.currencyCode,
                     },
                 };
 
