@@ -133,9 +133,9 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
                 const player = {
-                    UID: round.playerId,
+                    UID: round.uid,
                     profile: {
-                        name: round.name,
+                        name: name,
                     },
                     session: {
                         currencyName: round.currency,
@@ -145,8 +145,8 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                     },
                 };
 
-                this.gameData.ingame[round.name] = this.gameData.ingame[round.name] ?? { betQueue: [] };
-                this.gameData.ingame[round.name].betQueue.push({ player, payload: { freeSpin: true } });
+                this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
+                this.gameData.ingame[name].betQueue.push({ player, payload: { freeSpin: true } });
             })
         );
     }
