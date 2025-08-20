@@ -100,9 +100,11 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
     }
 
     async reload() {
-        const freeSpins = await this.queryFreeSpins();
-        const activeFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime > new Date());
-        const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= new Date());
+        const execTime = new Date();
+
+        const freeSpins = await this.queryFreeSpins(execTime);
+        const activeFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime > execTime);
+        const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(freeSpins);
         const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(activeFreeSpins);
@@ -144,6 +146,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                         playerId: round.playerId,
                         multiplier: round.multiplier,
                         currencyCode: round.currencyCode,
+                        currencyGroupId: round.currencyGroupId,
                     },
                 };
 
@@ -153,9 +156,10 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         );
     }
 
-    queryFreeSpins() {
+    queryFreeSpins(execTime) {
         const filter = {
             available: { $gt: 0 },
+            $or: [{ currencyGroupId: { $exists: true }, currencyCode: { $exists: true } }, { expiryTime: { $gt: execTime } }],
         };
         const projection = {
             _id: false,
