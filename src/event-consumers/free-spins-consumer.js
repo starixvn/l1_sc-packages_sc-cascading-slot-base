@@ -144,6 +144,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             };
 
             this.gameData.ingame[round.name] = this.gameData.ingame[round.name] ?? { betQueue: [] };
+            this.gameData.ingame[round.name].freeSpins = loadedFreeSpins ?? [];
             this.gameData.ingame[round.name].betQueue.push({ player, payload: { freeSpin: true } });
         });
     }
