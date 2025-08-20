@@ -2,25 +2,6 @@ import { helpers } from "sc-common";
 import { EventConsumers } from "sc-slot-game-base";
 
 export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
-    handlePromotionLogic(player, payload) {
-        const currentDateTime = new Date();
-        const freeSpinsOfPlayer = this.gameData.ingame[player.profile.name]?.freeSpins ?? [];
-        const soonestExpiredFreeSpinSet = freeSpinsOfPlayer.find(
-            (freeSpin) => freeSpin.available > 0 && new Date(freeSpin.expiryTime) > currentDateTime
-        );
-        const freeSpinExtra = soonestExpiredFreeSpinSet && soonestExpiredFreeSpinSet.promotionId;
-
-        if (player.promotion) {
-            this.updatePlayerPromotionFreeSpins(player, soonestExpiredFreeSpinSet);
-        }
-
-        if (freeSpinExtra || (payload.freeSpin && !soonestExpiredFreeSpinSet)) {
-            super.handlePromotionLogic(player, payload);
-        } else {
-            player.usePromotion = false;
-        }
-    }
-
     createPromotionPayload(player, originalPayload, promotionBetAmount) {
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
 
