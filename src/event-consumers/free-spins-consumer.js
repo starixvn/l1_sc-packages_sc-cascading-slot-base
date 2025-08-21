@@ -106,7 +106,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         const activeFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime > execTime);
         const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
-        const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(freeSpins);
+        const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(activeFreeSpins);
         const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(activeFreeSpins);
 
         await this.cleanUpGameNotifications(freeSpinsGroupedByUIDs);
@@ -153,6 +153,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                 this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
 
                 if (player.session.currencyGroupId && player.session.currencyCode) {
+                    this.gameData.ingame[name].freeSpins = (this.gameData.ingame[name].freeSpins ?? []).push(loadedFreeSpins);
                     this.gameData.ingame[name].betQueue.push(...new Array(loadedFreeSpins.length).fill({ player, payload: { freeSpin: true } }));
                 }
             })
