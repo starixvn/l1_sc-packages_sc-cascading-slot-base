@@ -154,7 +154,9 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
                 if (player.session.currencyGroupId && player.session.currencyCode) {
                     this.gameData.ingame[name].freeSpins = (this.gameData.ingame[name].freeSpins ?? []).push(loadedFreeSpins);
-                    this.gameData.ingame[name].betQueue.push(...new Array(loadedFreeSpins.length).fill({ player, payload: { freeSpin: true } }));
+                    this.gameData.ingame[name].betQueue.push(
+                        ...Array.from({ length: loadedFreeSpins.length }).fill({ player, payload: { freeSpin: true } })
+                    );
                 }
             })
         );
