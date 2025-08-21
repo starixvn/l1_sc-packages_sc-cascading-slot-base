@@ -61,17 +61,17 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         return firstAvailableFreeSpinSet;
     }
     getBuyFreeSpinBoard() {
+        const numOfScatterSymbols = 5;
+
         return [
             {
                 newBoard: this.chance.shuffle(
                     this.chance
-                        .pickset(this.buyFreeSpinSymbols, 26)
-                        .concat([
-                            defaultDefinition.specialSymbols.freeSpins,
-                            defaultDefinition.specialSymbols.freeSpins,
-                            defaultDefinition.specialSymbols.freeSpins,
-                            defaultDefinition.specialSymbols.freeSpins,
-                        ])
+                        .pickset(
+                            this.buyFreeSpinSymbols,
+                            defaultDefinition.boardSettings.reels * defaultDefinition.boardSettings.symbolsOnReel - numOfScatterSymbols
+                        )
+                        .concat(Array.from({ length: numOfScatterSymbols }).fill(defaultDefinition.specialSymbols.freeSpins))
                 ),
                 multipliers: [],
             },
