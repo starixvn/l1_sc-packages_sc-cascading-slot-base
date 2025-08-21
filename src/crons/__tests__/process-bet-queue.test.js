@@ -2,7 +2,7 @@ import CascadingProcessBetQueue from "../cascading-process-bet-queue";
 import { SlotGameData, EventConsumers } from "sc-slot-game-base";
 import { FreeSpinConsumer, SettleGameRoundConsumer, TotalMultiplierConsumer } from "../../event-consumers";
 import { stub, stubMongoose } from "jest-micro-auto-stub";
-import { logger } from "sc-common";
+import { logger, helpers } from "sc-common";
 import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
 import mongoose from "mongoose";
 import Chance from "chance";
@@ -40,6 +40,54 @@ describe("cascadingProcessBetQueue", () => {
             placeBetPublisher,
             baseMetrics,
             totalMultiplierConsumer,
+        });
+    });
+
+    describe("proceedBet", () => {
+        describe("when payload has buyFreeSpin and player has free spins", () => {
+            it("should publish failed bet event", async () => {
+                // Arrange
+                const payload = { buyFreeSpin: true };
+                freeSpinsConsumer.hasFreeSpin.mockReturnValueOnce(true);
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(placeBetPublisher.publishGameFailedBet).toBeCalledWith(
+                    player.UID,
+                    { endBet: -1, notice: { errorCode: helpers.noticeHelper.cannotPlaceBet } }
+                );
+            });
+        });
+
+        describe("when payload has buyFreeSpin but player has no free spins", () => {
+            it("should call super.proceedBet", async () => {
+                // Arrange
+                const payload = { buyFreeSpin: true };
+                freeSpinsConsumer.hasFreeSpin.mockReturnValueOnce(false);
+                const superProceedBetSpy = jest.spyOn(consumer, 'proceedBet').mockImplementation(() => {});
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(superProceedBetSpy).toBeCalledWith(player, payload);
+            });
+        });
+
+        describe("when payload does not have buyFreeSpin", () => {
+            it("should call super.proceedBet", async () => {
+                // Arrange
+                const payload = { buyFreeSpin: false };
+                const superProceedBetSpy = jest.spyOn(consumer, 'proceedBet').mockImplementation(() => {});
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(superProceedBetSpy).toBeCalledWith(player, payload);
+            });
         });
     });
 
@@ -83,6 +131,45 @@ describe("cascadingProcessBetQueue", () => {
                 });
             });
         });
+
+        describe("when bet has buyFreeSpin", () => {
+            it("should apply buy free spin multiplier", async () => {
+                // Arrange
+                const payload = { 
+                    freeBet: false, 
+                    betLevel: 10, 
+                    coinValue: 2,
+                    buyFreeSpin: true 
+                };
+                gameData.gameConfigs.cascadingSlotsConfig.features = {
+                    buyFreeSpins: { multiplier: 2 }
+                };
+
+                // Act
+                const actualResult = await consumer.generateBetInfo(payload, undefined, player);
+
+                // Assert
+                expect(actualResult.totalAmount).toBe(10 * 2 * 20 * 2); // betLevel * coinValue * betMultiplier * buyFreeSpinMultiplier
+                expect(actualResult.contributionAmount).toBe(0 * 2); // contributionRate * totalAmount * buyFreeSpinMultiplier
+            });
+        });
+
+        describe("when jackpot is configured", () => {
+            it("should include contribution rate and amount", async () => {
+                // Arrange
+                const payload = { freeBet: false, betLevel: 10, coinValue: 2 };
+                gameData.gameConfigs.cascadingSlotsConfig.jackpot = {
+                    playerContributionRatio: 0.05
+                };
+
+                // Act
+                const actualResult = await consumer.generateBetInfo(payload, undefined, player);
+
+                // Assert
+                expect(actualResult.contributionRate).toBe(0.05);
+                expect(actualResult.contributionAmount).toBe(0.05 * actualResult.totalAmount);
+            });
+        });
     });
 
     describe("upsertBet", () => {
@@ -118,16 +205,20 @@ describe("cascadingProcessBetQueue", () => {
                 bet: bet.amount,
                 betMultiplier: bet.betMultiplier,
                 totalAmount: bet.totalAmount,
+                buyFreeSpin: bet.buyFreeSpin,
                 rate: rate,
                 exchangeRateId: gameData.exchangeRates.exId,
+                buyFreeSpinRefRoundId: undefined,
                 odds: {
                     oddsByCounts: gameData.gameConfigs.cascadingSlotsConfig.oddsByCounts,
                     freeSpins: gameData.gameConfigs.cascadingSlotsConfig.freeSpins,
                 },
-                playerId: player.session.memberId,
                 siteId: player.session.siteId,
                 currency: player.session.currencyName,
-                operatorId: player.session.partnerId,
+                currencyCode: player.session.currencyCode,
+                currencyGroupId: player.session.currencyGroupId,
+                operatorId: player.session.operatorId,
+                playerId: player.session.playerId,
             });
         });
     });
@@ -148,6 +239,10 @@ describe("cascadingProcessBetQueue", () => {
             const freeSpinBet = { freeSpin: true };
 
             it("should call freeSpinsConsumer.userFreeSpin", async () => {
+                // Arrange
+                const mockFreeSpin = { buyFreeSpinRefRoundId: chance.natural() };
+                freeSpinsConsumer.useFreeSpin.mockResolvedValueOnce(mockFreeSpin);
+
                 // Act
                 await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
 
@@ -169,7 +264,7 @@ describe("cascadingProcessBetQueue", () => {
             await consumer.handleSuccessBet(player, balance, roundId, bet);
 
             // Assert
-            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate);
+            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate, null);
         });
 
         it("should call notifyPlacingBetResult", async () => {
