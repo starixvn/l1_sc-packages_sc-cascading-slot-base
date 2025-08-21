@@ -151,15 +151,17 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                 };
 
                 this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
-                this.gameData.ingame[name].betQueue.push({ player, payload: { freeSpin: true } });
+
+                if (player.session.currencyGroupId && player.session.currencyCode) {
+                    this.gameData.ingame[name].betQueue.push(...new Array(loadedFreeSpins.length).fill({ player, payload: { freeSpin: true } }));
+                }
             })
         );
     }
 
-    queryFreeSpins(execTime) {
+    queryFreeSpins() {
         const filter = {
             available: { $gt: 0 },
-            $or: [{ currencyGroupId: { $exists: true }, currencyCode: { $exists: true } }, { expiryTime: { $gt: execTime } }],
         };
         const projection = {
             _id: false,
