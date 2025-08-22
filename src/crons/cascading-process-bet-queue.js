@@ -1,5 +1,6 @@
-import { Crons } from "sc-slot-game-base";
 import { helpers } from "sc-common";
+import { Crons } from "sc-slot-game-base";
+import { isBuyFreeSpinEnabled } from "../utils";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
     async proceedBet(player, payload) {
@@ -10,7 +11,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         }
     }
 
-    async generateBetInfo(payload, freeSpinInfo) {
+    async generateBetInfo(payload, freeSpinInfo, player) {
         const betInfo = { ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
         const contributionRate = cascadingSlotsConfig.jackpot ? cascadingSlotsConfig.jackpot.playerContributionRatio : 0;
@@ -24,13 +25,18 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.coinValue = coinValue;
             betInfo.betMultiplier = betMultiplier;
         }
+        const buyFreeSpinConfig = cascadingSlotsConfig.features?.buyFreeSpins;
 
-        const buyFreeSpinRate = payload.buyFreeSpin ? cascadingSlotsConfig.features.buyFreeSpins.multiplier : 1;
+        let buyFreeSpinMultiplier = 1;
+        if (payload.buyFreeSpin) {
+            const isBuyFreeSpinValid = isBuyFreeSpinEnabled(buyFreeSpinConfig, player.session);
+            buyFreeSpinMultiplier = isBuyFreeSpinValid && buyFreeSpinConfig?.multiplier ? buyFreeSpinConfig.multiplier : 1;
+        }
 
         betInfo.amount = betInfo.betLevel * betInfo.coinValue;
-        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier * buyFreeSpinRate).toFixed(2));
+        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier * buyFreeSpinMultiplier).toFixed(2));
         betInfo.contributionRate = parseFloat(contributionRate.toFixed(4));
-        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount * buyFreeSpinRate).toFixed(4));
+        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount * buyFreeSpinMultiplier).toFixed(4));
 
         return betInfo;
     }

@@ -36,6 +36,12 @@ function stubGameData() {
                 initialOdds: [],
                 additionalOdds: [],
             },
+            features: {
+                buyFreeSpins: {
+                    enabled: true,
+                    multiplier: 2,
+                },
+            },
         },
     };
 
@@ -54,6 +60,9 @@ function stubGameData() {
 }
 
 describe("InGameConsumer", () => {
+    /**
+     * @type {InGameConsumer}
+     */
     let consumer;
 
     beforeEach(() => {
@@ -112,6 +121,11 @@ describe("InGameConsumer", () => {
                         rate: 4,
                         multiplier: 2,
                     },
+                    features: {
+                        buyFreeSpins: {
+                            enabled: true,
+                        },
+                    }
                 };
 
                 // Act
@@ -157,6 +171,11 @@ describe("InGameConsumer", () => {
                         rate: 4,
                         multiplier: 2,
                     },
+                    features: {
+                        buyFreeSpins: {
+                            enabled: true,
+                        },
+                    },
                 };
 
                 // Act
@@ -164,6 +183,83 @@ describe("InGameConsumer", () => {
 
                 // Assert
                 expect(actualValue).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when buy free spins feature is configured", () => {
+            it("should return enabled false when feature is disabled", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins.enabled = false;
+                const realPlayer = {
+                    session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(false);
+            });
+
+            it("should return enabled false when site is excluded", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins = {
+                    enabled: true,
+                    multiplier: 2,
+                    siteExclusions: [
+                        {
+                            operatorId: "operator1",
+                            sites: ["site1"],
+                        },
+                    ],
+                };
+                const realPlayer = {
+                    session: { 
+                        currencyGroupId: "617a650628b7a500016388f5", 
+                        currencyCode: "UUS", 
+                        multiplier: 2,
+                        operatorId: "operator1",
+                        siteName: "site1"
+                    },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(false);
+            });
+
+            it("should return enabled true when site is not in exclusion list", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins = {
+                    enabled: true,
+                    multiplier: 2,
+                    siteExclusions: [
+                        {
+                            operatorId: "operator1",
+                            sites: ["different-site"],
+                        },
+                    ],
+                };
+                const realPlayer = {
+                    session: { 
+                        currencyGroupId: "617a650628b7a500016388f5", 
+                        currencyCode: "UUS", 
+                        multiplier: 2,
+                        operatorId: "operator1",
+                        siteName: "site1"
+                    },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(true);
             });
         });
     });

@@ -1,4 +1,5 @@
 import { EventConsumers } from "sc-slot-game-base";
+import { isBuyFreeSpinEnabled } from "../utils";
 
 export default class InGameConsumer extends EventConsumers.InGameConsumer {
     async buildPayload(realPlayer) {
@@ -6,7 +7,8 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         const coinValues = settings?.coinValues;
         const maxWinPerRound = settings?.maxWinPerRound;
 
-        const { betLevels, betMultiplier, oddsByCounts, freeSpins: freeSpinsConfig } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const { betLevels, betMultiplier, oddsByCounts, freeSpins: freeSpinsConfig, features } = this.gameData.gameConfigs.cascadingSlotsConfig;
+
         const gameConfigs = {
             coinValues,
             maxWinPerRound,
@@ -40,6 +42,11 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
                 ...user,
                 rate,
                 multiplier: session.multiplier,
+            },
+            features: {
+                buyFreeSpins: {
+                    enabled: isBuyFreeSpinEnabled(features?.buyFreeSpins, realPlayer.session),
+                },
             },
         };
     }
