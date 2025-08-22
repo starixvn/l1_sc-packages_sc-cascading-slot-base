@@ -4,19 +4,8 @@
  * @returns {boolean}
  */
 export const isBuyFreeSpinEnabled = (buyFreeSpinsConfig, session) => {
-    if (!buyFreeSpinsConfig?.enabled) {
-        return false;
-    }
+    const siteExclusion = buyFreeSpinsConfig.siteExclusions?.find((exclusion) => exclusion.operatorId === session.operatorId);
 
-    if (!buyFreeSpinsConfig.siteExclusions?.length) {
-        return true;
-    }
-
-    const siteExclusion = buyFreeSpinsConfig.siteExclusions.find((exclusion) => exclusion.operatorId === session.operatorId);
-
-    if (!siteExclusion) {
-        return true;
-    }
-
-    return !siteExclusion.sites.some((site) => site.toLowerCase() === session.siteName.toLowerCase());
+    return buyFreeSpinsConfig?.enabled && 
+        (!siteExclusion || !siteExclusion.sites.some((site) => site.toLowerCase() === session.siteName.toLowerCase()));
 };
