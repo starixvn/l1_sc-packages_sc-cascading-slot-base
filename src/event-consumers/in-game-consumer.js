@@ -46,6 +46,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             features: {
                 buyFreeSpins: {
                     enabled: isBuyFreeSpinEnabled(features?.buyFreeSpins, realPlayer.session),
+                    multiplier: features?.buyFreeSpins?.multiplier ?? 1,
                 },
             },
         };

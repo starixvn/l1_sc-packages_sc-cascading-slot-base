@@ -124,6 +124,7 @@ describe("InGameConsumer", () => {
                     features: {
                         buyFreeSpins: {
                             enabled: true,
+                            multiplier: 2,
                         },
                     }
                 };
@@ -174,6 +175,7 @@ describe("InGameConsumer", () => {
                     features: {
                         buyFreeSpins: {
                             enabled: true,
+                            multiplier: 2,
                         },
                     },
                 };

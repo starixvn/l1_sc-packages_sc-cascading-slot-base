@@ -6,9 +6,19 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     async proceedBet(player, payload) {
         if (payload.buyFreeSpin && this.freeSpinsConsumer.hasFreeSpin(player)) {
             this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.cannotPlaceBet } });
-        } else {
-            await super.proceedBet(player, payload);
+            return;
         }
+
+        if (payload.buyFreeSpin) {
+            const { features } = this.gameData.gameConfigs.cascadingSlotsConfig;
+            const buyFreeSpinConfig = features?.buyFreeSpins;
+            const isBuyFreeSpinValid = isBuyFreeSpinEnabled(buyFreeSpinConfig, player.session) && buyFreeSpinConfig?.multiplier;
+            if (!isBuyFreeSpinValid) {
+                this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.invalidBet } });
+                return;
+            }
+        }
+        await super.proceedBet(player, payload);
     }
 
     async generateBetInfo(payload, freeSpinInfo, player) {
@@ -25,12 +35,10 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.coinValue = coinValue;
             betInfo.betMultiplier = betMultiplier;
         }
-        const buyFreeSpinConfig = cascadingSlotsConfig.features?.buyFreeSpins;
 
         let buyFreeSpinMultiplier = 1;
         if (payload.buyFreeSpin) {
-            const isBuyFreeSpinValid = isBuyFreeSpinEnabled(buyFreeSpinConfig, player.session) && buyFreeSpinConfig?.multiplier;
-            buyFreeSpinMultiplier = isBuyFreeSpinValid ? buyFreeSpinConfig.multiplier : 1;
+            buyFreeSpinMultiplier = cascadingSlotsConfig.features.buyFreeSpins.multiplier;
         }
 
         betInfo.amount = betInfo.betLevel * betInfo.coinValue;

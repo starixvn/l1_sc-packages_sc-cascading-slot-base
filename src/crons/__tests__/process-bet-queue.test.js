@@ -67,11 +67,17 @@ describe("cascadingProcessBetQueue", () => {
             });
         });
 
-        describe("when payload has buyFreeSpin but player has no free spins", () => {
-            it("should call super.proceedBet", async () => {
-                // Arrange
-                const payload = { buyFreeSpin: true };
+        describe("when payload has buyFreeSpin and player has no free spins", () => {
+            const payload = { buyFreeSpin: true };
+            beforeEach(() => {
                 freeSpinsConsumer.hasFreeSpin.mockReturnValueOnce(false);
+            });
+
+            it("should call super.proceedBet when feature is enabled", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features = {
+                    buyFreeSpins: { multiplier: 2, enabled: true },
+                };
                 const superProceedBetSpy = jest.spyOn(consumer, "proceedBet").mockImplementation(() => {});
 
                 // Act
@@ -79,6 +85,92 @@ describe("cascadingProcessBetQueue", () => {
 
                 // Assert
                 expect(superProceedBetSpy).toBeCalledWith(player, payload);
+            });
+
+            it("should call super.proceedBet when site is not excluded", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features = {
+                    buyFreeSpins: {
+                        multiplier: 2,
+                        enabled: true,
+                        siteExclusions: [
+                            {
+                                operatorId: player.session.operatorId,
+                                sites: ["different-site"],
+                            },
+                        ],
+                    },
+                };
+                const superProceedBetSpy = jest.spyOn(consumer, "proceedBet").mockImplementation(() => {});
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(superProceedBetSpy).toBeCalledWith(player, payload);
+            });
+
+            it("should publish failed bet event when site is excluded", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features = {
+                    buyFreeSpins: {
+                        multiplier: 2,
+                        enabled: true,
+                        siteExclusions: [
+                            {
+                                operatorId: player.session.operatorId,
+                                sites: [player.session.siteName],
+                            },
+                        ],
+                    },
+                };
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(placeBetPublisher.publishGameFailedBet).toBeCalledWith(player.UID, {
+                    endBet: -1,
+                    notice: { errorCode: helpers.noticeHelper.invalidBet },
+                });
+            });
+        });
+
+        describe("when payload has buyFreeSpin but feature is not enabled", () => {
+            it("should publish failed bet event", async () => {
+                // Arrange
+                const payload = { buyFreeSpin: true };
+                freeSpinsConsumer.hasFreeSpin.mockReturnValueOnce(false);
+                gameData.gameConfigs.cascadingSlotsConfig.features = {
+                    buyFreeSpins: { multiplier: 2, enabled: false },
+                };
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(placeBetPublisher.publishGameFailedBet).toBeCalledWith(player.UID, {
+                    endBet: -1,
+                    notice: { errorCode: helpers.noticeHelper.invalidBet },
+                });
+            });
+        });
+
+        describe("when payload has buyFreeSpin but feature is not configured", () => {
+            it("should publish failed bet event", async () => {
+                // Arrange
+                const payload = { buyFreeSpin: true };
+                freeSpinsConsumer.hasFreeSpin.mockReturnValueOnce(false);
+                gameData.gameConfigs.cascadingSlotsConfig.features = {};
+
+                // Act
+                await consumer.proceedBet(player, payload);
+
+                // Assert
+                expect(placeBetPublisher.publishGameFailedBet).toBeCalledWith(player.UID, {
+                    endBet: -1,
+                    notice: { errorCode: helpers.noticeHelper.invalidBet },
+                });
             });
         });
 
@@ -146,10 +238,10 @@ describe("cascadingProcessBetQueue", () => {
                 buyFreeSpin: true,
             };
 
-            it("should apply buy free spin multiplier when enabled", async () => {
+            it("should apply buy free spin multiplier when payload has buyFreeSpin", async () => {
                 // Arrange
                 gameData.gameConfigs.cascadingSlotsConfig.features = {
-                    buyFreeSpins: { multiplier: 2, enabled: true },
+                    buyFreeSpins: { multiplier: 2 },
                 };
 
                 // Act
@@ -160,64 +252,18 @@ describe("cascadingProcessBetQueue", () => {
                 expect(actualResult.contributionAmount).toBe(0 * 2); // contributionRate * totalAmount * buyFreeSpinMultiplier
             });
 
-            it("should not apply multiplier when buy free spin is disabled", async () => {
+            it("should not apply multiplier when payload not has buyFreeSpin", async () => {
                 // Arrange
                 gameData.gameConfigs.cascadingSlotsConfig.features = {
-                    buyFreeSpins: { multiplier: 2, enabled: false },
+                    buyFreeSpins: { multiplier: 2 },
                 };
 
                 // Act
-                const actualResult = await consumer.generateBetInfo(payload, undefined, player);
+                const actualResult = await consumer.generateBetInfo({ ...payload, buyFreeSpin: false }, undefined, player);
 
                 // Assert
                 expect(actualResult.totalAmount).toBe(10 * 2 * 20 * 1); // betLevel * coinValue * betMultiplier * 1
                 expect(actualResult.contributionAmount).toBe(0); // contributionRate * totalAmount * 1
-            });
-
-            it("should not apply multiplier when site is excluded", async () => {
-                // Arrange
-                gameData.gameConfigs.cascadingSlotsConfig.features = {
-                    buyFreeSpins: {
-                        multiplier: 2,
-                        enabled: true,
-                        siteExclusions: [
-                            {
-                                operatorId: player.session.operatorId,
-                                sites: [player.session.siteName],
-                            },
-                        ],
-                    },
-                };
-
-                // Act
-                const actualResult = await consumer.generateBetInfo(payload, undefined, player);
-
-                // Assert
-                expect(actualResult.totalAmount).toBe(10 * 2 * 20 * 1); // betLevel * coinValue * betMultiplier * 1
-                expect(actualResult.contributionAmount).toBe(0); // contributionRate * totalAmount * 1
-            });
-
-            it("should apply multiplier when site is not in exclusion list", async () => {
-                // Arrange
-                gameData.gameConfigs.cascadingSlotsConfig.features = {
-                    buyFreeSpins: {
-                        multiplier: 2,
-                        enabled: true,
-                        siteExclusions: [
-                            {
-                                operatorId: player.session.operatorId,
-                                sites: ["different-site"],
-                            },
-                        ],
-                    },
-                };
-
-                // Act
-                const actualResult = await consumer.generateBetInfo(payload, undefined, player);
-
-                // Assert
-                expect(actualResult.totalAmount).toBe(10 * 2 * 20 * 2); // betLevel * coinValue * betMultiplier * buyFreeSpinMultiplier
-                expect(actualResult.contributionAmount).toBe(0 * 2); // contributionRate * totalAmount * buyFreeSpinMultiplier
             });
         });
 
@@ -378,7 +424,7 @@ describe("cascadingProcessBetQueue", () => {
         userSession.operatorId = userSession.partnerId;
         userSession.playerId = userSession.memberId;
         userSession.playerName = userSession.memberName;
-        
+
         return {
             UID: userInfo.UID,
             profile: userInfo,
