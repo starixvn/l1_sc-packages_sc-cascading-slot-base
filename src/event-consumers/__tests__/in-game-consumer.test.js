@@ -1,6 +1,7 @@
 import { stub } from "jest-micro-auto-stub";
 import { BaseEventPublishers, RoundQuery } from "sc-game-base/src/core";
 import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
+import PromotionClient from "sc-game-base/src/core/promotion-client";
 import { EventConsumers } from "sc-slot-game-base";
 import { FreeSpinsConsumer } from "sc-slot-game-base/src/event-consumers/free-spins-consumer";
 import SlotGameData from "sc-slot-game-base/src/slot-game-data";
@@ -22,6 +23,12 @@ const gameManagementApiClient = {
     },
 };
 gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
+
+const gamePromotionApiClient = stub(PromotionClient);
+const promotionClient = {
+    getTOPRogress: jest.fn(() => Promise.resolve({})),
+};
+gamePromotionApiClient.instance.mockReturnValue(promotionClient);
 
 function stubGameDefinition() {
     return new SlotGameDefinition({ id: 47 });
@@ -72,6 +79,7 @@ describe("InGameConsumer", () => {
             freeSpinsConsumer,
             getBalance,
             gameManagementApiClientFactory,
+            gamePromotionApiClient,
         });
 
         freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValueOnce(10);
