@@ -36,7 +36,7 @@
     "dependencies": {
         "mathjs": "14.5.3",
         "sc-slot-board-generator": "1.0.1",
-        "sc-slot-game-base": "2.3.0-beta.150"
+        "sc-slot-game-base": "2.3.0-beta.152"
     },
     "overrides": {
         "mongoose": "6.13.8",
