@@ -57,6 +57,8 @@ describe("gameCron", () => {
     };
     gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
+    const promotionFreeSpinsConsumer = stub(EventConsumers.PromotionFreeSpinsConsumer);
+
     let gameCron;
 
     beforeEach(() => {
@@ -82,6 +84,7 @@ describe("gameCron", () => {
             totalMultiplierConsumer,
             boardGenerator,
             gameManagementApiClientFactory,
+            promotionFreeSpinsConsumer,
         });
     });
 

@@ -40,6 +40,7 @@ export default class TotalMultiplierConsumer {
                 ended: false,
                 time: new Date(),
                 rounds: [newRoundRecord],
+                ...(player.usePromotion && { promotionId: player.promotion.promotionId }),
             });
         }
 
@@ -59,17 +60,25 @@ export default class TotalMultiplierConsumer {
     async reload() {
         const totalMultipliers = await this.totalMultiplierRepository.find({ ended: false }).lean().exec();
 
-        totalMultipliers.forEach(async (totalMultiplier) => {
-            const latestTotalMultiplier = totalMultiplier.rounds[totalMultiplier.rounds.length - 1].totalMultiplier;
-            const isHavingFreeSpins = this.freeSpinsConsumer.hasFreeSpin({ profile: { name: totalMultiplier.name } });
+        if (totalMultipliers.length > 0) {
+            const players = Object.values(this.gameData.realPlayers);
 
-            if (isHavingFreeSpins) {
-                this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
-                this.gameData.ingame[totalMultiplier.name].totalMultiplier = latestTotalMultiplier;
-            } else {
-                this.gameData.ingame[totalMultiplier.name] && (this.gameData.ingame[totalMultiplier.name].totalMultiplier = 0);
-                await this.totalMultiplierRepository.updateOne({ uid: totalMultiplier.uid, ended: false }, { ended: true, endTime: new Date() });
-            }
-        });
+            totalMultipliers.forEach(async (totalMultiplier) => {
+                var player = players.find((player) => player.UID === totalMultiplier.uid);
+
+                const latestTotalMultiplier = totalMultiplier.rounds[totalMultiplier.rounds.length - 1].totalMultiplier;
+                const isHavingFreeSpins =
+                    this.freeSpinsConsumer.hasFreeSpin({ profile: { name: totalMultiplier.name } }) ||
+                    (totalMultiplier.promotionId && player?.promotion?.remainingBonusItems > 0);
+
+                if (isHavingFreeSpins) {
+                    this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
+                    this.gameData.ingame[totalMultiplier.name].totalMultiplier = latestTotalMultiplier;
+                } else {
+                    this.gameData.ingame[totalMultiplier.name] && (this.gameData.ingame[totalMultiplier.name].totalMultiplier = 0);
+                    await this.totalMultiplierRepository.updateOne({ uid: totalMultiplier.uid, ended: false }, { ended: true, endTime: new Date() });
+                }
+            });
+        }
     }
 }

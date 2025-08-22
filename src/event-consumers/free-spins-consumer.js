@@ -16,10 +16,11 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             total: numberOfFreeSpins,
             available: numberOfFreeSpins,
             time: createdTime,
-            expiryTime,
             betLevel,
             coinValue,
             betMultiplier: this.gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
+            expiryTime: player.usePromotion ? player.promotion.endDate : expiryTime,
+            ...(player.usePromotion && { promotionId: player.promotion.promotionId }),
         };
 
         const gainedFreeSpin = {
@@ -36,6 +37,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[memberName].freeSpins = this.gameData.ingame[memberName].freeSpins ?? [];
 
             this.gameData.ingame[memberName].freeSpins.push(newlyCachedFreeSpin);
+            this.updatePlayerPromotionFreeSpins(player, newlyCreatedFreeSpin);
         }
     }
 }

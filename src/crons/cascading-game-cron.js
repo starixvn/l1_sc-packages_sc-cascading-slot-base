@@ -13,12 +13,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
      * @param {Core.BaseEventPublishers.GameStatusPublisher} dependencies.gameStatusPublisher
      * @param {Core.BaseEventPublishers.RunningRoundInfoPublisher} dependencies.runningRoundInfoPublisher
      * @param {logger} dependencies.logService
-     * @param {mongoose.Model} dependencies.gameConfigsRepository
      * @param {mongoose.Model} dependencies.roundsRepository
-     * @param {mongoose.Model} dependencies.archiveStatusesRepository
-     * @param {mongoose.Model} dependencies.notificationRepository
-     * @param {mongoose.Model} dependencies.exchangeRatesRepository
-     * @param {mongoose.Model} dependencies.partnerConfigRepository
      * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
      */
     constructor({
@@ -36,6 +31,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         gameManagementApiClientFactory,
         totalMultiplierConsumer,
         boardGenerator,
+        promotionFreeSpinsConsumer,
     }) {
         super({
             definition,
@@ -50,6 +46,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             idCountersConsumer,
             roundIdConsumer,
             gameManagementApiClientFactory,
+            promotionFreeSpinsConsumer,
         });
 
         this.totalMultiplierConsumer = totalMultiplierConsumer;
@@ -74,6 +71,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             );
         }
 
+        this.checkPromotionReadiness();
         await this.loadUnsettledBetsToIngame();
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload();
@@ -116,6 +114,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
         }
+        await this.promotionFreeSpinsConsumer.checkExpiry(this.gameData.gameConfigs.gameId);
     }
 
     async checkGameStatus() {

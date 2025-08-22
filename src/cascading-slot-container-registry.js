@@ -1,14 +1,22 @@
 import { asClass, asValue } from "awilix";
 import { SlotContainerRegistry } from "sc-slot-game-base";
-import RoundCalculator from "./board/round-calculator";
-import TumbleCalculator from "./board/tumble-calculator";
-import { FreeSpinsConsumer, PlaceBetConsumer, TotalMultiplierConsumer, SettleGameRoundConsumer, InGameConsumer } from "./event-consumers";
-import HttpRouter from "./routers/cascading-http-router";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
-import { HistoryQuery } from "./query-apis";
+import RoundCalculator from "./board/round-calculator";
+import TumbleCalculator from "./board/tumble-calculator";
 import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
-import { Table } from "sc-game-base";
+import {
+    FreeSpinsConsumer,
+    InGameConsumer,
+    PlaceBetConsumer,
+    PromotionFreeSpinsConsumer,
+    SettleGameRoundConsumer,
+    TotalMultiplierConsumer,
+    UserSignInConsumer,
+} from "./event-consumers";
+import { CascadingSlotPromotionInterceptor } from "./event-interceptors";
+import { HistoryQuery } from "./query-apis";
+import HttpRouter from "./routers/cascading-http-router";
 
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     register(appConfigs, definition, gameData) {
@@ -46,8 +54,9 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             settleGameRoundConsumer: asClass(SettleGameRoundConsumer).singleton().proxy(),
             totalMultiplierConsumer: asClass(TotalMultiplierConsumer).singleton(),
             freeSpinsConsumer: asClass(FreeSpinsConsumer).singleton(),
-            userSignInConsumer: asClass(Table.EventConsumers.TableUserSignInConsumer).singleton(),
             inGameConsumer: asClass(InGameConsumer).singleton().proxy(),
+            userSignInConsumer: asClass(UserSignInConsumer).singleton().proxy(),
+            promotionFreeSpinsConsumer: asClass(PromotionFreeSpinsConsumer).singleton().proxy(),
         });
     }
 
@@ -66,6 +75,14 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             bot: asClass(CascadingBot).singleton().proxy(),
             gameCron: asClass(CascadingGameCron).singleton().proxy(),
             processBetQueue: asClass(CascadingProcessBetQueue).singleton().proxy(),
+        });
+    }
+
+    registerInterceptors() {
+        super.registerInterceptors();
+
+        this.container.register({
+            promotionBetInterceptor: asClass(CascadingSlotPromotionInterceptor).singleton().proxy(),
         });
     }
 }

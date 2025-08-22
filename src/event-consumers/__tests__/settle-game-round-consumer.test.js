@@ -2,6 +2,7 @@ import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
 import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
+import { EventInterceptors } from "sc-slot-game-base";
 import defaultDefinition from "../../board/default-definition";
 import RoundCalculator from "../../board/round-calculator";
 import TumbleCalculator from "../../board/tumble-calculator";
@@ -52,6 +53,8 @@ const gameManagementApiClient = {
 };
 gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
+const promotionBetInterceptor = stub(EventInterceptors.SlotPromotionInterceptor);
+
 function initConsumer() {
     return new SettleGameRoundConsumer({
         definition,
@@ -63,6 +66,7 @@ function initConsumer() {
         endGame,
         roundCalculator,
         gameManagementApiClientFactory,
+        promotionBetInterceptor,
     });
 }
 

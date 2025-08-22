@@ -61,7 +61,6 @@ describe("cascadingProcessBetQueue", () => {
                 expect(actualResult).toStrictEqual({
                     freeBet: true,
                     ...freeSpinInfo,
-                    amount: freeSpinInfo.betLevel * freeSpinInfo.coinValue,
                     totalAmount: freeSpinInfo.betLevel * freeSpinInfo.coinValue * freeSpinInfo.betMultiplier,
                     contributionAmount: 0,
                     contributionRate: 0,
@@ -70,7 +69,7 @@ describe("cascadingProcessBetQueue", () => {
         });
 
         describe("when bet is NOT free spin", () => {
-            const payload = { freeBet: false, betLevel: chance.natural(), coinValue: chance.natural() };
+            const payload = { freeBet: false, betLevel: 1, coinValue: 0.1 };
 
             it("should return correct bet info", async () => {
                 // Act
@@ -80,7 +79,6 @@ describe("cascadingProcessBetQueue", () => {
                 expect(actualResult).toStrictEqual({
                     ...payload,
                     betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
-                    amount: payload.betLevel * payload.coinValue,
                     totalAmount: payload.betLevel * payload.coinValue * gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
                     contributionAmount: 0,
                     contributionRate: 0,
@@ -130,8 +128,10 @@ describe("cascadingProcessBetQueue", () => {
                 },
                 playerId: player.session.memberId,
                 siteId: player.session.siteId,
+                siteName: player.session.siteName,
                 currency: player.session.currencyName,
                 operatorId: player.session.partnerId,
+                appType: player.session.system,
             });
         });
     });
@@ -152,6 +152,9 @@ describe("cascadingProcessBetQueue", () => {
             const freeSpinBet = { freeSpin: true };
 
             it("should call freeSpinsConsumer.userFreeSpin", async () => {
+                // Arrange
+                settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
                 // Act
                 await consumer.handleSuccessBet(player, balance, roundId, freeSpinBet);
 
@@ -161,6 +164,9 @@ describe("cascadingProcessBetQueue", () => {
         });
 
         it("should call calculateCurrencyRate", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
             await consumer.handleSuccessBet(player, balance, roundId, bet);
 
@@ -169,24 +175,33 @@ describe("cascadingProcessBetQueue", () => {
         });
 
         it("should call upsertBet", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
-            await consumer.handleSuccessBet(player, balance, roundId, bet);
+            await consumer.handleSuccessBet(player, balance, roundId, bet, []);
 
             // Assert
-            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate);
+            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate, []);
         });
 
         it("should call notifyPlacingBetResult", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
-            await consumer.handleSuccessBet(player, balance, roundId, bet);
+            await consumer.handleSuccessBet(player, balance, roundId, bet, []);
 
             // Assert
             expect(consumer.notifyPlacingBetResult).toBeCalledWith(player, balance, bet, rate);
         });
 
         it("should call settleGameRoundConsumer.settleRound", async () => {
+            // Arrange
+            settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
             // Act
-            await consumer.handleSuccessBet(player, balance, roundId, bet);
+            await consumer.handleSuccessBet(player, balance, roundId, bet, []);
 
             // Assert
             expect(settleGameRoundConsumer.settleRound).toBeCalledWith(player, roundId);

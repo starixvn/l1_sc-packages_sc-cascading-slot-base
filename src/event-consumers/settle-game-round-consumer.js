@@ -44,9 +44,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             const betResult = this.calculateBetResult(round);
 
             await round.save();
-            await this.callEndGame(round, roundId, round.endTime, betResult);
+
+            const metaData = this.createMetadata({ bet: round, settlementResult: round.settlementResult, result: round.result });
+            await this.callEndGame(round, roundId, round.endTime, betResult, metaData);
             await this.processFreeSpins(player, round);
             await this.userBetResultPublisher.publishToUser(round.uid, this.collectRoundResult(player, round, betResult));
+
+            return { betwin: round.betwin };
         }
     }
 
@@ -86,9 +90,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             );
         }
 
-        const totalAvailableFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(player);
+        let totalAvailableFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(player);
 
-        if (!totalAvailableFreeSpins) {
+        if (round.promotionId) {
+            totalAvailableFreeSpins += player.promotion?.remainingBonusItems ?? 0;
+        }
+
+        if (totalAvailableFreeSpins === 0) {
             await this.totalMultiplierConsumer.stopChain(player);
         }
     }

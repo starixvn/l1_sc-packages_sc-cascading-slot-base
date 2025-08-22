@@ -1,6 +1,6 @@
-import ServiceContainerRegistry from "../cascading-slot-container-registry";
-import * as Slot from "sc-slot-game-base";
 import { InjectionMode } from "awilix";
+import * as Slot from "sc-slot-game-base";
+import ServiceContainerRegistry from "../cascading-slot-container-registry";
 
 jest.mock(
     "awilix",
@@ -32,27 +32,6 @@ describe("service-container-registry", () => {
 
         //assert
         expect(serviceContainerRegistry instanceof Slot.SlotContainerRegistry);
-    });
-
-    describe("registerConsumers", () => {
-        it("should register correct consumers", () => {
-            // Arrange
-            const serviceContainerRegistry = new ServiceContainerRegistry(defaultInjectionMode);
-            serviceContainerRegistry.container = { register: jest.fn() };
-
-            // Act
-            serviceContainerRegistry.registerConsumers();
-
-            // Assert
-            expect(serviceContainerRegistry.container.register).toBeCalledWith({
-                placeBetConsumer: expect.any(Object),
-                settleGameRoundConsumer: expect.any(Function),
-                totalMultiplierConsumer: expect.any(Object),
-                freeSpinsConsumer: expect.any(Object),
-                userSignInConsumer: expect.any(Object),
-                inGameConsumer: expect.any(Function),
-            });
-        });
     });
 
     describe("registerApis", () => {

@@ -1,7 +1,18 @@
 import { helpers } from "sc-common";
-import { Core } from "sc-game-base";
+import { EventConsumers } from "sc-slot-game-base";
 
-export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
+export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
+    createPromotionPayload(player, originalPayload, promotionBetAmount) {
+        const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+
+        return {
+            betLevel: cascadingSlotsConfig.betLevels[0],
+            coinValue: player.promotion.coinValue,
+            promotionId: player.promotion.promotionId,
+            usePromotion: true,
+        };
+    }
+
     consume(player, payload) {
         Object.assign(payload, {
             roundId: payload.roundId ?? this.gameData.roundId,
@@ -9,6 +20,8 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
             coinValue: payload.coinValue,
             freeSpin: payload.freeSpin ?? false,
         });
+
+        this.handlePromotionLogic(player, payload);
 
         const name = player.profile.name;
         if (!this.validateBetRequest(player, payload)) {
@@ -31,11 +44,6 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
     }
 
     validateBetRequest(player, payload) {
-        const isValid = payload.freeSpin || (payload.betLevel && payload.coinValue);
-        if (!isValid) {
-            return false;
-        }
-
         const criteria = this.composeValidationCriteria(player, payload);
         const failedCriterion = criteria.find((criterion) => criterion.failure);
 
@@ -51,7 +59,9 @@ export default class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetCo
     composeValidationCriteria(player, payload) {
         const bettingTimeValidationCriteria = this.composeBettingTimeValidationCriteria();
         const betAmountValidationCriteria = this.composeBetAmountValidationCriteria(player, payload);
-        return bettingTimeValidationCriteria.concat(betAmountValidationCriteria);
+        const promotionValidationCriteria = this.composePromotionValidationCriteria(player);
+
+        return bettingTimeValidationCriteria.concat(betAmountValidationCriteria, promotionValidationCriteria);
     }
 
     composeBettingTimeValidationCriteria() {
