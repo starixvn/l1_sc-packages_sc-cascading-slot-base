@@ -52,6 +52,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
             return { betwin: round.betwin };
         }
+
+        return { betwin: 0 };
     }
 
     async processSpinning(player, round) {
