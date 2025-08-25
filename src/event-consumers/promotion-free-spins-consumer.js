@@ -11,6 +11,7 @@ export default class PromotionFreeSpinsConsumer extends EventConsumers.Promotion
 
     getDefaultBetLevel() {
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
+
         return cascadingSlotsConfig.betLevels[0];
     }
 }
