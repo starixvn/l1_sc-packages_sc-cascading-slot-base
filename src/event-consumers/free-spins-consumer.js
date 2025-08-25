@@ -102,7 +102,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
     async reload() {
         const execTime = new Date();
 
-        const freeSpins = await this.queryFreeSpins(execTime);
+        const freeSpins = await this.queryFreeSpins();
         const activeFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime > execTime);
         const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
@@ -133,6 +133,8 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
+                const isPlayerInGame = !!this.gameData.ingame[name];
+
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
                 const player = {
                     UID: round.uid,
@@ -154,8 +156,13 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
                 if (player.session.currencyGroupId && player.session.currencyCode) {
                     this.gameData.ingame[name].freeSpins = (this.gameData.ingame[name].freeSpins ?? []).concat(loadedFreeSpins);
-                    const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
-                    this.gameData.ingame[name].betQueue.push(...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true } }));
+
+                    if (!isPlayerInGame) {
+                        const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
+                        this.gameData.ingame[name].betQueue.push(
+                            ...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true } })
+                        );
+                    }
                 }
             })
         );
