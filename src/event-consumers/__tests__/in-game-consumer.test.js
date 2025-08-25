@@ -115,6 +115,7 @@ describe("InGameConsumer", () => {
                         betLevel: undefined,
                         coinValue: undefined,
                         betMultiplier: undefined,
+                        buyFreeSpin: false,
                     },
                     totalMultiplier: 10,
                     user: {
@@ -138,7 +139,7 @@ describe("InGameConsumer", () => {
         });
 
         describe("when player have currency group game settings", () => {
-            it("should return info coinValues and maxWinPerRound", async () => {
+            it("should return info coinValues and maxWinPerRound when not have buyFreeSpinRefRoundId", async () => {
                 // Arrange
                 freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce({ betLevel: 2, coinValue: 10, betMultiplier: 20 });
                 const realPlayer = {
@@ -166,6 +167,62 @@ describe("InGameConsumer", () => {
                         betLevel: 2,
                         betMultiplier: 20,
                         coinValue: 10,
+                        buyFreeSpin: false,
+                    },
+                    totalMultiplier: 0,
+                    user: {
+                        rate: 4,
+                        multiplier: 2,
+                    },
+                    features: {
+                        buyFreeSpins: {
+                            enabled: true,
+                            multiplier: 2,
+                        },
+                    },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue).toStrictEqual(expectedValue);
+            });
+
+            it("should return info coinValues and maxWinPerRound when have buyFreeSpinRefRoundId", async () => {
+                // Arrange
+                freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce({
+                    betLevel: 2,
+                    coinValue: 10,
+                    betMultiplier: 20,
+                    buyFreeSpinRefRoundId: 10,
+                });
+                const realPlayer = {
+                    session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
+                    profile: { name: "player2" },
+                };
+
+                // Arrange
+                const expectedValue = {
+                    gameConfigs: {
+                        coinValues: [1, 2, 5, 10, 50, 100],
+                        maxWinPerRound: 5000,
+                        betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                        betMultiplier: 20,
+                        odds: {
+                            symbols: [{ from: 8, to: 9, odds: 1 }],
+                            freeSpins: {
+                                initialOdds: [],
+                                additionalOdds: [],
+                            },
+                        },
+                    },
+                    freeSpins: {
+                        total: 10,
+                        betLevel: 2,
+                        betMultiplier: 20,
+                        coinValue: 10,
+                        buyFreeSpin: true,
                     },
                     totalMultiplier: 0,
                     user: {
@@ -217,12 +274,12 @@ describe("InGameConsumer", () => {
                     ],
                 };
                 const realPlayer = {
-                    session: { 
-                        currencyGroupId: "617a650628b7a500016388f5", 
-                        currencyCode: "UUS", 
+                    session: {
+                        currencyGroupId: "617a650628b7a500016388f5",
+                        currencyCode: "UUS",
                         multiplier: 2,
                         operatorId: "operator1",
-                        siteName: "site1"
+                        siteName: "site1",
                     },
                     profile: { name: "player2" },
                 };
@@ -247,12 +304,36 @@ describe("InGameConsumer", () => {
                     ],
                 };
                 const realPlayer = {
-                    session: { 
-                        currencyGroupId: "617a650628b7a500016388f5", 
-                        currencyCode: "UUS", 
+                    session: {
+                        currencyGroupId: "617a650628b7a500016388f5",
+                        currencyCode: "UUS",
                         multiplier: 2,
                         operatorId: "operator1",
-                        siteName: "site1"
+                        siteName: "site1",
+                    },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(true);
+            });
+
+            it("should return enabled true when siteExclusions is undefined", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins = {
+                    enabled: true,
+                    multiplier: 2,
+                };
+                const realPlayer = {
+                    session: {
+                        currencyGroupId: "617a650628b7a500016388f5",
+                        currencyCode: "UUS",
+                        multiplier: 2,
+                        operatorId: "operator1",
+                        siteName: "site1",
                     },
                     profile: { name: "player2" },
                 };
