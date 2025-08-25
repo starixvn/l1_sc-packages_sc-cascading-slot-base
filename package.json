@@ -11,7 +11,7 @@
         "betaver": "npm version prerelease --preid beta",
         "pubbeta": "npm publish --registry http://npm.lumigame.com --tag beta",
         "semantic-release": "semantic-release",
-        "prepare": "husky"
+        "prepare-husky": "husky"
     },
     "jestSonar": {
         "reportPath": "reports",
