@@ -115,7 +115,7 @@ describe("InGameConsumer", () => {
                         betLevel: undefined,
                         coinValue: undefined,
                         betMultiplier: undefined,
-                        buyFreeSpin: false,
+                        buyFreeSpins: false,
                     },
                     totalMultiplier: 10,
                     user: {
@@ -167,7 +167,7 @@ describe("InGameConsumer", () => {
                         betLevel: 2,
                         betMultiplier: 20,
                         coinValue: 10,
-                        buyFreeSpin: false,
+                        buyFreeSpins: false,
                     },
                     totalMultiplier: 0,
                     user: {
@@ -222,7 +222,7 @@ describe("InGameConsumer", () => {
                         betLevel: 2,
                         betMultiplier: 20,
                         coinValue: 10,
-                        buyFreeSpin: true,
+                        buyFreeSpins: true,
                     },
                     totalMultiplier: 0,
                     user: {
