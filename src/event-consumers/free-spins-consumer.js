@@ -115,7 +115,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(activeFreeSpins);
 
         await this.cleanUpGameNotifications(freeSpinsGroupedByUIDs);
-
+        console.log(`this.gameData.ingame before: ${JSON.stringify(this.gameData.ingame)}`);
         Object.entries(this.gameData.ingame).forEach(([name, ingameData]) => {
             const loadedFreeSpins = freeSpinsGroupedByNames[name] ?? [];
 
@@ -124,6 +124,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
             ingameData.freeSpins = loadedFreeSpins;
         });
+        console.log(`this.gameData.ingame after: ${JSON.stringify(this.gameData.ingame)}`);
 
         Object.entries(freeSpinsGroupedByNames).forEach(([name, loadedFreeSpins]) => {
             this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
@@ -140,9 +141,15 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
                 console.log(`settleExpiredFreeSpins ingame: ${JSON.stringify(this.gameData.ingame[name])}`);
+                const userId = this.gameData.ingame[name]?.player?.UID;
+                console.log(`settleExpiredFreeSpins userId: ${userId}`);
 
-                const isPlayerInGame = !!this.gameData.ingame[name];
-                
+                const realPlayer = Object.values(this.gameData.realPlayers).find(
+                    (player) => player.UID === userId && player.socketClient && player.socketClient.connected
+                );
+                console.log(`settleExpiredFreeSpins realPlayers: ${JSON.stringify(Object.values(this.gameData.realPlayers))}`);
+                console.log(`settleExpiredFreeSpins realPlayer: ${JSON.stringify(realPlayer)}`);
+                const isPlayerInGame = !!realPlayer;
 
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
                 const player = {
@@ -170,6 +177,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                     console.log(`pushing free spins to bet queue ingame + loadedFreeSpins: ${JSON.stringify(this.gameData.ingame[name])}`);
 
                     if (!isPlayerInGame) {
+                        console.log(`auto settle free spins: ${JSON.stringify(this.gameData.ingame[name])}`);
                         const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
                         this.gameData.ingame[name].betQueue.push(
                             ...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true } })
