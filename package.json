@@ -34,7 +34,7 @@
     "license": "ISC",
     "dependencies": {
         "mathjs": "^10.6.1",
-        "sc-slot-board-generator": "1.1.1-beta.3",
+        "sc-slot-board-generator": "1.1.1-beta.4",
         "sc-slot-game-base": "1.6.1"
     },
     "devDependencies": {

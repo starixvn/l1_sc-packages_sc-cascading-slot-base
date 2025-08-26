@@ -12,9 +12,7 @@ export default class CascadingBoardGenerator {
 
     initialize(isFreeSpin) {
         const { multiplierBonus, volatility } = this.gameData.gameConfigs.cascadingSlotsConfig;
-
         this.multiplierBonus = multiplierBonus;
-        this.difficulty = difficulty;
 
         return new BoardGenerator(
             this.boardSettings,
