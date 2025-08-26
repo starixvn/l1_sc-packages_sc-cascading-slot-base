@@ -1,6 +1,6 @@
 {
     "name": "sc-cascading-slot-base",
-    "version": "1.2.1-beta.21",
+    "version": "1.2.1-beta.24",
     "description": "The codebase of cascading slot games.",
     "main": "src/index.js",
     "scripts": {
