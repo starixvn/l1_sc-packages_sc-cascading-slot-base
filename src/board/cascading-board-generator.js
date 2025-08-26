@@ -10,13 +10,13 @@ export default class CascadingBoardGenerator {
         this.multiplierBonus = {};
     }
 
-    initialize() {
-        const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
+    initialize(isFreeSpin) {
+        const { multiplierBonus, volatility } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
         this.multiplierBonus = multiplierBonus;
         this.difficulty = difficulty;
 
-        this.boardGenerator = new BoardGenerator(
+        return new BoardGenerator(
             this.boardSettings,
             {
                 symbol: defaultDefinition.specialSymbols.multiplier,
@@ -24,34 +24,8 @@ export default class CascadingBoardGenerator {
                 max: multiplierBonus.max,
             },
             null,
-            difficulty
+            volatility,
+            isFreeSpin
         );
-    }
-
-    generate() {
-        return this.boardGenerator.generate();
-    }
-
-    explodeAndRefill(board, winSymbols, multipliers) {
-        return this.boardGenerator.explodeAndRefill(board, winSymbols, multipliers);
-    }
-
-    updateBoardConfig(difficulty, minMultiplierBonus, maxMultiplierBonus) {
-        if (difficulty !== this.difficulty || this.multiplierBonus.min !== minMultiplierBonus || this.multiplierBonus.max !== maxMultiplierBonus) {
-            this.difficulty = difficulty;
-            this.multiplierBonus.min = minMultiplierBonus;
-            this.multiplierBonus.max = maxMultiplierBonus;
-
-            this.boardGenerator.setDifficulty(difficulty);
-            this.boardGenerator.updateMultiplierConfig(minMultiplierBonus, maxMultiplierBonus);
-
-            this.logService.logError(
-                `${this.definition.name} updated board configuration!!! Mode: ${difficulty}, Multipler: ${minMultiplierBonus} - ${maxMultiplierBonus}`
-            );
-        }
-    }
-
-    setRefillSymbols(newSymbols, multipliers) {
-        this.boardGenerator.setRefillSymbols(newSymbols, multipliers);
     }
 }

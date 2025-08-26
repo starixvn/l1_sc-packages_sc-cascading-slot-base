@@ -8,7 +8,8 @@ export default class RoundCalculator {
     }
 
     processSpinning(round, totalMultiplier = 0, maxWinPerRound = Number.MAX_VALUE, preGeneratedResult = null) {
-        const generatedResult = preGeneratedResult?.shift() ?? this.boardGenerator.generate();
+        const boardGenerator = this.boardGenerator.initialize(round.freeSpin);
+        const generatedResult = preGeneratedResult?.shift() ?? boardGenerator.generate();
         round.result = generatedResult.newBoard.join(",");
 
         const firstTumble = {
@@ -24,7 +25,7 @@ export default class RoundCalculator {
             const lastTumble = tumbles[tumbles.length - 1];
             const refilledResult =
                 preGeneratedResult?.shift() ??
-                this.boardGenerator.explodeAndRefill(
+                boardGenerator.explodeAndRefill(
                     lastTumble.originalBoard.split(",").map((x) => parseInt(x)),
                     Object.keys(lastTumble.icons).map((x) => parseInt(x)),
                     lastTumble.multipliers

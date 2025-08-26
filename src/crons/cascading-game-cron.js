@@ -65,7 +65,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         });
 
         this.totalMultiplierConsumer = totalMultiplierConsumer;
-        this.boardGenerator = boardGenerator;
     }
 
     async start() {
@@ -92,7 +91,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
 
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
-        this.boardGenerator.initialize();
         this.initTrialMode();
 
         const job = new cron.CronJob(
@@ -135,16 +133,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             .find({ gameId: this.definition.id, enabled: true }, "groupId minBet maxBet maxBetPerChoices chips coinValues maxWinPerRound")
             .lean()
             .exec();
-    }
-
-    async checkGameStatus() {
-        await super.checkGameStatus();
-
-        if (!this.gameData.disabled) {
-            const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
-
-            this.boardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
-        }
     }
 
     initTrialMode() {}
