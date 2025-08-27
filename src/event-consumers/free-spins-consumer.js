@@ -132,10 +132,8 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
-                const userId = this.gameData.ingame[name]?.player?.UID;
-
                 const realPlayer = Object.values(this.gameData.realPlayers).find(
-                    (player) => player.UID === userId && player.socketClient && player.socketClient.connected
+                    (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
                 );
                 const isPlayerInGame = !!realPlayer;
 
