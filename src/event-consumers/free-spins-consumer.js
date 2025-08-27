@@ -61,7 +61,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         return firstAvailableFreeSpinSet;
     }
     getBuyFreeSpinBoard() {
-        const numOfScatterSymbols = 5;
+        const numOfScatterSymbols = 4;
 
         return [
             {
