@@ -104,7 +104,6 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         const freeSpins = await this.queryFreeSpins();
         const activeFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime > execTime);
-        const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(activeFreeSpins);
         const freeSpinsGroupedByUIDs = this.groupFreeSpinsByUIDs(activeFreeSpins);
@@ -124,7 +123,29 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[name].freeSpins = loadedFreeSpins ?? [];
         });
 
-        await this.settleExpiredFreeSpins(expiredFreeSpins);
+        const isPlayerInGame = (name) =>
+            Object.values(this.gameData.realPlayers).some(
+                (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
+            );
+
+        const expiredFreeSpinsNeedToSettle = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && !isPlayerInGame(freeSpin.name));
+        const expiredFreeSpinsNeedToCache = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && isPlayerInGame(freeSpin.name));
+
+        expiredFreeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(expiredFreeSpinsNeedToSettle));
+        expiredFreeSpinsNeedToCache.length > 0 && this.cacheExpiredFreeSpins(expiredFreeSpinsNeedToCache);
+    }
+
+    cacheExpiredFreeSpins(expiredFreeSpins) {
+        const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(expiredFreeSpins);
+
+        Object.entries(freeSpinsGroupedByNames).map(([name, loadedFreeSpins]) => {
+            this.initializeBetQueueAndAddPlayerFreeSpins(name, loadedFreeSpins);
+        });
+    }
+
+    initializeBetQueueAndAddPlayerFreeSpins(name, loadedFreeSpins) {
+        this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
+        this.gameData.ingame[name].freeSpins = (this.gameData.ingame[name].freeSpins ?? []).concat(loadedFreeSpins);
     }
 
     async settleExpiredFreeSpins(expiredFreeSpins) {
@@ -132,11 +153,6 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
-                const realPlayer = Object.values(this.gameData.realPlayers).find(
-                    (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
-                );
-                const isPlayerInGame = !!realPlayer;
-
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
                 const player = {
                     UID: round.uid,
@@ -154,17 +170,10 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                     },
                 };
 
-                this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
-
                 if (player.session.currencyGroupId && player.session.currencyCode) {
-                    this.gameData.ingame[name].freeSpins = (this.gameData.ingame[name].freeSpins ?? []).concat(loadedFreeSpins);
-
-                    if (!isPlayerInGame) {
-                        const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
-                        this.gameData.ingame[name].betQueue.push(
-                            ...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true } })
-                        );
-                    }
+                    this.initializeBetQueueAndAddPlayerFreeSpins(name, loadedFreeSpins);
+                    const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
+                    this.gameData.ingame[name].betQueue.push(...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true } }));
                 }
             })
         );
