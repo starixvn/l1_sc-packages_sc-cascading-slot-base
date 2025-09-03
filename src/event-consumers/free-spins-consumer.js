@@ -139,11 +139,11 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(expiredFreeSpins);
 
         Object.entries(freeSpinsGroupedByNames).map(([name, loadedFreeSpins]) => {
-            this.initializeBetQueueAndAddPlayerFreeSpins(name, loadedFreeSpins);
+            this.initPlayerFreeSpins(name, loadedFreeSpins);
         });
     }
 
-    initializeBetQueueAndAddPlayerFreeSpins(name, loadedFreeSpins) {
+    initPlayerFreeSpins(name, loadedFreeSpins) {
         this.gameData.ingame[name] = this.gameData.ingame[name] ?? { betQueue: [] };
         this.gameData.ingame[name].freeSpins = (this.gameData.ingame[name].freeSpins ?? []).concat(loadedFreeSpins);
     }
@@ -171,9 +171,10 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                 };
 
                 if (player.session.currencyGroupId && player.session.currencyCode) {
-                    this.initializeBetQueueAndAddPlayerFreeSpins(name, loadedFreeSpins);
+                    this.initPlayerFreeSpins(name, loadedFreeSpins);
+
                     const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
-                    this.gameData.ingame[name].betQueue.push(...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true } }));
+                    this.gameData.ingame[name].betQueue.push(...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true, autoSettle: true } }));
                 }
             })
         );
