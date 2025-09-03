@@ -1,5 +1,6 @@
 import cron from "cron";
 import { Crons } from "sc-slot-game-base";
+import TotalMultiplierConsumer from "../event-consumers/total-multiplier-consumer";
 
 export default class CascadingGameCron extends Crons.SlotGameCron {
     /**

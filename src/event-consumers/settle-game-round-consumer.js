@@ -1,7 +1,16 @@
 import { round as mathRound } from "mathjs";
 import { Core } from "sc-game-base";
+import RoundCalculator from "../board/round-calculator";
+import FreeSpinsConsumer from "./free-spins-consumer";
+import TotalMultiplierConsumer from "./total-multiplier-consumer";
 
 export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.SettleGameRoundConsumer {
+    /**
+     * @param {Object} dependencies
+     * @param {FreeSpinsConsumer} dependencies.freeSpinsConsumer
+     * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
+     * @param {RoundCalculator} dependencies.roundCalculator
+     */
     constructor({
         definition,
         gameData,
