@@ -127,10 +127,13 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             Object.values(this.gameData.realPlayers).some(
                 (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
             );
-
+        console.log("freeSpins", JSON.stringify(freeSpins));
         const expiredFreeSpinsNeedToSettle = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && !isPlayerInGame(freeSpin.name));
         const expiredFreeSpinsNeedToCache = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && isPlayerInGame(freeSpin.name));
-
+        
+        console.log("expiredFreeSpinsNeedToSettle", JSON.stringify(expiredFreeSpinsNeedToSettle));
+        console.log("expiredFreeSpinsNeedToCache", JSON.stringify(expiredFreeSpinsNeedToCache));
+        
         expiredFreeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(expiredFreeSpinsNeedToSettle));
         expiredFreeSpinsNeedToCache.length > 0 && this.cacheExpiredFreeSpins(expiredFreeSpinsNeedToCache);
     }
