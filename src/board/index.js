@@ -1,6 +1,6 @@
 import CascadingBoardGenerator from "./cascading-board-generator";
-import ResultChainManager from "./result-chain-manager";
+import ChainManager from "./chain-manager";
 import RoundCalculator from "./round-calculator";
 import TumbleCalculator from "./tumble-calculator";
 
-export { CascadingBoardGenerator, ResultChainManager, RoundCalculator, TumbleCalculator };
+export { CascadingBoardGenerator, ChainManager, RoundCalculator, TumbleCalculator };

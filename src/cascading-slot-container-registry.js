@@ -2,7 +2,7 @@ import { asClass, asValue } from "awilix";
 import { SlotContainerRegistry } from "sc-slot-game-base";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
-import ChainManager from "./board/result-chain-manager";
+import ChainManager from "./board/chain-manager";
 import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
 import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
@@ -23,7 +23,6 @@ import UserSession from "./models/user-session";
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     register(appConfigs, definition, gameData) {
         this.registerBoardUtilities();
-        this.registerRepositories();
         super.register(appConfigs, definition, gameData);
 
         return this.container;
@@ -37,11 +36,6 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         });
     }
     
-        registerRepositories() {
-        this.container.register({
-            resultChainRepository: this.createRepository("ResultChain", ResultChainSchema),
-        });
-
     registerBoardUtilities() {
         this.container.register({
             boardSettings: asValue(defaultDefinition.boardSettings),

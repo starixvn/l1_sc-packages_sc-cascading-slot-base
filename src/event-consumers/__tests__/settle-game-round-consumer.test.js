@@ -4,7 +4,7 @@ import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
 import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
 import { EventInterceptors } from "sc-slot-game-base";
 import defaultDefinition from "../../board/default-definition";
-import ChainManager from "../../board/result-chain-manager";
+import ChainManager from "../../board/chain-manager";
 import RoundCalculator from "../../board/round-calculator";
 import TumbleCalculator from "../../board/tumble-calculator";
 import { definition, gameConfigs } from "../../test-data";

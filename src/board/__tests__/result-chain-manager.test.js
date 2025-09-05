@@ -1,4 +1,4 @@
-import ChainManager from "../result-chain-manager";
+import ChainManager from "../chain-manager";
 
 const mockGameData = {};
 const mockLogService = {

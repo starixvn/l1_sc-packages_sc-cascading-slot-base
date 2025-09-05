@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-09-05T06:24:03.262Z",
+  "config": {
+    "patterns": [
+      "wave"
+    ],
+    "boardCounts": [
+      100
+    ],
+    "targetRTP": 0.97,
+    "createdBy": "script-generator",
+    "maxRetries": 10,
+    "tolerance": 0.02,
+    "outputDir": "./chain-output",
+    "betSize": 1
+  },
+  "summary": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0,
+    "successRate": 100
+  },
+  "results": [
+    {
+      "success": true,
+      "chainName": "wave-100boards-1757053424315",
+      "filename": "wave-100boards-1757053424315.json",
+      "actualRTP": 0.4599999999999999,
+      "generationStats": {
+        "attempts": 1,
+        "duration": 18943,
+        "finalRTP": 0.4599999999999999,
+        "targetAchieved": false
+      }
+    }
+  ]
+}

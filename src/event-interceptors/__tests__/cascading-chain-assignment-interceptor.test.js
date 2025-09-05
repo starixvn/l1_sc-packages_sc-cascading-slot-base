@@ -1,6 +1,6 @@
 import { stub } from "jest-micro-auto-stub";
-import ChainManager from "../../board/result-chain-manager";
-import ChainInterceptor from "../cascading-chain-assignment-interceptor";
+import ChainManager from "../../board/chain-manager";
+import ChainInterceptor from "../chain-interceptor";
 
 describe("ChainInterceptor", () => {
     let chainManager;
