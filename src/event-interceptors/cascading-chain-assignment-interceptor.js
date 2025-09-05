@@ -1,8 +1,5 @@
-import { EventInterceptors } from "sc-slot-game-base";
-
-export default class ChainInterceptor extends EventInterceptors.BaseBetInterceptor {
+export default class ChainInterceptor {
     constructor({ resultChainManager, logService }) {
-        super();
         this.chainManager = resultChainManager;
         this.logService = logService;
     }

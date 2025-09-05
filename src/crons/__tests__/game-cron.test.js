@@ -58,6 +58,9 @@ describe("gameCron", () => {
     gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
     const promotionFreeSpinsConsumer = stub(EventConsumers.PromotionFreeSpinsConsumer);
+    const resultChainManager = {
+        loadChainData: jest.fn().mockResolvedValue(),
+    };
 
     // Mock the boardGenerator.initialize() method
     boardGenerator.initialize.mockReturnValue({
@@ -96,6 +99,7 @@ describe("gameCron", () => {
             boardGenerator,
             gameManagementApiClientFactory,
             promotionFreeSpinsConsumer,
+            resultChainManager,
         });
     });
 
@@ -193,6 +197,14 @@ describe("gameCron", () => {
 
             // Assert
             expect(totalMultiplierConsumer.reload).toBeCalled();
+        });
+
+        it("should load chain data", async () => {
+            // Act
+            await gameCron.start();
+
+            // Assert
+            expect(resultChainManager.loadChainData).toBeCalled();
         });
 
         it("should call boardGenerator.initialize", async () => {
