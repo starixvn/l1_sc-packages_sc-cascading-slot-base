@@ -3,10 +3,6 @@ import { Core } from "sc-game-base";
 import defaultDefinition from "../board/default-definition";
 
 export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
-    /**
-     * @param {Object} appConfigs
-     * @param {logger} logService
-     */
     constructor(appConfigs, gameData, tumbleCalculator, boardGenerator, logService, historyQuery, metricQuery) {
         super(appConfigs, gameData, historyQuery, metricQuery, logService);
 

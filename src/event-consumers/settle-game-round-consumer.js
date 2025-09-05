@@ -23,6 +23,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         totalMultiplierConsumer,
         roundCalculator,
         gameManagementApiClientFactory,
+        logService,
+        resultChainManager,
     }) {
         super({
             definition,
@@ -38,6 +40,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         this.freeSpinsConsumer = freeSpinsConsumer;
         this.totalMultiplierConsumer = totalMultiplierConsumer;
         this.roundCalculator = roundCalculator;
+        this.chainManager = resultChainManager;
     }
 
     async settleRound(player, roundId) {
@@ -73,7 +76,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         const presetBoard = round.buyFreeSpin
             ? this.freeSpinsConsumer.getBuyFreeSpinBoard()
-            : this.gameData.settlementResultFromAdmin[player.profile.name];
+            : this.selectPreGeneratedResult(player, round);
 
         round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, presetBoard);
 
@@ -81,7 +84,35 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             await this.totalMultiplierConsumer.increaseTotalMultiplier(player, { roundId: round.id, multiplier: round.multiplier });
         }
 
-        delete this.gameData.settlementResultFromAdmin[player.profile.name];
+        delete this.gameData.settlementResultFromAdmin[playerName];
+    }
+
+    selectPreGeneratedResult(player, round) {
+        const playerName = player.profile.name;
+        const adminResult = this.getAdminResult(playerName);
+        const chainResult = this.getChainResult(playerName, round.freeSpin);
+
+        return this.chooseResult(adminResult, chainResult);
+    }
+
+    getAdminResult(playerName) {
+        return this.gameData.settlementResultFromAdmin[playerName] || null;
+    }
+
+    getChainResult(playerName, isFreeSpin) {
+        return this.chainManager.getNextResult(playerName, isFreeSpin);
+    }
+
+    chooseResult(adminResult, chainResult) {
+        if (adminResult) {
+            return adminResult;
+        }
+
+        if (chainResult) {
+            return chainResult;
+        }
+
+        return null;
     }
 
     async processFreeSpins(player, round) {

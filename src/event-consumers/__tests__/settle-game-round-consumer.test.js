@@ -4,6 +4,7 @@ import { UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
 import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
 import { EventInterceptors } from "sc-slot-game-base";
 import defaultDefinition from "../../board/default-definition";
+import ChainManager from "../../board/result-chain-manager";
 import RoundCalculator from "../../board/round-calculator";
 import TumbleCalculator from "../../board/tumble-calculator";
 import { definition, gameConfigs } from "../../test-data";
@@ -68,19 +69,23 @@ const gameManagementApiClient = {
 gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient);
 
 const promotionBetInterceptor = stub(EventInterceptors.SlotPromotionInterceptor);
+const resultChainManager = stub(ChainManager);
 
 function initConsumer() {
     return new SettleGameRoundConsumer({
         definition,
         gameData,
-        roundsRepository,
+        roundResultPublisher: userBetResultPublisher,
         userBetResultPublisher,
         freeSpinsConsumer,
-        totalMultiplierConsumer,
         endGame,
+        roundsRepository,
+        betsRepository: roundsRepository,
+        totalMultiplierConsumer,
         roundCalculator,
         gameManagementApiClientFactory,
-        promotionBetInterceptor,
+        logService: { logInfo: jest.fn(), logWarning: jest.fn(), logError: jest.fn() },
+        resultChainManager,
     });
 }
 

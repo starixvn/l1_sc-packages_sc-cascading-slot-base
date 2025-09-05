@@ -2,6 +2,7 @@ import { asClass, asValue } from "awilix";
 import { SlotContainerRegistry } from "sc-slot-game-base";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
+import ChainManager from "./board/result-chain-manager";
 import RoundCalculator from "./board/round-calculator";
 import TumbleCalculator from "./board/tumble-calculator";
 import { CascadingBot, CascadingGameCron, CascadingProcessBetQueue } from "./crons";
@@ -14,7 +15,7 @@ import {
     TotalMultiplierConsumer,
     UserSignInConsumer,
 } from "./event-consumers";
-import { CascadingSlotPromotionInterceptor } from "./event-interceptors";
+import { ChainInterceptor, CascadingSlotPromotionInterceptor } from "./event-interceptors";
 import { HistoryQuery } from "./query-apis";
 import HttpRouter from "./routers/cascading-http-router";
 import UserSession from "./models/user-session";
@@ -43,6 +44,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             tumbleCalculator: asClass(TumbleCalculator),
             roundCalculator: asClass(RoundCalculator).proxy(),
             boardGenerator: asClass(CascadingBoardGenerator).singleton(),
+            resultChainManager: asClass(ChainManager).singleton(),
         });
     }
 
@@ -90,6 +92,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         super.registerInterceptors();
 
         this.container.register({
+            chainInterceptor: asClass(ChainInterceptor).singleton().proxy(),
             promotionBetInterceptor: asClass(CascadingSlotPromotionInterceptor).singleton().proxy(),
         });
     }

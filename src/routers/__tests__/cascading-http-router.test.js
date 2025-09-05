@@ -35,12 +35,15 @@ const tumbleCalculator = new TumbleCalculator();
 const boardGenerator = new CascadingBoardGenerator(definition, gameData, defaultDefinition.boardSettings, logService);
 boardGenerator.initialize();
 
+const historyQuery = stub();
+const metricQuery = stub();
+
 const res = {
     send: jest.fn(),
 };
 
 function initRouter(appConfigs) {
-    return new CascadingHttpRouter(appConfigs, gameData, tumbleCalculator, boardGenerator, logService);
+    return new CascadingHttpRouter(appConfigs, gameData, tumbleCalculator, boardGenerator, logService, historyQuery, metricQuery);
 }
 
 const validParams = {
