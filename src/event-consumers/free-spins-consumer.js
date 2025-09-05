@@ -3,10 +3,11 @@ import { EventConsumers } from "sc-slot-game-base";
 import defaultDefinition from "../board/default-definition";
 
 export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer {
-    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer, roundsRepository) {
+    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer, roundsRepository, userSessionsRepository) {
         super(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
 
         this.roundsRepository = roundsRepository;
+        this.userSessionsRepository = userSessionsRepository;
         this.chance = new Chance();
         this.buyFreeSpinSymbols = [0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((symbol) => Array(7).fill(symbol));
     }
@@ -127,13 +128,9 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             Object.values(this.gameData.realPlayers).some(
                 (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
             );
-        console.log("freeSpins", JSON.stringify(freeSpins));
         const expiredFreeSpinsNeedToSettle = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && !isPlayerInGame(freeSpin.name));
         const expiredFreeSpinsNeedToCache = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && isPlayerInGame(freeSpin.name));
-        
-        console.log("expiredFreeSpinsNeedToSettle", JSON.stringify(expiredFreeSpinsNeedToSettle));
-        console.log("expiredFreeSpinsNeedToCache", JSON.stringify(expiredFreeSpinsNeedToCache));
-        
+
         expiredFreeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(expiredFreeSpinsNeedToSettle));
         expiredFreeSpinsNeedToCache.length > 0 && this.cacheExpiredFreeSpins(expiredFreeSpinsNeedToCache);
     }
@@ -157,6 +154,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
+                const userSession = await this.userSessionsRepository.findOne({ playerId: round.playerId }).lean().exec();
                 const player = {
                     UID: round.uid,
                     profile: {
@@ -170,6 +168,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                         multiplier: round.multiplier,
                         currencyCode: round.currencyCode,
                         currencyGroupId: round.currencyGroupId,
+                        ip: userSession.ip,
                     },
                 };
 
@@ -177,7 +176,10 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                     this.initPlayerFreeSpins(name, loadedFreeSpins);
 
                     const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
-                    this.gameData.ingame[name].betQueue.push(...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true, autoSettle: true } }));
+
+                    this.gameData.ingame[name].betQueue.push(
+                        ...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true, autoSettle: true } })
+                    );
                 }
             })
         );
