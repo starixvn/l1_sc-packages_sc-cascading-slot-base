@@ -154,7 +154,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
-                const userSession = await this.userSessionsRepository.findOne({ playerId: round.playerId }).lean().exec();
+                const userSession = await this.userSessionsRepository.findOne({ playerId: round.playerId }, "ip operatorToken").lean().exec();
                 const player = {
                     UID: round.uid,
                     profile: {
@@ -169,6 +169,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                         currencyCode: round.currencyCode,
                         currencyGroupId: round.currencyGroupId,
                         ip: userSession.ip,
+                        operatorToken: userSession.operatorToken,
                     },
                 };
 
