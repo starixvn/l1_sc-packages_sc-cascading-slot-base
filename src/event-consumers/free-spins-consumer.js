@@ -124,17 +124,21 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             this.gameData.ingame[name].freeSpins = loadedFreeSpins ?? [];
         });
 
-        const isPlayerInGame = (name) =>
-            Object.values(this.gameData.realPlayers).some(
-                (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
-            );
-        const expiredFreeSpinsNeedToSettle = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && !isPlayerInGame(freeSpin.name));
-        const expiredFreeSpinsNeedToCache = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime && isPlayerInGame(freeSpin.name));
+        const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
-        expiredFreeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(expiredFreeSpinsNeedToSettle));
-        expiredFreeSpinsNeedToCache.length > 0 && this.cacheExpiredFreeSpins(expiredFreeSpinsNeedToCache);
+        const freeSpinsNeedToSettle = expiredFreeSpins.filter((freeSpin) => !this.isPlayerInGame(freeSpin.name));
+        const freeSpinsNeedToCache = expiredFreeSpins.filter((freeSpin) => this.isPlayerInGame(freeSpin.name));
+
+        // freeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(freeSpinsNeedToSettle));
+        freeSpinsNeedToCache.length > 0 && this.cacheExpiredFreeSpins(freeSpinsNeedToCache);
     }
 
+    isPlayerInGame(name) {
+        return Object.values(this.gameData.realPlayers).some(
+            (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
+        );
+    }
+    
     cacheExpiredFreeSpins(expiredFreeSpins) {
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(expiredFreeSpins);
 
