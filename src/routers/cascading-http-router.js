@@ -3,11 +3,12 @@ import { Core } from "sc-game-base";
 import defaultDefinition from "../board/default-definition";
 
 export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
-    constructor(appConfigs, gameData, tumbleCalculator, boardGenerator, logService, historyQuery, metricQuery) {
+    constructor(appConfigs, gameData, tumbleCalculator, boardGenerator, logService, historyQuery, metricQuery, resultChainManager) {
         super(appConfigs, gameData, historyQuery, metricQuery, logService);
 
         this.tumbleCalculator = tumbleCalculator;
         this.boardGenerator = boardGenerator;
+        this.chainManager = resultChainManager;
     }
 
     init(app) {
@@ -20,6 +21,24 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
                 audiences: this.appConfigs.authenticateSettings.audiences,
             }),
             (_req, res) => this.handleSetBoard(_req.body, res)
+        );
+
+        app.post(
+            "/api/admin/result-chains/toggle",
+            utils.authentication.useAuthenticate({
+                authUrl: this.appConfigs.apiSettings.authUrl,
+                audiences: this.appConfigs.authenticateSettings.audiences,
+            }),
+            (_req, res) => this.handleToggleResultChains(_req.body, res)
+        );
+
+        app.get(
+            "/api/admin/result-chains/status",
+            utils.authentication.useAuthenticate({
+                authUrl: this.appConfigs.apiSettings.authUrl,
+                audiences: this.appConfigs.authenticateSettings.audiences,
+            }),
+            (_req, res) => this.handleGetResultChainsStatus(res)
         );
     }
 
@@ -84,5 +103,60 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
         }
 
         return preGeneratedResult;
+    }
+
+    handleToggleResultChains(params, res) {
+        try {
+            if (this.appConfigs.sentry.env !== "PROD") {
+                const { enabled } = params;
+
+                if (typeof enabled !== "boolean") {
+                    res.send({ error: true, message: "enabled parameter must be boolean" });
+                    return;
+                }
+
+                this.appConfigs.resultChains = { enabled };
+
+                if (enabled) {
+                    // Reload chains when enabling
+                    this.chainManager.loadChainData().catch(this.logService.logError);
+                }
+
+                res.send({
+                    success: true,
+                    enabled,
+                    message: `Result chains ${enabled ? "enabled" : "disabled"}`,
+                });
+            } else {
+                res.send({ noPermission: true });
+            }
+        } catch (error) {
+            this.logService.logError(error);
+            res.send({ error: true });
+        }
+    }
+
+    handleGetResultChainsStatus(res) {
+        try {
+            if (this.appConfigs.sentry.env !== "PROD") {
+                const enabled = this.appConfigs.resultChains?.enabled || false;
+                const availableChains = this.chainManager.availableChains.length;
+
+                res.send({
+                    enabled,
+                    availableChains,
+                    chains: this.chainManager.availableChains.map((chain) => ({
+                        name: chain.name,
+                        boardCount: chain.boards.length,
+                        metadata: chain.metadata,
+                    })),
+                });
+            } else {
+                res.send({ noPermission: true });
+            }
+        } catch (error) {
+            this.logService.logError(error);
+            res.send({ error: true });
+        }
     }
 }

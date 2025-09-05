@@ -11,6 +11,10 @@ const mockResultChainRepository = {
     find: jest.fn(),
 };
 
+const mockAppConfigs = {
+    resultChains: { enabled: true },
+};
+
 const mockDatabaseChains = [
     {
         _id: "68ba82677350005bcefd0fbe",
@@ -79,20 +83,36 @@ describe("ChainManager", () => {
             }),
         });
 
-        chainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository);
+        chainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, mockAppConfigs);
         await chainManager.loadChainData();
     });
 
     describe("constructor", () => {
-        it("should initialize with gameData, logService, and resultChainRepository", () => {
+        it("should initialize with gameData, logService, resultChainRepository, and appConfigs", () => {
             expect(chainManager.gameData).toBe(mockGameData);
             expect(chainManager.logService).toBe(mockLogService);
             expect(chainManager.resultChainRepository).toBe(mockResultChainRepository);
+            expect(chainManager.appConfigs).toBe(mockAppConfigs);
         });
 
         it("should load chain data on initialization", () => {
             expect(chainManager.availableChains).toHaveLength(1);
             expect(chainManager.availableChains[0].name).toBe("test-chain");
+        });
+    });
+
+    describe("loadChainData", () => {
+        it("should not load chains when feature is disabled", async () => {
+            jest.clearAllMocks();
+
+            const disabledChainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, {
+                resultChains: { enabled: false },
+            });
+
+            await disabledChainManager.loadChainData();
+
+            expect(disabledChainManager.availableChains).toHaveLength(0);
+            expect(mockResultChainRepository.find).not.toHaveBeenCalled();
         });
     });
 
@@ -154,13 +174,18 @@ describe("ChainManager", () => {
     });
 
     describe("shouldAssignChain", () => {
-        it("should return true for player without chain", () => {
+        it("should return true for player without chain when enabled", () => {
             expect(chainManager.shouldAssignChain("newPlayer")).toBe(true);
         });
 
         it("should return false for player with chain", () => {
             chainManager.assignChain("testPlayer");
             expect(chainManager.shouldAssignChain("testPlayer")).toBe(false);
+        });
+
+        it("should return false when feature is disabled", () => {
+            chainManager.appConfigs.resultChains.enabled = false;
+            expect(chainManager.shouldAssignChain("newPlayer")).toBe(false);
         });
     });
 

@@ -1,14 +1,24 @@
 export default class ChainManager {
-    constructor(gameData, logService, resultChainRepository) {
+    constructor(gameData, logService, resultChainRepository, appConfigs) {
         this.gameData = gameData;
         this.logService = logService;
         this.resultChainRepository = resultChainRepository;
+        this.appConfigs = appConfigs;
 
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.availableChains = [];
+
+        // Initialize feature flag if not exists
+        if (this.appConfigs.resultChains === undefined) {
+            this.appConfigs.resultChains = { enabled: false };
+        }
     }
 
     async loadChainData() {
+        if (!this.appConfigs.resultChains?.enabled) {
+            return;
+        }
+
         try {
             const resultChains = await this.resultChainRepository.find({}).lean().exec();
 
@@ -51,6 +61,10 @@ export default class ChainManager {
     }
 
     getNextResult(playerName, isFreeSpin = false) {
+        if (!this.appConfigs.resultChains?.enabled) {
+            return null;
+        }
+
         const playerChain = this.gameData.playerChains[playerName];
 
         if (!playerChain) {
@@ -109,6 +123,9 @@ export default class ChainManager {
     }
 
     shouldAssignChain(playerName) {
+        if (!this.appConfigs.resultChains?.enabled) {
+            return false;
+        }
         return !this.gameData.playerChains[playerName];
     }
 
