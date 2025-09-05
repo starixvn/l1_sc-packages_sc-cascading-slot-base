@@ -1,30 +1,31 @@
-import fs from "fs";
-import path from "path";
-
 export default class ChainManager {
-    constructor(gameData, logService) {
+    constructor(gameData, logService, resultChainRepository) {
         this.gameData = gameData;
         this.logService = logService;
+        this.resultChainRepository = resultChainRepository;
 
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.availableChains = [];
-        this.loadChainData();
     }
 
-    loadChainData() {
+    async loadChainData() {
         try {
-            const chainFilePath = path.join(process.cwd(), "src/chain-output/wave-100boards-1757053424315.json");
-            const chainData = JSON.parse(fs.readFileSync(chainFilePath, "utf8"));
+            const resultChains = await this.resultChainRepository.find({}).lean().exec();
 
-            if (chainData.boards && chainData.boards.length > 0) {
-                this.availableChains.push({
-                    name: chainData.metadata.name,
-                    boards: chainData.boards,
-                    metadata: chainData.metadata,
-                });
+            for (const chain of resultChains) {
+                if (chain.boardsData && chain.boardsData.length > 0) {
+                    this.availableChains.push({
+                        name: chain.name,
+                        boards: chain.boardsData,
+                        metadata: {
+                            name: chain.name,
+                            createdAt: chain.createdAt,
+                        },
+                    });
+                }
             }
         } catch (error) {
-            this.logService.logWarning("Failed to load chain data, will fallback to normal generation: " + error.message);
+            this.logService.logError(error);
         }
     }
 

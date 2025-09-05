@@ -1,9 +1,5 @@
 import ChainManager from "../result-chain-manager";
 
-// Mock file system
-jest.mock("fs");
-jest.mock("path");
-
 const mockGameData = {};
 const mockLogService = {
     log: jest.fn(),
@@ -11,80 +7,87 @@ const mockLogService = {
     logError: jest.fn(),
 };
 
-const mockChainData = {
-    metadata: {
-        name: "test-chain",
-        boardCount: 3,
-    },
-    boards: [
-        {
-            board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-            multipliers: [1],
-            isFreeSpin: false,
-            remainingFreeSpins: 0,
-            settlementResult: {
-                tumbles: [
-                    {
-                        originalBoard: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30",
-                        multipliers: [1],
-                        icons: {},
-                    },
-                ],
-            },
-        },
-        {
-            board: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
-            multipliers: [2],
-            isFreeSpin: true,
-            remainingFreeSpins: 3,
-            settlementResult: {
-                tumbles: [
-                    {
-                        originalBoard: "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
-                        multipliers: [2],
-                        icons: {},
-                    },
-                ],
-            },
-        },
-        {
-            board: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-            multipliers: [1],
-            isFreeSpin: false,
-            remainingFreeSpins: 0,
-            settlementResult: {
-                tumbles: [
-                    {
-                        originalBoard: "2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2",
-                        multipliers: [1],
-                        icons: {},
-                    },
-                ],
-            },
-        },
-    ],
+const mockResultChainRepository = {
+    find: jest.fn(),
 };
+
+const mockDatabaseChains = [
+    {
+        _id: "68ba82677350005bcefd0fbe",
+        name: "test-chain",
+        boardsData: [
+            {
+                board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+                multipliers: [1],
+                isFreeSpin: false,
+                remainingFreeSpins: 0,
+                settlementResult: {
+                    tumbles: [
+                        {
+                            originalBoard: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30",
+                            multipliers: [1],
+                            icons: {},
+                        },
+                    ],
+                },
+            },
+            {
+                board: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+                multipliers: [2],
+                isFreeSpin: true,
+                remainingFreeSpins: 3,
+                settlementResult: {
+                    tumbles: [
+                        {
+                            originalBoard: "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
+                            multipliers: [2],
+                            icons: {},
+                        },
+                    ],
+                },
+            },
+            {
+                board: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+                multipliers: [1],
+                isFreeSpin: false,
+                remainingFreeSpins: 0,
+                settlementResult: {
+                    tumbles: [
+                        {
+                            originalBoard: "2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2",
+                            multipliers: [1],
+                            icons: {},
+                        },
+                    ],
+                },
+            },
+        ],
+        createdAt: new Date("2025-09-05T06:25:43.344Z"),
+    },
+];
 
 describe("ChainManager", () => {
     let chainManager;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
 
-        // Mock file system to return our test data
-        const fs = require("fs");
-        const path = require("path");
+        // Mock repository to return our test data
+        mockResultChainRepository.find.mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+                exec: jest.fn().mockResolvedValue(mockDatabaseChains),
+            }),
+        });
 
-        path.join.mockReturnValue("/mock/path/to/chain.json");
-        fs.readFileSync.mockReturnValue(JSON.stringify(mockChainData));
-
-        chainManager = new ChainManager(mockGameData, mockLogService);
+        chainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository);
+        await chainManager.loadChainData();
     });
 
     describe("constructor", () => {
-        it("should initialize with gameData and logService", () => {
+        it("should initialize with gameData, logService, and resultChainRepository", () => {
             expect(chainManager.gameData).toBe(mockGameData);
             expect(chainManager.logService).toBe(mockLogService);
+            expect(chainManager.resultChainRepository).toBe(mockResultChainRepository);
         });
 
         it("should load chain data on initialization", () => {
@@ -129,7 +132,7 @@ describe("ChainManager", () => {
             const result = chainManager.getNextResult("testPlayer", true);
 
             expect(result).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(3); // Should skip to free spin board
+            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(2); // Should skip to free spin board
         });
 
         it("should return null for player without chain", () => {

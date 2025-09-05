@@ -33,6 +33,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         totalMultiplierConsumer,
         boardGenerator,
         promotionFreeSpinsConsumer,
+        resultChainManager,
     }) {
         super({
             definition,
@@ -52,6 +53,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
 
         this.totalMultiplierConsumer = totalMultiplierConsumer;
         this.boardGenerator = boardGenerator;
+        this.chainManager = resultChainManager;
     }
 
     async start() {
@@ -77,6 +79,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.promotionFreeSpinsConsumer.loadPromotionsRunning();
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload(true);
+        await this.chainManager.loadChainData();
 
         // Initialize the board generator
         this.boardGenerator.initialize();

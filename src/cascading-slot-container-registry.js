@@ -16,12 +16,14 @@ import {
     UserSignInConsumer,
 } from "./event-consumers";
 import { ChainInterceptor, CascadingSlotPromotionInterceptor } from "./event-interceptors";
+import { ResultChainSchema } from "./models";
 import { HistoryQuery } from "./query-apis";
 import HttpRouter from "./routers/cascading-http-router";
 import UserSession from "./models/user-session";
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     register(appConfigs, definition, gameData) {
         this.registerBoardUtilities();
+        this.registerRepositories();
         super.register(appConfigs, definition, gameData);
 
         return this.container;
@@ -34,6 +36,11 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             userSessionsRepository: asValue(UserSession),
         });
     }
+    
+        registerRepositories() {
+        this.container.register({
+            resultChainRepository: this.createRepository("ResultChain", ResultChainSchema),
+        });
 
     registerBoardUtilities() {
         this.container.register({
