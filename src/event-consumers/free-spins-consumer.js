@@ -129,7 +129,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         const freeSpinsNeedToSettle = expiredFreeSpins.filter((freeSpin) => !this.isPlayerInGame(freeSpin.name));
         const freeSpinsNeedToCache = expiredFreeSpins.filter((freeSpin) => this.isPlayerInGame(freeSpin.name));
 
-        // freeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(freeSpinsNeedToSettle));
+        freeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(freeSpinsNeedToSettle));
         freeSpinsNeedToCache.length > 0 && this.cacheExpiredFreeSpins(freeSpinsNeedToCache);
     }
 
@@ -158,7 +158,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
-                const userSession = await this.userSessionsRepository.findOne({ playerId: round.playerId }, "ip operatorToken").lean().exec();
+                const userSession = await this.userSessionsRepository.findOne({ playerId: round.playerId }, "ip operatorToken").sort({ _id:-1 }).lean().exec();
                 const player = {
                     UID: round.uid,
                     profile: {
