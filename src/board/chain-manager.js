@@ -15,7 +15,6 @@ export default class ChainManager {
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.availableChains = [];
 
-        // Initialize feature flag if not exists
         if (this.appConfigs.resultChains === undefined) {
             this.appConfigs.resultChains = { enabled: false };
         }
@@ -81,12 +80,12 @@ export default class ChainManager {
                 status: ASSIGNMENT_STATUS.ACTIVE,
                 totalWinAmount: 0,
                 totalBetAmount: 0,
-                betLevel, // Required - will fail early if undefined
-                coinValue, // Required - will fail early if undefined
-                operatorId, // Will fail early if undefined
-                gameId, // Will fail early if undefined
-                chainId, // Will fail early if undefined
-                currency, // Will fail early if undefined
+                betLevel,
+                coinValue,
+                operatorId,
+                gameId,
+                chainId,
+                currency,
             };
 
             await this.assignmentRepository.create(assignmentData);
@@ -103,7 +102,6 @@ export default class ChainManager {
                 chainId,
                 currency,
             });
-            // Continue with in-memory assignment even if persistent fails
         }
 
         return true;
@@ -142,11 +140,7 @@ export default class ChainManager {
             boardResult = this.convertChainBoardToResult(currentBoard);
         }
 
-        // Update in-memory progress
         playerChain.currentIndex = newIndex;
-
-        // Progress tracking is now handled externally after round calculation
-        // This keeps result generation separate from progress tracking
 
         return boardResult;
     }

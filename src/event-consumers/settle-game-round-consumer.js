@@ -124,11 +124,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async getChainResult(player, round, isFreeSpin) {
         const playerName = player.profile.name;
 
-        // Just get the chain result without tracking progress yet
-        // Progress will be tracked AFTER the round is calculated
-        const chainResult = await this.chainManager.getNextResult(playerName, {}, { isFreeSpin });
-
-        return chainResult;
+        return this.chainManager.getNextResult(playerName, {}, { isFreeSpin });
     }
 
     chooseResult(adminResult, chainResult) {
