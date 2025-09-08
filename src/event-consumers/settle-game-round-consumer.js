@@ -80,6 +80,28 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, presetBoard);
 
+        // Now track chain progress with ACTUAL calculated values
+        if (preGeneratedResult) {
+            // We got a chain result, so player has an active chain - track progress
+            try {
+                const playerChain = this.chainManager.gameData.playerChains[playerName];
+                if (playerChain) {
+                    await this.chainManager.updateChainProgress({
+                        playerId: player.session?.playerId || player.UID,
+                        betLevel: round.betLevel,
+                        coinValue: round.coinValue,
+                        roundBetAmount: round.totalAmount,
+                        roundWinAmount: round.betwin || 0, // Now this has the ACTUAL win amount!
+                        currentBoardIndex: playerChain.currentIndex,
+                        totalBoards: playerChain.boards.length,
+                    });
+                }
+            } catch (error) {
+                this.logService.logError(`Failed to update chain progress for ${playerName}`, error);
+                // Continue with game flow even if tracking fails
+            }
+        }
+
         if (round.freeSpin && round.betwin > 0 && round.multiplier > 0 && round.settlementResult.tumbles.length > 1) {
             await this.totalMultiplierConsumer.increaseTotalMultiplier(player, { roundId: round.id, multiplier: round.multiplier });
         }
@@ -87,10 +109,10 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         delete this.gameData.settlementResultFromAdmin[playerName];
     }
 
-    selectPreGeneratedResult(player, round) {
+    async selectPreGeneratedResult(player, round) {
         const playerName = player.profile.name;
         const adminResult = this.getAdminResult(playerName);
-        const chainResult = this.getChainResult(playerName, round.freeSpin);
+        const chainResult = await this.getChainResult(player, round, round.freeSpin);
 
         return this.chooseResult(adminResult, chainResult);
     }
@@ -99,8 +121,14 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         return this.gameData.settlementResultFromAdmin[playerName] || null;
     }
 
-    getChainResult(playerName, isFreeSpin) {
-        return this.chainManager.getNextResult(playerName, isFreeSpin);
+    async getChainResult(player, round, isFreeSpin) {
+        const playerName = player.profile.name;
+
+        // Just get the chain result without tracking progress yet
+        // Progress will be tracked AFTER the round is calculated
+        const chainResult = await this.chainManager.getNextResult(playerName, {}, { isFreeSpin });
+
+        return chainResult;
     }
 
     chooseResult(adminResult, chainResult) {

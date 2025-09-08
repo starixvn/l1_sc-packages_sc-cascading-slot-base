@@ -40,7 +40,13 @@ describe("ChainInterceptor", () => {
             const result = await interceptor.afterSuccessEvent(context);
 
             expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer");
-            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer");
+            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+                playerId: undefined,
+                sessionId: undefined,
+                operatorId: undefined,
+                gameId: "unknown",
+                currency: "USD",
+            });
             expect(logService.log).not.toHaveBeenCalled();
             expect(logService.logWarning).not.toHaveBeenCalled();
             expect(result).toBe(context);
@@ -64,7 +70,13 @@ describe("ChainInterceptor", () => {
 
             const result = await interceptor.afterSuccessEvent(context);
 
-            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer");
+            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+                playerId: undefined,
+                sessionId: undefined,
+                operatorId: undefined,
+                gameId: "unknown",
+                currency: "USD",
+            });
             expect(logService.logWarning).toHaveBeenCalledWith("No chains available for testPlayer");
             expect(result).toBe(context);
         });

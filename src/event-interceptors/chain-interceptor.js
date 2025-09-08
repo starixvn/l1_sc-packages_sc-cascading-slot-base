@@ -10,7 +10,15 @@ export default class ChainInterceptor {
             const playerName = player.profile.name;
 
             if (this.chainManager.shouldAssignChain(playerName)) {
-                const success = this.chainManager.assignChain(playerName);
+                const playerContext = {
+                    playerId: player.session?.playerId || player.UID,
+                    sessionId: player.session?.sessionId,
+                    operatorId: player.session?.operatorId,
+                    gameId: player.session?.gameId || "unknown",
+                    currency: player.session?.currencyName || "USD",
+                };
+
+                const success = await this.chainManager.assignChain(playerName, playerContext);
 
                 if (!success) {
                     this.logService.logWarning(`No chains available for ${playerName}`);

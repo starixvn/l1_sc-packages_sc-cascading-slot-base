@@ -5,10 +5,17 @@ const mockLogService = {
     log: jest.fn(),
     logWarning: jest.fn(),
     logError: jest.fn(),
+    logInfo: jest.fn(),
 };
 
 const mockResultChainRepository = {
     find: jest.fn(),
+};
+
+const mockAssignmentRepository = {
+    create: jest.fn().mockResolvedValue({ _id: "test-assignment-id" }),
+    findOne: jest.fn().mockResolvedValue(null),
+    findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: "test-assignment-id" }),
 };
 
 const mockAppConfigs = {
@@ -83,15 +90,16 @@ describe("ChainManager", () => {
             }),
         });
 
-        chainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, mockAppConfigs);
+        chainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, mockAssignmentRepository, mockAppConfigs);
         await chainManager.loadChainData();
     });
 
     describe("constructor", () => {
-        it("should initialize with gameData, logService, resultChainRepository, and appConfigs", () => {
+        it("should initialize with gameData, logService, resultChainRepository, assignmentRepository, and appConfigs", () => {
             expect(chainManager.gameData).toBe(mockGameData);
             expect(chainManager.logService).toBe(mockLogService);
             expect(chainManager.resultChainRepository).toBe(mockResultChainRepository);
+            expect(chainManager.assignmentRepository).toBe(mockAssignmentRepository);
             expect(chainManager.appConfigs).toBe(mockAppConfigs);
         });
 
@@ -105,7 +113,7 @@ describe("ChainManager", () => {
         it("should not load chains when feature is disabled", async () => {
             jest.clearAllMocks();
 
-            const disabledChainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, {
+            const disabledChainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, mockAssignmentRepository, {
                 resultChains: { enabled: false },
             });
 
@@ -117,8 +125,8 @@ describe("ChainManager", () => {
     });
 
     describe("assignChain", () => {
-        it("should assign chain to player successfully", () => {
-            const result = chainManager.assignChain("testPlayer");
+        it("should assign chain to player successfully", async () => {
+            const result = await chainManager.assignChain("testPlayer");
 
             expect(result).toBe(true);
             expect(mockGameData.playerChains["testPlayer"]).toBeDefined();
@@ -126,9 +134,9 @@ describe("ChainManager", () => {
             expect(mockGameData.playerChains["testPlayer"].totalBoards).toBe(3);
         });
 
-        it("should return false when no chains available", () => {
+        it("should return false when no chains available", async () => {
             chainManager.availableChains = [];
-            const result = chainManager.assignChain("testPlayer");
+            const result = await chainManager.assignChain("testPlayer");
 
             expect(result).toBe(false);
             expect(mockLogService.logWarning).toHaveBeenCalled();
@@ -136,37 +144,37 @@ describe("ChainManager", () => {
     });
 
     describe("getNextResult", () => {
-        beforeEach(() => {
-            chainManager.assignChain("testPlayer");
+        beforeEach(async () => {
+            await chainManager.assignChain("testPlayer");
         });
 
-        it("should return first board result", () => {
-            const result = chainManager.getNextResult("testPlayer", false);
+        it("should return first board result", async () => {
+            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false });
 
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
             expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(1);
         });
 
-        it("should return free spin board when requested", () => {
-            const result = chainManager.getNextResult("testPlayer", true);
+        it("should return free spin board when requested", async () => {
+            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
 
             expect(result).toBeDefined();
             expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(2); // Should skip to free spin board
         });
 
-        it("should return null for player without chain", () => {
-            const result = chainManager.getNextResult("unknownPlayer", false);
+        it("should return null for player without chain", async () => {
+            const result = await chainManager.getNextResult("unknownPlayer", {}, { isFreeSpin: false });
             expect(result).toBeNull();
         });
 
-        it("should clean up and return null when chain is complete", () => {
+        it("should clean up and return null when chain is complete", async () => {
             // Use up all boards
-            chainManager.getNextResult("testPlayer", false); // Board 1
-            chainManager.getNextResult("testPlayer", false); // Board 2
-            chainManager.getNextResult("testPlayer", false); // Board 3
+            await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Board 1
+            await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Board 2
+            await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Board 3
 
-            const result = chainManager.getNextResult("testPlayer", false); // Should be null
+            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Should be null
 
             expect(result).toBeNull();
             expect(mockGameData.playerChains["testPlayer"]).toBeUndefined();
