@@ -4,7 +4,27 @@ import RoundCalculator from "../round-calculator";
 import TumbleCalculator from "../tumble-calculator";
 import { gameConfigs } from "../../test-data";
 
-const boardGenerator = stub(CascadingBoardGenerator);
+const mockBoardGeneratorInstance = {
+    generate: jest.fn().mockReturnValue({
+        newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        multipliers: [1],
+    }),
+    explodeAndRefill: jest.fn().mockReturnValue({
+        newBoard: [2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1],
+        explodedSymbols: [1],
+        newSymbols: [1],
+        multipliers: [1],
+    }),
+    setRefillSymbols: jest.fn(),
+    setDifficulty: jest.fn(),
+    updateMultiplierConfig: jest.fn(),
+    getMultiplierConfig: jest.fn(),
+    getDifficulty: jest.fn(),
+};
+
+const boardGenerator = {
+    initialize: jest.fn().mockReturnValue(mockBoardGeneratorInstance),
+};
 const tumbleCalculator = new TumbleCalculator();
 
 function initCalculator() {
@@ -39,6 +59,18 @@ describe("RoundCalculator", () => {
     beforeEach(() => {
         calculator = initCalculator();
         jest.clearAllMocks();
+        // Reset the mock return values
+        boardGenerator.initialize.mockReturnValue(mockBoardGeneratorInstance);
+        mockBoardGeneratorInstance.generate.mockReturnValue({
+            newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            multipliers: [1],
+        });
+        mockBoardGeneratorInstance.explodeAndRefill.mockReturnValue({
+            newBoard: [2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1],
+            explodedSymbols: [1],
+            newSymbols: [1],
+            multipliers: [1],
+        });
     });
 
     afterEach(() => {
@@ -54,7 +86,7 @@ describe("RoundCalculator", () => {
                     newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
                     multipliers: [1],
                 };
-                boardGenerator.generate.mockReturnValue(mockGeneratedResult);
+                mockBoardGeneratorInstance.generate.mockReturnValue(mockGeneratedResult);
 
                 // Mock tumbleCalculator to avoid errors
                 const mockCalculate = jest.spyOn(tumbleCalculator, "calculate");
@@ -77,7 +109,7 @@ describe("RoundCalculator", () => {
                     newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
                     multipliers: [1],
                 };
-                boardGenerator.generate.mockReturnValue(mockGeneratedResult);
+                mockBoardGeneratorInstance.generate.mockReturnValue(mockGeneratedResult);
 
                 // Mock tumbleCalculator to avoid errors
                 const mockCalculate = jest.spyOn(tumbleCalculator, "calculate");
@@ -117,7 +149,7 @@ describe("RoundCalculator", () => {
                 calculator.processSpinning(round, 0, Number.MAX_VALUE, preGeneratedResult);
 
                 // Assert
-                expect(boardGenerator.generate).not.toHaveBeenCalled();
+                expect(mockBoardGeneratorInstance.generate).not.toHaveBeenCalled();
                 expect(round.result).toBe("1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30");
             });
         });
@@ -138,8 +170,8 @@ describe("RoundCalculator", () => {
                         newSymbols: [1, 2, 2, 9, 3, 1, 0, 1, 2, 9, 2, 1, 0, 10, 9, 0, 10, 1, 3, 10, 0, 2, 0, 3, 3, 1, 0, 0, 1, 9],
                     };
 
-                    boardGenerator.generate.mockReturnValue(mockGeneratedResult);
-                    boardGenerator.explodeAndRefill.mockReturnValue(mockRefillResult);
+                    mockBoardGeneratorInstance.generate.mockReturnValue(mockGeneratedResult);
+                    mockBoardGeneratorInstance.explodeAndRefill.mockReturnValue(mockRefillResult);
 
                     // Mock tumbleCalculator to simulate winning first tumble, no win second tumble
                     const mockCalculate = jest.spyOn(tumbleCalculator, "calculate");
@@ -174,7 +206,7 @@ describe("RoundCalculator", () => {
                     multipliers: [2],
                 };
 
-                boardGenerator.generate.mockReturnValue(mockGeneratedResult);
+                mockBoardGeneratorInstance.generate.mockReturnValue(mockGeneratedResult);
 
                 // Mock explodeAndRefill to avoid errors
                 const mockRefillResult = {
@@ -183,7 +215,7 @@ describe("RoundCalculator", () => {
                     explodedSymbols: [8],
                     newSymbols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
                 };
-                boardGenerator.explodeAndRefill.mockReturnValue(mockRefillResult);
+                mockBoardGeneratorInstance.explodeAndRefill.mockReturnValue(mockRefillResult);
 
                 const mockCalculate = jest.spyOn(tumbleCalculator, "calculate");
                 mockCalculate.mockImplementation((tumble) => {

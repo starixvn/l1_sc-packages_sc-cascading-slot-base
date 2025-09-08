@@ -19,12 +19,25 @@ const gameData = {
     settlementResultFromAdmin: {},
 };
 
-
 const userBetResultPublisher = stub(UserBetResultPublisher);
 const boardGenerator = {
+    initialize: jest.fn(),
     generate: jest.fn(),
     explodeAndRefill: jest.fn(),
 };
+
+// Mock the boardGenerator.initialize() to return a mock BoardGenerator instance
+const mockBoardGeneratorInstance = {
+    generate: jest.fn(),
+    explodeAndRefill: jest.fn(),
+    setRefillSymbols: jest.fn(),
+    setDifficulty: jest.fn(),
+    updateMultiplierConfig: jest.fn(),
+    getMultiplierConfig: jest.fn(),
+    getDifficulty: jest.fn(),
+};
+
+boardGenerator.initialize.mockReturnValue(mockBoardGeneratorInstance);
 
 const freeSpinsConsumer = stub(FreeSpinsConsumer);
 
@@ -83,8 +96,8 @@ describe("settle round", () => {
             beforeAll(() => {
                 const baseBoard = [8, 8, 8, 3, 8, 10, 8, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 7];
                 const newBoardAfterExplode = [0, 1, 2, 3, 8, 10, 6, 4, 0, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 7];
-                boardGenerator.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
-                boardGenerator.explodeAndRefill.mockReturnValue({
+                mockBoardGeneratorInstance.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
+                mockBoardGeneratorInstance.explodeAndRefill.mockReturnValue({
                     explodedSymbols: [],
                     newSymbols: [],
                     multipliers: [2, 2],
@@ -122,8 +135,8 @@ describe("settle round", () => {
             });
 
             afterAll(() => {
-                boardGenerator.generate.mockReset();
-                boardGenerator.explodeAndRefill.mockReset();
+                mockBoardGeneratorInstance.generate.mockReset();
+                mockBoardGeneratorInstance.explodeAndRefill.mockReset();
             });
         });
     });
@@ -143,8 +156,8 @@ describe("settle round", () => {
             beforeAll(() => {
                 const baseBoard = [8, 8, 8, 3, 8, 10, 8, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 10];
                 const newBoardAfterExplode = [0, 1, 2, 3, 8, 10, 6, 4, 10, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 7];
-                boardGenerator.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
-                boardGenerator.explodeAndRefill.mockReturnValue({
+                mockBoardGeneratorInstance.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
+                mockBoardGeneratorInstance.explodeAndRefill.mockReturnValue({
                     explodedSymbols: [],
                     newSymbols: [],
                     multipliers: [2, 2],
@@ -175,15 +188,15 @@ describe("settle round", () => {
             });
 
             afterAll(() => {
-                boardGenerator.generate.mockReset();
-                boardGenerator.explodeAndRefill.mockReset();
+                mockBoardGeneratorInstance.generate.mockReset();
+                mockBoardGeneratorInstance.explodeAndRefill.mockReset();
             });
         });
 
         describe("when not having winning icons", () => {
             beforeAll(() => {
                 const baseBoard = [1, 0, 2, 3, 3, 10, 8, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 10];
-                boardGenerator.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
+                mockBoardGeneratorInstance.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
             });
 
             it("should not add multiplier to total multipliers", async () => {
@@ -213,8 +226,8 @@ describe("settle round", () => {
             });
 
             afterAll(() => {
-                boardGenerator.generate.mockReset();
-                boardGenerator.explodeAndRefill.mockReset();
+                mockBoardGeneratorInstance.generate.mockReset();
+                mockBoardGeneratorInstance.explodeAndRefill.mockReset();
             });
         });
 
@@ -222,7 +235,7 @@ describe("settle round", () => {
             let freeSpinCount;
             beforeAll(() => {
                 const baseBoard = [1, 0, 2, 3, 9, 10, 9, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 10];
-                boardGenerator.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
+                mockBoardGeneratorInstance.generate.mockReturnValue({ newBoard: baseBoard, multipliers: [2, 2] });
                 freeSpinCount = baseBoard.filter((x) => x === defaultDefinition.specialSymbols.freeSpins).length;
             });
 
@@ -240,7 +253,7 @@ describe("settle round", () => {
             });
 
             afterAll(() => {
-                boardGenerator.generate.mockReset();
+                mockBoardGeneratorInstance.generate.mockReset();
             });
         });
     });

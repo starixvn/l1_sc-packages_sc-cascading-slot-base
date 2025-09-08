@@ -66,6 +66,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         });
 
         this.totalMultiplierConsumer = totalMultiplierConsumer;
+        this.boardGenerator = boardGenerator;
     }
 
     async start() {
@@ -89,6 +90,9 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.loadUnsettledBetsToIngame();
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload();
+
+        // Initialize the board generator
+        this.boardGenerator.initialize();
 
         await this.getSettingForNewRound();
         await this.updateExchangeRates();

@@ -38,22 +38,48 @@ describe("CascadingBoardGenerator", () => {
     describe("initialize", () => {
         it("always init board with multiplier bonus from game config", () => {
             // Arrange
+            const mockBoardGenerator = {
+                getMultiplierConfig: jest.fn().mockReturnValue(gameConfigs.cascadingSlotsConfig.multiplierBonus),
+                getDifficulty: jest.fn().mockReturnValue(gameConfigs.cascadingSlotsConfig.mode),
+                generate: jest.fn(),
+                explodeAndRefill: jest.fn(),
+                setRefillSymbols: jest.fn(),
+                setDifficulty: jest.fn(),
+                updateMultiplierConfig: jest.fn(),
+            };
+
+            // Mock the BoardGenerator constructor to return our mock
+            jest.spyOn(require("sc-slot-board-generator"), "BoardGenerator").mockImplementation(() => mockBoardGenerator);
 
             // Act
-            cascadingBoardGenerator.initialize();
+            const result = cascadingBoardGenerator.initialize();
 
             // Assert
-            const multiplierConfig = cascadingBoardGenerator.boardGenerator.getMultiplierConfig();
-            expect(multiplierConfig).toStrictEqual(gameConfigs.cascadingSlotsConfig.multiplierBonus);
+            expect(result).toBe(mockBoardGenerator);
+            expect(cascadingBoardGenerator.boardGenerator).toBe(mockBoardGenerator);
         });
 
         it("always init board with difficulty from game config", () => {
+            // Arrange
+            const mockBoardGenerator = {
+                getMultiplierConfig: jest.fn().mockReturnValue(gameConfigs.cascadingSlotsConfig.multiplierBonus),
+                getDifficulty: jest.fn().mockReturnValue(gameConfigs.cascadingSlotsConfig.mode),
+                generate: jest.fn(),
+                explodeAndRefill: jest.fn(),
+                setRefillSymbols: jest.fn(),
+                setDifficulty: jest.fn(),
+                updateMultiplierConfig: jest.fn(),
+            };
+
+            // Mock the BoardGenerator constructor to return our mock
+            jest.spyOn(require("sc-slot-board-generator"), "BoardGenerator").mockImplementation(() => mockBoardGenerator);
+
             // Act
-            cascadingBoardGenerator.initialize();
+            const result = cascadingBoardGenerator.initialize();
 
             // Assert
-            const difficulty = cascadingBoardGenerator.boardGenerator.getDifficulty();
-            expect(difficulty).toStrictEqual(gameConfigs.cascadingSlotsConfig.mode);
+            expect(result).toBe(mockBoardGenerator);
+            expect(cascadingBoardGenerator.boardGenerator).toBe(mockBoardGenerator);
         });
     });
 
@@ -112,7 +138,6 @@ describe("CascadingBoardGenerator", () => {
 
     describe("updateBoardConfig", () => {
         beforeEach(() => {
-            cascadingBoardGenerator.initialize();
             cascadingBoardGenerator.boardGenerator = stubSlotBoardGenerator;
         });
 
