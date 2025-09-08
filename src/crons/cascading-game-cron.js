@@ -78,6 +78,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
 
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
+        await this.promotionFreeSpinsConsumer.getAllPromotionsRunning();
         this.boardGenerator.initialize();
         this.initTrialMode();
 
@@ -111,6 +112,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         if (this.gameData.remainingTime < 0) {
             this.gameData.remainingTime = durations.wholeRound;
 
+            await this.promotionFreeSpinsConsumer.getAllPromotionsRunning();
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
         }
