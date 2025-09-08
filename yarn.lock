@@ -9715,10 +9715,10 @@ sc-api-client@1.5.0:
   dependencies:
     axios "^0.19.2"
 
-sc-base-apis@3.0.0:
-  version "3.0.0"
-  resolved "https://npm.lumigame.com/sc-base-apis/-/sc-base-apis-3.0.0.tgz"
-  integrity sha512-za2g+9UH4RjdSEaIiuxGiHk3AzcZQ2LGutDGu/xEr5LiUbET+9arufgsr7KOlmYffmSJ+JQSXvoO9udWsacPaQ==
+sc-base-apis@3.0.1-beta.0:
+  version "3.0.1-beta.0"
+  resolved "https://npm.lumigame.com/sc-base-apis/-/sc-base-apis-3.0.1-beta.0.tgz"
+  integrity sha512-RW1wVvExeodR+DS4lctF13P3k+tWkrVmZWq62uzLY2x3TBmbzmsjWW0T/ZOQ8nxrN5ERdnhJdBUdrQP2xDPeqQ==
   dependencies:
     moment "^2.29.4"
     sc-api-client "1.5.0"
@@ -9735,10 +9735,10 @@ sc-common@3.0.0:
     mongoose-long "0.8.0"
     numeral "2.0.6"
 
-sc-game-base@6.0.2-beta.6:
-  version "6.0.2-beta.6"
-  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.0.2-beta.6.tgz"
-  integrity sha512-Nfer+dqAuLoWBwjt1zXmrFrWmYclsqS3vOztbnx2YsHt6Rmyt/LyKoUJVUvl9afkYSELC4HNJnlkWfyGhuGjMQ==
+sc-game-base@6.0.2-beta.8:
+  version "6.0.2-beta.8"
+  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.0.2-beta.8.tgz"
+  integrity sha512-ylHQrLXFpMVdGE5HWfTZ6mZSrhZdQiPKhOcAFS+GUGjWfu6PNSAVmL9R8u+WhTN50zTG6JuZznl2fXl1VgvLFQ==
   dependencies:
     "@sc/game-promotion-api-client" "1.0.1-beta.29"
     "@sc/user-tracking-client" "1.0.0"
@@ -9759,7 +9759,7 @@ sc-game-base@6.0.2-beta.6:
     prom-client "11.2.1"
     random-js "2.1.0"
     randomstring "1.3.0"
-    sc-base-apis "3.0.0"
+    sc-base-apis "3.0.1-beta.0"
     sc-common "3.0.0"
     sc-game-management-client "0.1.5"
     sc-pf-client-seed "1.0.5"
@@ -9795,14 +9795,14 @@ sc-slot-board-generator@1.0.1:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@3.0.1-beta.4:
-  version "3.0.1-beta.4"
-  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.0.1-beta.4.tgz"
-  integrity sha512-H/oga88yjyo5F1Us9rjl5OtuF7dnFKlEdAIuEHj+kTmRSGgikb1/iP9IaMuBcxBfrGW69QjkAqxia0fp9lgraA==
+sc-slot-game-base@3.0.1-beta.5:
+  version "3.0.1-beta.5"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.0.1-beta.5.tgz"
+  integrity sha512-b1hp963jZAb++Phertw3Cd2Em3JvKrB99xNHSCR8xzTNFEHGqUIT3Shpak3tmpMaXr3a2XCXdexGsf8iCjwnqQ==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "6.0.2-beta.6"
+    sc-game-base "6.0.2-beta.8"
     sc-game-management-client "0.1.5"
 
 seedrandom@^3.0.5:
