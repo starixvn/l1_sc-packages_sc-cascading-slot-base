@@ -317,17 +317,18 @@ describe("PlaceBetConsumer", () => {
             describe("when bet level is valid", () => {
                 it("should return result with not failure", () => {
                     // Arrange
-                    const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                    const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
                     player.session.currencyGroupId = "1";
                     gameData.gameConfigs.cascadingSlotsConfig.betLevels = [1, 5, 10];
                     payload.betLevel = 5;
                     payload.freeSpin = true;
+                    payload.buyFreeSpin = true;
 
                     // Act
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
 
                     // Assert
-                    expect(actualValue[0]).toStrictEqual(expectedValue);
+                    expect(actualValue[1]).toStrictEqual(expectedValue);
                 });
             });
 
@@ -342,7 +343,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
 
                     // Assert
-                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                    expect(actualValue[2]).toStrictEqual(expectedValue);
                 });
             });
 
@@ -357,7 +358,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
 
                     // Assert
-                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                    expect(actualValue[2]).toStrictEqual(expectedValue);
                 });
             });
         });
@@ -409,7 +410,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
 
                     // Assert
-                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                    expect(actualValue[2]).toStrictEqual(expectedValue);
                 });
             });
 
@@ -424,8 +425,51 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
 
                     // Assert
-                    expect(actualValue[1]).toStrictEqual(expectedValue);
+                    expect(actualValue[2]).toStrictEqual(expectedValue);
                 });
+            });
+        });
+
+        describe("buy free spin validation", () => {
+            it("should return failure when buyFreeSpin is true and freeSpin is true", () => {
+                // Arrange
+                const expectedValue = { failure: true, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.buyFreeSpin = true;
+                payload.freeSpin = true;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[1]).toStrictEqual(expectedValue);
+            });
+
+            it("should return not failure when buyFreeSpin is false and freeSpin is true", () => {
+                // Arrange
+                const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.buyFreeSpin = false;
+                payload.freeSpin = true;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[1]).toStrictEqual(expectedValue);
+            });
+
+            it("should return not failure when buyFreeSpin is true and freeSpin is false", () => {
+                // Arrange
+                const expectedValue = { failure: false, notice: { errorCode: helpers.noticeHelper.invalidBet } };
+                payload.buyFreeSpin = true;
+                payload.freeSpin = false;
+                gameData.gameConfigs.cascadingSlotsConfig.betLevels = [1, 5, 10];
+                payload.betLevel = 5;
+
+                // Act
+                const actualValue = consumer.composeBetAmountValidationCriteria(player, payload);
+
+                // Assert
+                expect(actualValue[1]).toStrictEqual(expectedValue);
             });
         });
     });

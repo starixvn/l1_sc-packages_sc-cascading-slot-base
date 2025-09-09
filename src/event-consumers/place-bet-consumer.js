@@ -19,6 +19,7 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
             betLevel: payload.betLevel,
             coinValue: payload.coinValue,
             freeSpin: payload.freeSpin ?? false,
+            buyFreeSpin: payload.buyFreeSpin ?? false,
         });
 
         this.handlePromotionLogic(player, payload);
@@ -76,12 +77,16 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
     }
 
     composeBetAmountValidationCriteria(player, payload) {
-        const { betLevel, coinValue } = payload;
+        const { betLevel, coinValue, buyFreeSpin } = payload;
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId) ?? { coinValues: [] };
 
         return [
             {
                 failure: !payload.freeSpin && this.gameData.gameConfigs.cascadingSlotsConfig.betLevels.indexOf(betLevel) === -1,
+                notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
+            },
+            {
+                failure: buyFreeSpin && payload.freeSpin,
                 notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
             },
             {

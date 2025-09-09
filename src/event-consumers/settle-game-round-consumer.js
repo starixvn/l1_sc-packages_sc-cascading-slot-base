@@ -1,7 +1,16 @@
 import { round as mathRound } from "mathjs";
 import { Core } from "sc-game-base";
+import RoundCalculator from "../board/round-calculator";
+import FreeSpinsConsumer from "./free-spins-consumer";
+import TotalMultiplierConsumer from "./total-multiplier-consumer";
 
 export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.SettleGameRoundConsumer {
+    /**
+     * @param {Object} dependencies
+     * @param {FreeSpinsConsumer} dependencies.freeSpinsConsumer
+     * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
+     * @param {RoundCalculator} dependencies.roundCalculator
+     */
     constructor({
         definition,
         gameData,
@@ -59,16 +68,16 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async processSpinning(player, round) {
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
-        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * round.totalAmount, 2);
+        const baseBetAmount = round.coinValue * round.betLevel * round.betMultiplier;
+        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * baseBetAmount, 2);
 
-        round = this.roundCalculator.processSpinning(
-            round,
-            currentTotalMultiplier,
-            maxWinPerRound,
-            this.gameData.settlementResultFromAdmin[player.profile.name]
-        );
+        const presetBoard = round.buyFreeSpin
+            ? this.freeSpinsConsumer.getBuyFreeSpinBoard()
+            : this.gameData.settlementResultFromAdmin[player.profile.name];
 
-        if (round.freeSpin && round.betwin > 0 && round.multiplier > 0) {
+        round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, presetBoard);
+
+        if (round.freeSpin && round.betwin > 0 && round.multiplier > 0 && round.settlementResult.tumbles.length > 1) {
             await this.totalMultiplierConsumer.increaseTotalMultiplier(player, { roundId: round.id, multiplier: round.multiplier });
         }
 
@@ -76,17 +85,22 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     async processFreeSpins(player, round) {
-        const { id, settlementResult } = round;
+        const { id, settlementResult, coinValue, betLevel, betMultiplier, buyFreeSpin } = round;
+
         if (settlementResult.freeSpins?.odds > 0) {
+            const buyFreeSpinRefRoundId = buyFreeSpin ? round.id : round.buyFreeSpinRefRoundId;
+
             await this.freeSpinsConsumer.gainFreeSpin(
                 player,
                 {
                     roundId: id,
-                    totalAmount: round.totalAmount,
-                    coinValue: round.coinValue,
-                    betLevel: round.betLevel,
-                    betMultiplier: round.betMultiplier,
+                    totalAmount: coinValue * betLevel * betMultiplier,
+                    coinValue,
+                    betLevel,
+                    betMultiplier,
                     numberOfFreeSpins: settlementResult.freeSpins.odds,
+                    buyFreeSpin,
+                    buyFreeSpinRefRoundId,
                 },
                 this.definition.freeSpinLiveSeconds
             );
@@ -100,6 +114,12 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         if (totalAvailableFreeSpins === 0) {
             await this.totalMultiplierConsumer.stopChain(player);
+
+            if (round.buyFreeSpinRefRoundId) {
+                const buyFreeSpinResult = await this.freeSpinsConsumer.summarizeBuyFreeSpins(player, round.buyFreeSpinRefRoundId);
+
+                this.roundResultPublisher.publishToUser(round.uid, { buyFreeSpinResult: { ...buyFreeSpinResult } });
+            }
         }
     }
 

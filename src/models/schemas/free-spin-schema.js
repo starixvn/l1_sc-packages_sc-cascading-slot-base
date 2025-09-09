@@ -15,4 +15,5 @@ export default new mongoose.Schema({
     coinValue: { type: Number, require: true },
     betMultiplier: { type: Number, require: true },
     promotionId: { type: String, required: false },
+    buyFreeSpinRefRoundId: { type: Number, require: false },
 });

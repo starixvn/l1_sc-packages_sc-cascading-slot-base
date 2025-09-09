@@ -16,6 +16,8 @@ export default new mongoose.Schema({
     totalMultiplier: { type: Number, default: 0 },
     freeSpin: { type: Boolean, default: false },
     reachMaxWin: { type: Boolean, default: false },
+    buyFreeSpin: { type: Boolean, require: false },
+    buyFreeSpinRefRoundId: { type: Number, require: false },
 
     result: { type: String },
     settlementResult: { type: Object },
@@ -27,6 +29,8 @@ export default new mongoose.Schema({
     endTime: { type: Date },
 
     currency: { type: String, require: true },
+    currencyGroupId: { type: String, require: false },
+    currencyCode: { type: String, require: false },
     rate: { type: Number, require: true },
     exchangeRateId: { type: Number, require: true },
 

@@ -8,7 +8,8 @@ export default class RoundCalculator {
     }
 
     processSpinning(round, totalMultiplier = 0, maxWinPerRound = Number.MAX_VALUE, preGeneratedResult = null) {
-        const generatedResult = preGeneratedResult?.shift() ?? this.boardGenerator.generate();
+        const boardGenerator = this.boardGenerator.initialize(round.freeSpin);
+        const generatedResult = preGeneratedResult?.shift() ?? boardGenerator.generate();
         round.result = generatedResult.newBoard.join(",");
 
         const firstTumble = {
@@ -24,7 +25,7 @@ export default class RoundCalculator {
             const lastTumble = tumbles[tumbles.length - 1];
             const refilledResult =
                 preGeneratedResult?.shift() ??
-                this.boardGenerator.explodeAndRefill(
+                boardGenerator.explodeAndRefill(
                     lastTumble.originalBoard.split(",").map((x) => parseInt(x)),
                     Object.keys(lastTumble.icons).map((x) => parseInt(x)),
                     lastTumble.multipliers
@@ -49,7 +50,7 @@ export default class RoundCalculator {
             }
         }
 
-        this.countFreeSpin(round);
+        this.countFreeSpin(round, maxWinPerRound);
         return round;
     }
 
@@ -81,19 +82,28 @@ export default class RoundCalculator {
         round.reachMaxWin = round.betwin >= maxWinPerRound;
     }
 
-    countFreeSpin(round) {
+    countFreeSpin(round, maxWinPerRound = Number.MAX_VALUE) {
         const { settlementResult } = round;
         const { tumbles } = settlementResult;
         const lastBoard = tumbles[tumbles.length - 1].originalBoard.split(",").map((x) => parseInt(x));
         const freeSpinCount = lastBoard.filter((x) => x === defaultDefinition.specialSymbols.freeSpins).length;
 
-        const { freeSpins } = round.odds;
+        const { freeSpins, oddsByCounts } = round.odds;
         const freeSpinOddsConfig = round.freeSpin ? freeSpins.additionalOdds : freeSpins.initialOdds;
         const freeSpinOdds = freeSpinOddsConfig.filter((x) => freeSpinCount >= x.count).map((x) => x.odds);
+        const freeSpinOddsByCounts =
+            oddsByCounts[defaultDefinition.specialSymbols.freeSpins]?.find((x) => freeSpinCount >= x.from && freeSpinCount <= x.to)?.odds ?? 0;
+        const winAmount = freeSpinOddsByCounts * round.coinValue * round.betLevel;
+
+        round.actualBetwin += winAmount;
+        round.betwin = Math.min(round.actualBetwin, maxWinPerRound);
+        round.reachMaxWin = round.betwin >= maxWinPerRound;
+        const winFreeSpin = round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds);
 
         settlementResult.freeSpins = {
-            count: round.reachMaxWin ? 0 : freeSpinCount,
-            odds: round.reachMaxWin ? 0 : Math.max(0, ...freeSpinOdds),
+            count: winAmount > 0 || winFreeSpin > 0 ? freeSpinCount : 0,
+            odds: winFreeSpin,
+            win: winAmount,
         };
     }
 }

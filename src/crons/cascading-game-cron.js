@@ -1,5 +1,6 @@
 import cron from "cron";
 import { Crons } from "sc-slot-game-base";
+import TotalMultiplierConsumer from "../event-consumers/total-multiplier-consumer";
 
 export default class CascadingGameCron extends Crons.SlotGameCron {
     /**
@@ -76,10 +77,12 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload();
 
+        // Initialize the board generator
+        this.boardGenerator.initialize();
+
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
         await this.promotionFreeSpinsConsumer.loadPromotionsRunning();
-        this.boardGenerator.initialize();
         this.initTrialMode();
 
         const job = new cron.CronJob(
@@ -117,16 +120,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             await this.totalMultiplierConsumer.reload();
         }
         await this.promotionFreeSpinsConsumer.checkExpiry(this.gameData.gameConfigs.gameId);
-    }
-
-    async checkGameStatus() {
-        await super.checkGameStatus();
-
-        if (!this.gameData.disabled) {
-            const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
-
-            this.boardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
-        }
     }
 
     initTrialMode() {}

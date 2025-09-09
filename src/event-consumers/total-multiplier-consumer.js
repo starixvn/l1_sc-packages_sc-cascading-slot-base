@@ -1,8 +1,9 @@
+import FreeSpinsConsumer from "./free-spins-consumer";
 export default class TotalMultiplierConsumer {
     /**
      * @param {SlotGameData} gameData
      * @param {mongoose.Model} totalMultiplierRepository
-     * @param {EventConsumers.FreeSpinsConsumer} dependencies.freeSpinsConsumer
+     * @param {FreeSpinsConsumer} freeSpinsConsumer
      */
     constructor(gameData, totalMultiplierRepository, freeSpinsConsumer) {
         this.gameData = gameData;

@@ -1,4 +1,5 @@
 import { EventConsumers } from "sc-slot-game-base";
+import { isBuyFreeSpinEnabled } from "../utils";
 
 export default class InGameConsumer extends EventConsumers.InGameConsumer {
     constructor({
@@ -36,7 +37,8 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         const maxWinPerRound = settings?.maxWinPerRound;
         const defaultCoinValue = settings?.defaultCoinValue;
 
-        const { betLevels, betMultiplier, oddsByCounts, freeSpins: freeSpinsConfig } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const { betLevels, betMultiplier, oddsByCounts, freeSpins: freeSpinsConfig, features } = this.gameData.gameConfigs.cascadingSlotsConfig;
+
         const gameConfigs = {
             coinValues,
             maxWinPerRound,
@@ -46,7 +48,17 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             defaultCoinValue,
         };
 
-        const freeSpins = this.getAvailableFreeSpins(realPlayer);
+        const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);
+        const soonestExpiredFreeSpin = this.freeSpinsConsumer.getSoonestExpiredFreeSpinSet(realPlayer);
+
+        const freeSpins = {
+            total: totalOfFreeSpins,
+            betLevel: soonestExpiredFreeSpin?.betLevel,
+            coinValue: soonestExpiredFreeSpin?.coinValue,
+            betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
+            buyFreeSpins: soonestExpiredFreeSpin?.buyFreeSpinRefRoundId != null,
+        };
+
 
         const user = await this.getUserInfo(realPlayer);
         const { exchangeRates } = this.gameData;
@@ -61,6 +73,12 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
                 ...user,
                 rate,
                 multiplier: session.multiplier,
+            },
+            features: {
+                buyFreeSpins: {
+                    enabled: isBuyFreeSpinEnabled(features?.buyFreeSpins, realPlayer.session),
+                    multiplier: features?.buyFreeSpins?.multiplier ?? 1,
+                },
             },
         };
 

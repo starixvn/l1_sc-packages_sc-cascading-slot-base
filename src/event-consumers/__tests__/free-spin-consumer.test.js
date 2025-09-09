@@ -76,6 +76,7 @@ describe("freeSpinsConsumer", () => {
                 betLevel: freeSpinData.betLevel,
                 coinValue: freeSpinData.coinValue,
                 betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
+                buyFreeSpinRefRoundId: undefined,
             });
         });
 
@@ -102,8 +103,231 @@ describe("freeSpinsConsumer", () => {
                     betLevel: freeSpinData.betLevel,
                     coinValue: freeSpinData.coinValue,
                     betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
+                    buyFreeSpinRefRoundId: undefined,
                 },
             ]);
+        });
+    });
+
+    describe("useFreeSpin", () => {
+        it("should return first available free spin set", async () => {
+            // Arrange
+            const mockFreeSpin = { id: 1, available: 3 };
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [mockFreeSpin],
+            };
+
+            // Act
+            const result = await consumer.useFreeSpin(player);
+
+            // Assert
+            expect(result).toBe(mockFreeSpin);
+            expect(freeSpinsRepository.updateOne).toBeCalledWith({ id: mockFreeSpin.id }, { $inc: { available: -1 } });
+        });
+
+        it("should return undefined when no free spins available", async () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [],
+            };
+
+            // Act
+            const result = await consumer.useFreeSpin(player);
+
+            // Assert
+            expect(result).toBeUndefined();
+            expect(freeSpinsRepository.updateOne).not.toBeCalled();
+        });
+
+        it("should return undefined when player not in ingame", async () => {
+            // Act
+            const result = await consumer.useFreeSpin(player);
+
+            // Assert
+            expect(result).toBeUndefined();
+            expect(freeSpinsRepository.updateOne).not.toBeCalled();
+        });
+    });
+
+    describe("hasFreeSpin", () => {
+        it("should return true when player has available free spins", () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [{ available: 2 }],
+            };
+
+            // Act
+            const result = consumer.hasFreeSpin(player);
+
+            // Assert
+            expect(result).toBe(true);
+        });
+
+        it("should return false when player has no free spins", () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [],
+            };
+
+            // Act
+            const result = consumer.hasFreeSpin(player);
+
+            // Assert
+            expect(result).toBe(false);
+        });
+
+        it("should return false when player has no available free spins", () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [{ available: 0 }],
+            };
+
+            // Act
+            const result = consumer.hasFreeSpin(player);
+
+            // Assert
+            expect(result).toBe(false);
+        });
+
+        it("should return false when player not in ingame", () => {
+            // Act
+            const result = consumer.hasFreeSpin(player);
+
+            // Assert
+            expect(result).toBe(false);
+        });
+    });
+
+    describe("getSoonestExpiredFreeSpinSet", () => {
+        it("should return first available free spin", () => {
+            // Arrange
+            const freeSpin1 = { available: 0 };
+            const freeSpin2 = { available: 2 };
+            const freeSpin3 = { available: 1 };
+
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [freeSpin1, freeSpin2, freeSpin3],
+            };
+
+            // Act
+            const result = consumer.getSoonestExpiredFreeSpinSet(player);
+
+            // Assert
+            expect(result).toBe(freeSpin2);
+        });
+
+        it("should return undefined when no available free spins", () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [{ available: 0 }],
+            };
+
+            // Act
+            const result = consumer.getSoonestExpiredFreeSpinSet(player);
+
+            // Assert
+            expect(result).toBeUndefined();
+        });
+
+        it("should return undefined when player not in ingame", () => {
+            // Act
+            const result = consumer.getSoonestExpiredFreeSpinSet(player);
+
+            // Assert
+            expect(result).toBeUndefined();
+        });
+    });
+
+    describe("getLatestExpiredFreeSpinSet", () => {
+        it("should return last available free spin", () => {
+            // Arrange
+            const freeSpin1 = { available: 0 };
+            const freeSpin2 = { available: 2 };
+            const freeSpin3 = { available: 1 };
+
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [freeSpin1, freeSpin2, freeSpin3],
+            };
+
+            // Act
+            const result = consumer.getLatestExpiredFreeSpinSet(player);
+
+            // Assert
+            expect(result).toBe(freeSpin3);
+        });
+
+        it("should return undefined when no available free spins", () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = {
+                freeSpins: [{ available: 0 }],
+            };
+
+            // Act
+            const result = consumer.getLatestExpiredFreeSpinSet(player);
+
+            // Assert
+            expect(result).toBeUndefined();
+        });
+    });
+
+    describe("getBuyFreeSpinBoard", () => {
+        it("should return shuffled board with free spin symbols", () => {
+            // Act
+            const result = consumer.getBuyFreeSpinBoard();
+
+            // Assert
+            expect(result).toHaveLength(1);
+            expect(result[0]).toHaveProperty("newBoard");
+            expect(result[0]).toHaveProperty("multipliers");
+            expect(result[0].newBoard).toHaveLength(30); // 26 + 4 free spin symbols
+            expect(result[0].multipliers).toEqual([]);
+        });
+    });
+
+    describe("summarizeBuyFreeSpins", () => {
+        it("should calculate correct summary", async () => {
+            // Arrange
+            const buyFreeSpinRefRoundId = chance.natural();
+            const mockRounds = [
+                { id: buyFreeSpinRefRoundId, betwin: 100 },
+                { buyFreeSpinRefRoundId, betwin: 200 },
+                { buyFreeSpinRefRoundId, betwin: 150 },
+            ];
+
+            consumer.roundsRepository = {
+                find: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(mockRounds),
+                    }),
+                }),
+            };
+
+            // Act
+            const result = await consumer.summarizeBuyFreeSpins(player, buyFreeSpinRefRoundId);
+
+            // Assert
+            expect(result.numberOfFreeSpins).toBe(2); // total rounds - 1
+            expect(result.totalWin).toBe(450); // sum of all betwins
+        });
+
+        it("should handle empty rounds", async () => {
+            // Arrange
+            const buyFreeSpinRefRoundId = chance.natural();
+
+            consumer.roundsRepository = {
+                find: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue([]),
+                    }),
+                }),
+            };
+
+            // Act
+            const result = await consumer.summarizeBuyFreeSpins(player, buyFreeSpinRefRoundId);
+
+            // Assert
+            expect(result.numberOfFreeSpins).toBe(0);
+            expect(result.totalWin).toBe(0);
         });
     });
 });

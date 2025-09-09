@@ -70,14 +70,14 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
             multipliers: base.multipliers,
             icons: this.tumbleCalculator.calculateIconOdds(base.board, cascadingSlotsConfig),
         };
-
+        const boardGenerator = this.boardGenerator.initialize();
         const preGeneratedResult = [firstTumble];
 
         for (const tumble of tumbles) {
             const lastTumble = preGeneratedResult[preGeneratedResult.length - 1];
-            this.boardGenerator.setRefillSymbols(tumble.newSymbols, tumble.multipliers);
+            boardGenerator.setRefillSymbols(tumble.newSymbols, tumble.multipliers);
 
-            const refilledResult = this.boardGenerator.explodeAndRefill(
+            const refilledResult = boardGenerator.explodeAndRefill(
                 lastTumble.newBoard,
                 Object.keys(lastTumble.icons).map((x) => parseInt(x)),
                 lastTumble.multipliers

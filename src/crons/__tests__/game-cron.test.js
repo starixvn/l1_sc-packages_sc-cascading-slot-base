@@ -59,6 +59,17 @@ describe("gameCron", () => {
 
     const promotionFreeSpinsConsumer = stub(EventConsumers.PromotionFreeSpinsConsumer);
 
+    // Mock the boardGenerator.initialize() method
+    boardGenerator.initialize.mockReturnValue({
+        generate: jest.fn(),
+        explodeAndRefill: jest.fn(),
+        setRefillSymbols: jest.fn(),
+        setDifficulty: jest.fn(),
+        updateMultiplierConfig: jest.fn(),
+        getMultiplierConfig: jest.fn(),
+        getDifficulty: jest.fn(),
+    });
+
     let gameCron;
 
     beforeEach(() => {

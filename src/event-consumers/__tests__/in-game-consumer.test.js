@@ -49,6 +49,12 @@ function stubGameData() {
                 initialOdds: [],
                 additionalOdds: [],
             },
+            features: {
+                buyFreeSpins: {
+                    enabled: true,
+                    multiplier: 2,
+                },
+            },
         },
     };
 
@@ -68,6 +74,9 @@ function stubGameData() {
 }
 
 describe("InGameConsumer", () => {
+    /**
+     * @type {InGameConsumer}
+     */
     let consumer;
 
     beforeEach(() => {
@@ -122,12 +131,19 @@ describe("InGameConsumer", () => {
                         coinValue: undefined,
                         betMultiplier: undefined,
                         promotionId: undefined,
+                        buyFreeSpins: false,
                     },
                     totalMultiplier: 10,
                     user: {
                         rate: 4,
                         multiplier: 2,
                     },
+                    features: {
+                        buyFreeSpins: {
+                            enabled: true,
+                            multiplier: 2,
+                        },
+                    }
                 };
 
                 // Act
@@ -139,7 +155,7 @@ describe("InGameConsumer", () => {
         });
 
         describe("when player have currency group game settings", () => {
-            it("should return info coinValues and maxWinPerRound", async () => {
+            it("should return info coinValues and maxWinPerRound when not have buyFreeSpinRefRoundId", async () => {
                 // Arrange
                 freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce({ betLevel: 2, coinValue: 10, betMultiplier: 20 });
                 const realPlayer = {
@@ -156,7 +172,60 @@ describe("InGameConsumer", () => {
                         maxWinPerRound: 5000,
                         betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                         betMultiplier: 20,
-                        defaultCoinValue: undefined,
+                        odds: {
+                            symbols: [{ from: 8, to: 9, odds: 1 }],
+                            freeSpins: {
+                                initialOdds: [],
+                                additionalOdds: [],
+                            },
+                        },
+                    },
+                    freeSpins: {
+                        total: 10,
+                        betLevel: 2,
+                        betMultiplier: 20,
+                        coinValue: 10,
+                        buyFreeSpins: false,
+                    },
+                    totalMultiplier: 0,
+                    user: {
+                        rate: 4,
+                        multiplier: 2,
+                    },
+                    features: {
+                        buyFreeSpins: {
+                            enabled: true,
+                            multiplier: 2,
+                        },
+                    },
+                };
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue).toStrictEqual(expectedValue);
+            });
+
+            it("should return info coinValues and maxWinPerRound when have buyFreeSpinRefRoundId", async () => {
+                // Arrange
+                freeSpinsConsumer.getSoonestExpiredFreeSpinSet.mockReturnValueOnce({
+                    betLevel: 2,
+                    coinValue: 10,
+                    betMultiplier: 20,
+                    buyFreeSpinRefRoundId: 10,
+                });
+                const realPlayer = {
+                    session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
+                    profile: { name: "player2" },
+                };
+
+                // Arrange
+                const expectedValue = {
+                    gameConfigs: {
+                        coinValues: [1, 2, 5, 10, 50, 100],
+                        maxWinPerRound: 5000,
+                        betLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                        betMultiplier: 20,
                         odds: {
                             symbols: [{ from: 8, to: 9, odds: 1 }],
                             freeSpins: {
@@ -172,11 +241,18 @@ describe("InGameConsumer", () => {
                         betMultiplier: 20,
                         coinValue: 10,
                         promotionId: undefined,
+                        buyFreeSpins: true,
                     },
                     totalMultiplier: 0,
                     user: {
                         rate: 4,
                         multiplier: 2,
+                    },
+                    features: {
+                        buyFreeSpins: {
+                            enabled: true,
+                            multiplier: 2,
+                        },
                     },
                 };
 
@@ -185,6 +261,107 @@ describe("InGameConsumer", () => {
 
                 // Assert
                 expect(actualValue).toStrictEqual(expectedValue);
+            });
+        });
+
+        describe("when buy free spins feature is configured", () => {
+            it("should return enabled false when feature is disabled", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins.enabled = false;
+                const realPlayer = {
+                    session: { currencyGroupId: "617a650628b7a500016388f5", currencyCode: "UUS", multiplier: 2 },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(false);
+            });
+
+            it("should return enabled false when site is excluded", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins = {
+                    enabled: true,
+                    multiplier: 2,
+                    siteExclusions: [
+                        {
+                            operatorId: "operator1",
+                            sites: ["site1"],
+                        },
+                    ],
+                };
+                const realPlayer = {
+                    session: {
+                        currencyGroupId: "617a650628b7a500016388f5",
+                        currencyCode: "UUS",
+                        multiplier: 2,
+                        operatorId: "operator1",
+                        siteName: "site1",
+                    },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(false);
+            });
+
+            it("should return enabled true when site is not in exclusion list", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins = {
+                    enabled: true,
+                    multiplier: 2,
+                    siteExclusions: [
+                        {
+                            operatorId: "operator1",
+                            sites: ["different-site"],
+                        },
+                    ],
+                };
+                const realPlayer = {
+                    session: {
+                        currencyGroupId: "617a650628b7a500016388f5",
+                        currencyCode: "UUS",
+                        multiplier: 2,
+                        operatorId: "operator1",
+                        siteName: "site1",
+                    },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(true);
+            });
+
+            it("should return enabled true when siteExclusions is undefined", async () => {
+                // Arrange
+                gameData.gameConfigs.cascadingSlotsConfig.features.buyFreeSpins = {
+                    enabled: true,
+                    multiplier: 2,
+                };
+                const realPlayer = {
+                    session: {
+                        currencyGroupId: "617a650628b7a500016388f5",
+                        currencyCode: "UUS",
+                        multiplier: 2,
+                        operatorId: "operator1",
+                        siteName: "site1",
+                    },
+                    profile: { name: "player2" },
+                };
+
+                // Act
+                const actualValue = await consumer.buildPayload(realPlayer);
+
+                // Assert
+                expect(actualValue.features.buyFreeSpins.enabled).toBe(true);
             });
         });
     });

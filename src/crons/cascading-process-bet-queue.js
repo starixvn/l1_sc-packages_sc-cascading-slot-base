@@ -1,8 +1,28 @@
 import { round } from "mathjs";
+import { helpers } from "sc-common";
 import { Crons } from "sc-slot-game-base";
+import { isBuyFreeSpinEnabled } from "../utils";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
-    async generateBetInfo(payload, freeSpinInfo) {
+    async proceedBet(player, payload) {
+        if (payload.buyFreeSpin && this.freeSpinsConsumer.hasFreeSpin(player)) {
+            this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.cannotPlaceBet } });
+            return;
+        }
+
+        if (payload.buyFreeSpin) {
+            const { features } = this.gameData.gameConfigs.cascadingSlotsConfig;
+            const buyFreeSpinConfig = features?.buyFreeSpins;
+            const isBuyFreeSpinValid = isBuyFreeSpinEnabled(buyFreeSpinConfig, player.session) && buyFreeSpinConfig?.multiplier;
+            if (!isBuyFreeSpinValid) {
+                this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.invalidBet } });
+                return;
+            }
+        }
+        await super.proceedBet(player, payload);
+    }
+
+    async generateBetInfo(payload, freeSpinInfo, player) {
         const betInfo = { ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
         const contributionRate = cascadingSlotsConfig.jackpot ? cascadingSlotsConfig.jackpot.playerContributionRatio : 0;
@@ -17,14 +37,20 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             betInfo.betMultiplier = betMultiplier;
         }
 
-        betInfo.totalAmount = round(betInfo.betLevel * betInfo.coinValue * betInfo.betMultiplier, 2);
-        betInfo.contributionRate = round(contributionRate, 4);
-        betInfo.contributionAmount = round(contributionRate * betInfo.totalAmount, 4);
+        let buyFreeSpinMultiplier = 1;
+        if (payload.buyFreeSpin) {
+            buyFreeSpinMultiplier = cascadingSlotsConfig.features.buyFreeSpins.multiplier;
+        }
+
+        betInfo.amount = betInfo.betLevel * betInfo.coinValue;
+        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier * buyFreeSpinMultiplier).toFixed(2));
+        betInfo.contributionRate = parseFloat(contributionRate.toFixed(4));
+        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount * buyFreeSpinMultiplier).toFixed(4));
 
         return betInfo;
     }
 
-    async upsertBet(player, roundId, bet, rate, applicableInterceptors) {
+    async upsertBet(player, roundId, bet, rate, applicableInterceptors, buyFreeSpinRefRoundId) {
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
 
         let newBet = {
@@ -38,8 +64,10 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             coinValue: bet.coinValue,
             betMultiplier: bet.betMultiplier,
             totalAmount: bet.totalAmount,
+            buyFreeSpin: bet.buyFreeSpin,
             rate: rate,
             exchangeRateId: this.gameData.exchangeRates.exId,
+            buyFreeSpinRefRoundId: buyFreeSpinRefRoundId,
             odds: {
                 oddsByCounts: cascadingSlotsConfig.oddsByCounts,
                 freeSpins: cascadingSlotsConfig.freeSpins,
@@ -56,7 +84,8 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         if (player.session) {
             newBet.siteId = player.session.siteId;
             newBet.currency = player.session.currencyName;
-
+            newBet.currencyCode = player.session.currencyCode;
+            newBet.currencyGroupId = player.session.currencyGroupId;
             newBet.operatorId = player.session.operatorId;
             newBet.playerId = player.session.playerId;
             newBet.appType = player.session.system;
@@ -67,14 +96,17 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     }
 
     async handleSuccessBet(player, balance, roundId, bet, applicableInterceptors) {
+        let buyFreeSpinRefRoundId = null;
+
         if (bet.freeSpin) {
-            await this.freeSpinsConsumer.useFreeSpin(player);
+            const freeSpin = await this.freeSpinsConsumer.useFreeSpin(player);
+            buyFreeSpinRefRoundId = freeSpin.buyFreeSpinRefRoundId;
         }
 
         const rate = this.calculateCurrencyRate(player.session);
 
-        await this.upsertBet(player, roundId, bet, rate, applicableInterceptors);
-        this.notifyPlacingBetResult(player, balance, bet, rate);
+        await this.upsertBet(player, roundId, bet, rate, applicableInterceptors, buyFreeSpinRefRoundId);
+        !bet.autoSettle && this.notifyPlacingBetResult(player, balance, bet, rate);
 
         const { betwin } = await this.settleGameRoundConsumer.settleRound(player, roundId);
 
