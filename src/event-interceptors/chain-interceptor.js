@@ -1,8 +1,9 @@
 import { EventInterceptors } from "sc-game-base/src/core";
 
 export default class ChainInterceptor extends EventInterceptors.BaseEventInterceptor {
-    constructor({ logService, definition, resultChainManager }) {
+    constructor({ logService, definition, gameData, resultChainManager }) {
         super({ logService, definition });
+        this.gameData = gameData;
         this.chainManager = resultChainManager;
     }
 
@@ -16,8 +17,8 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
                     playerId: player.session?.playerId || player.UID,
                     sessionId: player.session?.sessionId,
                     operatorId: player.session?.operatorId,
-                    gameId: player.session?.gameId || "unknown",
-                    currency: player.session?.currencyName || "USD",
+                    gameId: this.gameData.gameConfigs.gameId,
+                    currency: player.session?.currencyName || "",
                     betLevel: bet?.betLevel,
                     coinValue: bet?.coinValue,
                 };

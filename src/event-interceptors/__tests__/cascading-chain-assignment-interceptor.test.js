@@ -15,12 +15,33 @@ describe("ChainInterceptor", () => {
             logError: jest.fn(),
         };
 
-        interceptor = new ChainInterceptor({ resultChainManager: chainManager, logService });
+        const definition = { configName: "cascading-slot-v1" };
+        const gameData = {
+            gameConfigs: {
+                gameId: 1,
+            },
+        };
+
+        interceptor = new ChainInterceptor({
+            resultChainManager: chainManager,
+            logService,
+            definition,
+            gameData,
+        });
     });
 
     describe("shouldIntercept", () => {
         it("should always return true", () => {
-            const player = { profile: { name: "testPlayer" } };
+            const player = {
+                profile: { name: "testPlayer" },
+                session: {
+                    playerId: "player123",
+                    sessionId: "session456",
+                    operatorId: "operator789",
+                    gameId: 1,
+                    currencyName: "USD",
+                },
+            };
             const bet = { totalAmount: 10 };
 
             const result = interceptor.shouldIntercept(player, bet);
@@ -30,7 +51,16 @@ describe("ChainInterceptor", () => {
     });
 
     describe("afterSuccessEvent", () => {
-        const player = { profile: { name: "testPlayer" } };
+        const player = {
+            profile: { name: "testPlayer" },
+            session: {
+                playerId: "player123",
+                sessionId: "session456",
+                operatorId: "operator789",
+                gameId: 1,
+                currencyName: "USD",
+            },
+        };
         const context = { player, bet: { totalAmount: 10, betLevel: 5, coinValue: 0.1 }, balance: 100 };
 
         it("should assign chain when player needs assignment", async () => {
@@ -41,10 +71,10 @@ describe("ChainInterceptor", () => {
 
             expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer");
             expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
-                playerId: undefined,
-                sessionId: undefined,
-                operatorId: undefined,
-                gameId: "unknown",
+                playerId: "player123",
+                sessionId: "session456",
+                operatorId: "operator789",
+                gameId: 1,
                 currency: "USD",
                 betLevel: 5,
                 coinValue: 0.1,
@@ -73,10 +103,10 @@ describe("ChainInterceptor", () => {
             const result = await interceptor.afterSuccessEvent(context);
 
             expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
-                playerId: undefined,
-                sessionId: undefined,
-                operatorId: undefined,
-                gameId: "unknown",
+                playerId: "player123",
+                sessionId: "session456",
+                operatorId: "operator789",
+                gameId: 1,
                 currency: "USD",
                 betLevel: 5,
                 coinValue: 0.1,
@@ -98,7 +128,8 @@ describe("ChainInterceptor", () => {
         });
 
         it("should assign chain even when bet information is missing", async () => {
-            const contextWithoutBet = { player, balance: 100 };
+            const playerWithoutSession = { profile: { name: "testPlayer" } };
+            const contextWithoutBet = { player: playerWithoutSession, balance: 100 };
             chainManager.shouldAssignChain.mockReturnValue(true);
             chainManager.assignChain.mockReturnValue(true);
 
@@ -108,8 +139,8 @@ describe("ChainInterceptor", () => {
                 playerId: undefined,
                 sessionId: undefined,
                 operatorId: undefined,
-                gameId: "unknown",
-                currency: "USD",
+                gameId: 1,
+                currency: "",
                 betLevel: undefined,
                 coinValue: undefined,
             });
