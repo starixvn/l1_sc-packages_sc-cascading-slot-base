@@ -1,4 +1,4 @@
-import { asClass, asValue } from "awilix";
+import { asClass, asValue, asFunction } from "awilix";
 import { SlotContainerRegistry } from "sc-slot-game-base";
 import CascadingBoardGenerator from "./board/cascading-board-generator";
 import defaultDefinition from "./board/default-definition";
