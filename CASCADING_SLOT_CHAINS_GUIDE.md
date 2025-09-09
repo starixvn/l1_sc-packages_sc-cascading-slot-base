@@ -342,21 +342,23 @@ Authorization: Bearer <admin-token>
 
 ### Basic Chain Assignment
 
+Chain assignment happens automatically via `ChainInterceptor` when `shouldAssignChain()` returns true. The interceptor extracts bet information from the context to ensure proper tracking:
+
 ```javascript
-// Chain assignment happens automatically via ChainInterceptor
-// when shouldAssignChain() returns true
+// ChainInterceptor automatically extracts bet information
+const playerContext = {
+  playerId: player.session?.playerId || player.UID,
+  sessionId: player.session?.sessionId,
+  operatorId: player.session?.operatorId,
+  gameId: player.session?.gameId || "unknown",
+  currency: player.session?.currencyName || "USD",
+  betLevel: bet?.betLevel, // ✅ CRITICAL: Required for progress tracking
+  coinValue: bet?.coinValue, // ✅ CRITICAL: Required for progress tracking
+};
 
-// Access through container
+// Manual assignment (for testing/admin use)
 const resultChainManager = container.resolve("resultChainManager");
-
-await resultChainManager.assignChain(playerName, {
-  playerId: player.UID,
-  operatorId: player.session.operatorId,
-  gameId: "cascading-slot-v1",
-  currency: "USD",
-  betLevel: 5,
-  coinValue: 0.1,
-});
+await resultChainManager.assignChain(playerName, playerContext);
 ```
 
 ### Progress Tracking
@@ -412,7 +414,8 @@ const stats = await assignmentRepository.aggregate([
 - **Atomic MongoDB Operations**: Uses `$inc` for safe, concurrent updates
 - **Session-Independent**: Chain progress persists across reconnections
 - **Race Condition Safe**: Multiple concurrent spins won't corrupt data
-- **Precise Filtering**: betLevel/coinValue prevent cross-player interference
+- **Precise Filtering**: `betLevel`/`coinValue` prevent cross-player interference
+- **Bet Context Capture**: `ChainInterceptor` extracts bet information for proper tracking
 - **Single Database Operation**: Optimized `findOneAndUpdate` calls
 - **Clean Logic**: Simple "if chain result exists, track progress"
 
@@ -431,6 +434,7 @@ selectPreGeneratedResult()  // Get predetermined board
 
 - **Unique Constraints**: One active assignment per player/bet configuration
 - **Atomic Updates**: Prevents data corruption during concurrent operations
+- **Complete Bet Context**: `betLevel`/`coinValue` captured during assignment
 - **Fail-Safe Design**: Game continues if tracking fails
 - **Input Validation**: All required parameters validated
 
@@ -464,9 +468,11 @@ selectPreGeneratedResult()  // Get predetermined board
 
 #### 5. Progress Not Updating
 
-- **Verify**: `updateChainProgress` is called with correct parameters
-- **Check**: `betLevel` and `coinValue` match the assignment
-- **Ensure**: Parameters are not `undefined` (will cause filter mismatch)
+- **Root Cause**: `updateChainProgress` can't find assignments without matching `betLevel`/`coinValue`
+- **Critical Fix**: Ensure `ChainInterceptor` captures bet information during assignment
+- **Verify**: Assignment records contain `betLevel` and `coinValue` fields
+- **Check**: `updateChainProgress` parameters match assignment exactly
+- **Debug Query**: `db.player_chain_assignments.find({playerId: "X", betLevel: {$exists: false}})`
 
 ### Testing Migration
 

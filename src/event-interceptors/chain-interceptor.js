@@ -8,7 +8,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
 
     async afterSuccessEvent(context) {
         try {
-            const { player } = context;
+            const { player, bet } = context;
             const playerName = player.profile.name;
 
             if (this.chainManager.shouldAssignChain(playerName)) {
@@ -18,6 +18,8 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
                     operatorId: player.session?.operatorId,
                     gameId: player.session?.gameId || "unknown",
                     currency: player.session?.currencyName || "USD",
+                    betLevel: bet?.betLevel,
+                    coinValue: bet?.coinValue,
                 };
 
                 const success = await this.chainManager.assignChain(playerName, playerContext);

@@ -31,7 +31,7 @@ describe("ChainInterceptor", () => {
 
     describe("afterSuccessEvent", () => {
         const player = { profile: { name: "testPlayer" } };
-        const context = { player, bet: { totalAmount: 10 }, balance: 100 };
+        const context = { player, bet: { totalAmount: 10, betLevel: 5, coinValue: 0.1 }, balance: 100 };
 
         it("should assign chain when player needs assignment", async () => {
             chainManager.shouldAssignChain.mockReturnValue(true);
@@ -46,6 +46,8 @@ describe("ChainInterceptor", () => {
                 operatorId: undefined,
                 gameId: "unknown",
                 currency: "USD",
+                betLevel: 5,
+                coinValue: 0.1,
             });
             expect(logService.log).not.toHaveBeenCalled();
             expect(logService.logWarning).not.toHaveBeenCalled();
@@ -76,6 +78,8 @@ describe("ChainInterceptor", () => {
                 operatorId: undefined,
                 gameId: "unknown",
                 currency: "USD",
+                betLevel: 5,
+                coinValue: 0.1,
             });
             expect(logService.logWarning).toHaveBeenCalledWith("No chains available for testPlayer");
             expect(result).toBe(context);
@@ -91,6 +95,25 @@ describe("ChainInterceptor", () => {
 
             expect(logService.logError).toHaveBeenCalledWith(error);
             expect(result).toBe(context);
+        });
+
+        it("should assign chain even when bet information is missing", async () => {
+            const contextWithoutBet = { player, balance: 100 };
+            chainManager.shouldAssignChain.mockReturnValue(true);
+            chainManager.assignChain.mockReturnValue(true);
+
+            const result = await interceptor.afterSuccessEvent(contextWithoutBet);
+
+            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+                playerId: undefined,
+                sessionId: undefined,
+                operatorId: undefined,
+                gameId: "unknown",
+                currency: "USD",
+                betLevel: undefined,
+                coinValue: undefined,
+            });
+            expect(result).toBe(contextWithoutBet);
         });
     });
 });
