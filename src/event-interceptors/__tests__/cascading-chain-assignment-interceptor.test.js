@@ -146,5 +146,36 @@ describe("ChainInterceptor", () => {
             });
             expect(result).toBe(contextWithoutBet);
         });
+
+        it("should correctly extract and pass betLevel and coinValue from bet context", async () => {
+            // This test ensures we never regress on the critical betLevel/coinValue extraction
+            const contextWithBetLevels = {
+                player,
+                bet: {
+                    totalAmount: 50,
+                    betLevel: 10, // ✅ Critical: Must be extracted
+                    coinValue: 2.5, // ✅ Critical: Must be extracted
+                    roundId: "round123",
+                    betWin: 75,
+                },
+                balance: 200,
+            };
+
+            chainManager.shouldAssignChain.mockReturnValue(true);
+            chainManager.assignChain.mockReturnValue(true);
+
+            const result = await interceptor.afterSuccessEvent(contextWithBetLevels);
+
+            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+                playerId: "player123",
+                sessionId: "session456",
+                operatorId: "operator789",
+                gameId: 1,
+                currency: "USD",
+                betLevel: 10, // ✅ Must match bet.betLevel
+                coinValue: 2.5, // ✅ Must match bet.coinValue
+            });
+            expect(result).toBe(contextWithBetLevels);
+        });
     });
 });

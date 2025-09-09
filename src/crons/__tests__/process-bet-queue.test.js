@@ -174,6 +174,7 @@ describe("cascadingProcessBetQueue", () => {
             consumer.calculateCurrencyRate = jest.fn().mockReturnValueOnce(rate);
             consumer.upsertBet = jest.fn();
             consumer.notifyPlacingBetResult = jest.fn();
+            consumer.executeInterceptorEvent = jest.fn();
         });
 
         describe("when bet is using freeSpin", () => {
@@ -218,6 +219,70 @@ describe("cascadingProcessBetQueue", () => {
 
             // Assert
             expect(settleGameRoundConsumer.settleRound).toBeCalledWith(player, roundId);
+        });
+
+        describe("when interceptors are provided", () => {
+            it("should call executeInterceptorEvent with complete bet structure including betLevel and coinValue", async () => {
+                // Arrange
+                const betwin = 150;
+                const betWithLevels = {
+                    betLevel: 5,
+                    coinValue: 0.25,
+                    totalAmount: 25,
+                    freeSpin: false,
+                };
+                const mockInterceptors = ["interceptor1", "interceptor2"];
+
+                settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin });
+
+                // Act
+                await consumer.handleSuccessBet(player, balance, roundId, betWithLevels, mockInterceptors);
+
+                // Assert
+                expect(consumer.executeInterceptorEvent).toBeCalledWith("afterSuccessEvent", mockInterceptors, {
+                    player,
+                    bet: {
+                        roundId,
+                        betWin: betwin,
+                        amount: betWithLevels.totalAmount,
+                        betLevel: betWithLevels.betLevel, // ✅ Critical: Must be included
+                        coinValue: betWithLevels.coinValue, // ✅ Critical: Must be included
+                    },
+                    balance,
+                });
+            });
+
+            it("should not call executeInterceptorEvent when no interceptors provided", async () => {
+                // Arrange
+                settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
+                // Act
+                await consumer.handleSuccessBet(player, balance, roundId, bet, null);
+
+                // Assert
+                expect(consumer.executeInterceptorEvent).not.toBeCalled();
+            });
+
+            it("should call executeInterceptorEvent even with empty interceptors array", async () => {
+                // Arrange
+                settleGameRoundConsumer.settleRound.mockResolvedValueOnce({ betwin: 100 });
+
+                // Act
+                await consumer.handleSuccessBet(player, balance, roundId, bet, []);
+
+                // Assert
+                expect(consumer.executeInterceptorEvent).toBeCalledWith("afterSuccessEvent", [], {
+                    player,
+                    bet: {
+                        roundId,
+                        betWin: 100,
+                        amount: bet.totalAmount,
+                        betLevel: bet.betLevel,
+                        coinValue: bet.coinValue,
+                    },
+                    balance,
+                });
+            });
         });
     });
 
