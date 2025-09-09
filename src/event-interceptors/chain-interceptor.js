@@ -1,7 +1,9 @@
-export default class ChainInterceptor {
-    constructor({ resultChainManager, logService }) {
+import { EventInterceptors } from "sc-game-base/src/core";
+
+export default class ChainInterceptor extends EventInterceptors.BaseEventInterceptor {
+    constructor({ logService, definition, resultChainManager }) {
+        super({ logService, definition });
         this.chainManager = resultChainManager;
-        this.logService = logService;
     }
 
     async afterSuccessEvent(context) {

@@ -16,7 +16,6 @@ import {
     UserSignInConsumer,
 } from "./event-consumers";
 import { ChainInterceptor, CascadingSlotPromotionInterceptor } from "./event-interceptors";
-import { ResultChainSchema } from "./models";
 import { HistoryQuery } from "./query-apis";
 import HttpRouter from "./routers/cascading-http-router";
 import UserSession from "./models/user-session";
@@ -95,6 +94,26 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         this.container.register({
             chainInterceptor: asClass(ChainInterceptor).singleton().proxy(),
             promotionBetInterceptor: asClass(CascadingSlotPromotionInterceptor).singleton().proxy(),
+        });
+    }
+
+    registerInterceptorArrays() {
+        this.container.register({
+            betEventInterceptors: asFunction(() => {
+                const interceptors = [];
+
+                const promotionBetInterceptor = this.container.resolve("promotionBetInterceptor");
+                if (promotionBetInterceptor) {
+                    interceptors.push(promotionBetInterceptor);
+                }
+
+                const chainInterceptor = this.container.resolve("chainInterceptor");
+                if (chainInterceptor) {
+                    interceptors.push(chainInterceptor);
+                }
+
+                return interceptors;
+            }).singleton(),
         });
     }
 }

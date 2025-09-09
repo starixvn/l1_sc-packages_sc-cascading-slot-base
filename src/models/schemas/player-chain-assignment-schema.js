@@ -11,10 +11,6 @@ const playerChainAssignmentSchema = new Schema(
             type: String,
             required: true,
         },
-        sessionId: {
-            type: String,
-            required: true,
-        },
         operatorId: {
             type: String,
             required: true,
@@ -28,7 +24,6 @@ const playerChainAssignmentSchema = new Schema(
         chainName: {
             type: String,
             required: true,
-            ref: "result_chains", // Reference to result chain collection
         },
         chainId: {
             type: Schema.Types.ObjectId,
@@ -49,12 +44,12 @@ const playerChainAssignmentSchema = new Schema(
         // Financial tracking
         balanceBeforeChain: {
             type: Number,
-            required: false, // Will be set when chain starts
+            required: false,
             default: null,
         },
         balanceAfterChain: {
             type: Number,
-            required: false, // Will be set when chain completes
+            required: false,
             default: null,
         },
         currency: {
