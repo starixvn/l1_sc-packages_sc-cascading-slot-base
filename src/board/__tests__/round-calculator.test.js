@@ -1,5 +1,3 @@
-import { stub } from "jest-micro-auto-stub";
-import CascadingBoardGenerator from "../cascading-board-generator";
 import RoundCalculator from "../round-calculator";
 import TumbleCalculator from "../tumble-calculator";
 import { gameConfigs } from "../../test-data";

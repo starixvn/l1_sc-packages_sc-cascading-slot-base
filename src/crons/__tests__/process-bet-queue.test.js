@@ -216,7 +216,7 @@ describe("cascadingProcessBetQueue", () => {
         userSession.operatorId = userSession.partnerId;
         userSession.playerId = userSession.memberId;
         userSession.playerName = userSession.memberName;
-        
+
         return {
             UID: userInfo.UID,
             profile: userInfo,
