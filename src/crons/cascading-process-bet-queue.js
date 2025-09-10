@@ -87,9 +87,9 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
                 bet: {
                     roundId,
                     betWin: betwin,
-                    baseBetWin: round(betwin * rate, 2),
+                    baseBetWin: betwin * rate,
                     amount: bet.totalAmount,
-                    baseAmount: round(bet.totalAmount * rate, 2),
+                    baseAmount: bet.totalAmount * rate,
                 },
                 balance,
             });
