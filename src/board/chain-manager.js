@@ -225,10 +225,8 @@ export default class ChainManager {
                 newBoard: tumble.originalBoard ? tumble.originalBoard.split(",").map((x) => parseInt(x)) : chainBoard.board,
                 multipliers: tumble.multipliers || chainBoard.multipliers || [],
                 icons: tumble.icons || {},
-                settlement: {
-                    explode: tumble.explodedSymbols || [],
-                    new: tumble.newSymbols || [],
-                },
+                explodedSymbols: tumble.explodedSymbols || [],
+                newSymbols: tumble.newSymbols || [],
             }));
         }
 
@@ -237,10 +235,8 @@ export default class ChainManager {
                 newBoard: chainBoard.board,
                 multipliers: chainBoard.multipliers || [],
                 icons: {},
-                settlement: {
-                    explode: [],
-                    new: [],
-                },
+                explodedSymbols: [],
+                newSymbols: [],
             },
         ];
     }

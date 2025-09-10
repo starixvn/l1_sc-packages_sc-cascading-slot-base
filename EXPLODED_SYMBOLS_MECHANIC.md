@@ -89,10 +89,8 @@ convertChainBoardToResult(chainBoard) {
             newBoard: tumble.originalBoard ? tumble.originalBoard.split(",").map((x) => parseInt(x)) : chainBoard.board,
             multipliers: tumble.multipliers || chainBoard.multipliers || [],
             icons: tumble.icons || {},
-            settlement: {
-                explode: tumble.explodedSymbols || [],
-                new: tumble.newSymbols || [],
-            },
+            explodedSymbols: tumble.explodedSymbols || [],
+            newSymbols: tumble.newSymbols || [],
         }));
     }
 
@@ -101,10 +99,8 @@ convertChainBoardToResult(chainBoard) {
             newBoard: chainBoard.board,
             multipliers: chainBoard.multipliers || [],
             icons: {},
-            settlement: {
-                explode: [],
-                new: [],
-            },
+            explodedSymbols: [],
+            newSymbols: [],
         },
     ];
 }
@@ -189,7 +185,13 @@ The `convertChainBoardToResult` test suite verifies the **settlement format** be
 - 5-tumble cascade example with multiple symbol types
 - 2-tumble example (excluded from >2 tumble tests)
 
-**Note**: Tests are independent of external files, making them fast, reliable, and maintainable. The mock data covers all essential exploded symbols behavior patterns.
+**Settlement Format Verification**: Tests verify that the conversion correctly populates the settlement format:
+
+- **Winning tumbles**: `settlement.explode` contains exploded symbol values, `settlement.new` contains replacement symbols
+- **Final tumbles**: `settlement.explode` and `settlement.new` are empty arrays `[]` (expected behavior)
+- **Format consistency**: Matches exactly what `SettleGameRoundConsumer` expects for client responses
+
+**Note**: Tests are independent of external files, making them fast, reliable, and maintainable. The mock data covers all essential exploded symbols behavior patterns and verifies correct settlement format population.
 
 ### Running the Tests
 
@@ -297,27 +299,34 @@ npm test src/board/__tests__/result-chain-manager.test.js
 
 ## Data Format Summary
 
-The exploded symbols data now uses a **unified settlement format** throughout:
+The exploded symbols data flows through **different formats** optimized for each layer:
 
-1. **Internal Processing** (`RoundCalculator`): Creates `explodedSymbols` and `newSymbols` arrays internally
+1. **Internal Processing** (`RoundCalculator`): Uses `explodedSymbols` and `newSymbols` arrays directly
 2. **Chain Data Storage**: Stores raw `explodedSymbols` and `newSymbols` arrays in JSON files
-3. **Chain Conversion** (`ChainManager`): Converts to standardized `settlement: { explode: [], new: [] }` format
-4. **Client Response** (`SettleGameRoundConsumer`): Uses the same `settlement: { explode: [], new: [] }` format
+3. **Chain Conversion** (`ChainManager`): Returns `explodedSymbols`/`newSymbols` format for `RoundCalculator` compatibility
+4. **Client Response** (`SettleGameRoundConsumer`): Transforms to `settlement: { explode: [], new: [] }` format for client
 
-**Benefits of Unified Format:**
+**Format Transformation Pipeline:**
 
-- Consistent API structure across all components
-- Eliminates data transformation complexity
-- Easier to maintain and test
-- Single source of truth for settlement structure
+```
+Chain Data → ChainManager → RoundCalculator → SettleGameRoundConsumer → Client
+explodedSymbols → explodedSymbols → explodedSymbols → settlement.explode → Client UI
+```
+
+**Benefits of Layered Formats:**
+
+- Each component gets the format it needs
+- `RoundCalculator` receives compatible data via `preGeneratedResult`
+- Client gets clean, standardized settlement structure
+- Clear separation of concerns
 
 ## Key Takeaways
 
-1. **Expected Behavior**: Final tumbles having empty `settlement.explode` and `settlement.new` arrays is **correct and expected**
+1. **Expected Behavior**: Final tumbles having empty `explodedSymbols` and `newSymbols` arrays is **correct and expected**
 2. **Cascade Logic**: The cascade stops precisely because no symbols explode
-3. **Data Integrity**: The pattern is consistent across all test data and unified settlement format
-4. **Implementation**: The code correctly implements this logic with consistent settlement format across `RoundCalculator`, `ChainManager`, and `SettleGameRoundConsumer`
-5. **Format Consistency**: All components now use the same `settlement: { explode: [], new: [] }` structure
+3. **Data Integrity**: The pattern is consistent across all test data and format transformations
+4. **Implementation**: The code correctly implements layered format transformation: `ChainManager` → `RoundCalculator` → `SettleGameRoundConsumer`
+5. **Format Compatibility**: `ChainManager` returns `RoundCalculator` compatible format, `SettleGameRoundConsumer` transforms to client format
 
 ## Maintenance Notes
 

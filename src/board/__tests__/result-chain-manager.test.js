@@ -427,19 +427,18 @@ describe("ChainManager", () => {
                     result.forEach((tumbleResult, tumbleIndex) => {
                         const originalTumble = tumbles[tumbleIndex];
 
-                        // Verify settlement format structure
-                        expect(tumbleResult.settlement).toBeDefined();
-                        expect(tumbleResult.settlement.explode).toBeDefined();
-                        expect(tumbleResult.settlement.new).toBeDefined();
+                        // Verify RoundCalculator format structure (used by preGeneratedResult)
+                        expect(tumbleResult.explodedSymbols).toBeDefined();
+                        expect(tumbleResult.newSymbols).toBeDefined();
 
                         // Verify explodedSymbols are preserved in conversion
                         if (originalTumble.explodedSymbols) {
-                            expect(tumbleResult.settlement.explode).toEqual(originalTumble.explodedSymbols);
+                            expect(tumbleResult.explodedSymbols).toEqual(originalTumble.explodedSymbols);
                         }
 
                         // Verify newSymbols are preserved in conversion
                         if (originalTumble.newSymbols) {
-                            expect(tumbleResult.settlement.new).toEqual(originalTumble.newSymbols);
+                            expect(tumbleResult.newSymbols).toEqual(originalTumble.newSymbols);
                         }
                     });
                 });
@@ -541,7 +540,7 @@ describe("ChainManager", () => {
                 expect(nonFinalTumblesWithExploded).toBeGreaterThan(totalNonFinalTumbles * 0.8);
             });
 
-            it("should return consistent settlement format for boards without settlement result", () => {
+            it("should return consistent RoundCalculator format for boards without settlement result", () => {
                 const simpleBoard = {
                     board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
                     multipliers: [1],
@@ -552,9 +551,55 @@ describe("ChainManager", () => {
                 expect(result).toBeDefined();
                 expect(Array.isArray(result)).toBe(true);
                 expect(result.length).toBe(1);
-                expect(result[0].settlement).toBeDefined();
-                expect(result[0].settlement.explode).toEqual([]);
-                expect(result[0].settlement.new).toEqual([]);
+                expect(result[0].explodedSymbols).toEqual([]);
+                expect(result[0].newSymbols).toEqual([]);
+            });
+
+            it("should correctly populate RoundCalculator format for preGeneratedResult compatibility", () => {
+                // Test with the 3-tumble board that has exploded symbols
+                const boardWithExplodedSymbols = mockMultiTumbleTestData.boards[0];
+
+                const result = chainManager.convertChainBoardToResult(boardWithExplodedSymbols);
+
+                expect(result).toBeDefined();
+                expect(Array.isArray(result)).toBe(true);
+                expect(result.length).toBe(3); // 3 tumbles
+
+                // Verify first tumble data (winning tumble) - RoundCalculator format
+                const firstTumble = result[0];
+                expect(firstTumble.explodedSymbols).toEqual([
+                    -1, -1, -1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                ]);
+                expect(firstTumble.newSymbols).toEqual([
+                    2, 3, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                ]);
+
+                // Verify second tumble data (winning tumble) - RoundCalculator format
+                const secondTumble = result[1];
+                expect(secondTumble.explodedSymbols).toEqual([
+                    -1, -1, -1, 2, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                ]);
+                expect(secondTumble.newSymbols).toEqual([
+                    5, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                ]);
+
+                // Verify final tumble data (non-winning tumble - empty) - RoundCalculator format
+                const finalTumble = result[2];
+                expect(finalTumble.explodedSymbols).toEqual([]); // Empty - no symbols exploded
+                expect(finalTumble.newSymbols).toEqual([]); // Empty - no new symbols needed
+
+                // Verify all tumbles have the required structure for RoundCalculator preGeneratedResult
+                result.forEach((tumble, index) => {
+                    expect(tumble).toHaveProperty("newBoard");
+                    expect(tumble).toHaveProperty("multipliers");
+                    expect(tumble).toHaveProperty("icons");
+                    expect(tumble).toHaveProperty("explodedSymbols");
+                    expect(tumble).toHaveProperty("newSymbols");
+
+                    // Arrays should be defined (empty or populated)
+                    expect(Array.isArray(tumble.explodedSymbols)).toBe(true);
+                    expect(Array.isArray(tumble.newSymbols)).toBe(true);
+                });
             });
         });
     });
