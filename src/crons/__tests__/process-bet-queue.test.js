@@ -6,6 +6,7 @@ import { logger } from "sc-common";
 import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
 import mongoose from "mongoose";
 import Chance from "chance";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
 
 describe("cascadingProcessBetQueue", () => {
     jest.mock("sc-common");
@@ -16,8 +17,11 @@ describe("cascadingProcessBetQueue", () => {
     const totalMultiplierConsumer = stub(TotalMultiplierConsumer);
     const placeBet = jest.fn();
     const roundsRepository = stubMongoose(mongoose.Model);
+    const betsRepository = stubMongoose(mongoose.Model);
+    const betLogsRepository = stubMongoose(mongoose.Model);
     const idCountersConsumer = stub(EventConsumers.IdCountersConsumer);
     const placeBetPublisher = { publishGameFailedBet: jest.fn() };
+    const gameManagementApiClientFactory = stub(GameManagementApiClientFactory);
     const gameData = stubGameData();
     const player = stubPlayer();
     const definition = { id: chance.natural() };
@@ -28,18 +32,39 @@ describe("cascadingProcessBetQueue", () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
+        // Mock the gameManagementApiClientFactory.instance() method
+        gameManagementApiClientFactory.instance.mockReturnValue({
+            users: {
+                updateBalance: jest.fn(() => Promise.resolve({ isOk: true })),
+            },
+        });
+
+        // Mock the freeSpinsConsumer.useFreeSpin method
+        freeSpinsConsumer.useFreeSpin.mockReturnValue({
+            buyFreeSpinRefRoundId: chance.natural(),
+        });
+
+        // Mock the settleGameRoundConsumer.settleRound method
+        settleGameRoundConsumer.settleRound.mockReturnValue({
+            betwin: chance.natural(),
+        });
+
         consumer = new CascadingProcessBetQueue({
             definition,
             gameData,
             freeSpinsConsumer,
             settleGameRoundConsumer,
             placeBet,
-            loggerService: logger,
+            logService: logger,
             roundsRepository,
+            betsRepository,
+            betLogsRepository,
             idCountersConsumer,
             placeBetPublisher,
             baseMetrics,
             totalMultiplierConsumer,
+            gameManagementApiClientFactory,
+            betEventInterceptors: [],
         });
     });
 
@@ -115,19 +140,24 @@ describe("cascadingProcessBetQueue", () => {
                 freeSpin: bet.freeSpin,
                 betLevel: bet.betLevel,
                 coinValue: bet.coinValue,
-                bet: bet.amount,
                 betMultiplier: bet.betMultiplier,
                 totalAmount: bet.totalAmount,
+                buyFreeSpin: bet.buyFreeSpin,
                 rate: rate,
                 exchangeRateId: gameData.exchangeRates.exId,
+                buyFreeSpinRefRoundId: undefined,
                 odds: {
                     oddsByCounts: gameData.gameConfigs.cascadingSlotsConfig.oddsByCounts,
                     freeSpins: gameData.gameConfigs.cascadingSlotsConfig.freeSpins,
                 },
-                playerId: player.session.memberId,
                 siteId: player.session.siteId,
                 currency: player.session.currencyName,
-                operatorId: player.session.partnerId,
+                currencyCode: player.session.currencyCode,
+                currencyGroupId: player.session.currencyGroupId,
+                operatorId: player.session.operatorId,
+                playerId: player.session.playerId,
+                appType: player.session.system,
+                siteName: player.session.siteName,
             });
         });
     });
@@ -169,7 +199,7 @@ describe("cascadingProcessBetQueue", () => {
             await consumer.handleSuccessBet(player, balance, roundId, bet);
 
             // Assert
-            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate);
+            expect(consumer.upsertBet).toBeCalledWith(player, roundId, bet, rate, undefined, null);
         });
 
         it("should call notifyPlacingBetResult", async () => {

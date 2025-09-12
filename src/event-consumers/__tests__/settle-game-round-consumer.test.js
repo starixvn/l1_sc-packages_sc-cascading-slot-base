@@ -143,7 +143,7 @@ describe("settle round", () => {
 
                 //Assert
                 expect(round.betwin).toEqual(currencyGroupSetting.maxWinPerRound * round.totalAmount);
-                expect(round.reachMaxWin).toBeTrue();
+                expect(round.reachMaxWin).toBe(true);
                 currencyGroupSetting.maxWinPerRound = 100;
             });
 
