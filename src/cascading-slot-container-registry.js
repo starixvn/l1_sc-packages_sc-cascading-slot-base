@@ -30,7 +30,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         super.registerModels();
 
         this.container.register({
-            userSession: asClass(UserSession).singleton(),
+            userSessionsRepository: asValue(UserSession),
         });
     }
 
