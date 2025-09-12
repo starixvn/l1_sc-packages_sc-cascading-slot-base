@@ -3,8 +3,8 @@ import { EventConsumers } from "sc-slot-game-base";
 import defaultDefinition from "../board/default-definition";
 
 export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer {
-    constructor(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer, roundsRepository, userSessionsRepository) {
-        super(gameId, gameData, freeSpinsRepository, gameNotificationsRepository, idCountersConsumer);
+    constructor(gameId, gameData, freeSpinsRepository, idCountersConsumer, gameManagementApiClientFactory, roundsRepository, userSessionsRepository) {
+        super(gameId, gameData, freeSpinsRepository, idCountersConsumer, gameManagementApiClientFactory);
 
         this.roundsRepository = roundsRepository;
         this.userSessionsRepository = userSessionsRepository;
@@ -140,7 +140,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
             (player) => player.profile.name === name && player.socketClient && player.socketClient.connected
         );
     }
-    
+
     cacheExpiredFreeSpins(expiredFreeSpins) {
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(expiredFreeSpins);
 
@@ -160,7 +160,11 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         await Promise.all(
             Object.entries(freeSpinsGroupedByNames).map(async ([name, loadedFreeSpins]) => {
                 const round = await this.roundsRepository.findOne({ id: loadedFreeSpins[0].roundId }).lean().exec();
-                const userSession = await this.userSessionsRepository.findOne({ playerId: round.playerId }, "ip operatorToken").sort({ _id:-1 }).lean().exec();
+                const userSession = await this.userSessionsRepository
+                    .findOne({ playerId: round.playerId }, "ip operatorToken")
+                    .sort({ _id: -1 })
+                    .lean()
+                    .exec();
                 const player = {
                     UID: round.uid,
                     profile: {
