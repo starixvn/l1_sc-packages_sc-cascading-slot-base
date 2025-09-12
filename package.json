@@ -1,13 +1,13 @@
 {
     "name": "sc-cascading-slot-base",
-    "version": "2.1.1",
+    "version": "2.3.0-beta.3 ",
     "description": "The codebase of cascading slot games.",
     "main": "src/index.js",
     "scripts": {
         "test": "jest",
         "test-coverage": "jest --collect-coverage",
         "reg": "npm set registry http://npm.lumigame.com",
-        "pub": "npm publish --registry http://npm.lumigame.com --tag latest",
+        "pub": "npm publish --registry http://npm.lumigame.com",
         "betaver": "npm version prerelease --preid beta",
         "pubbeta": "npm publish --registry http://npm.lumigame.com --tag beta",
         "semantic-release": "semantic-release",
