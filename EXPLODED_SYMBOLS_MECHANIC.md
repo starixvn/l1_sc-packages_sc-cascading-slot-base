@@ -4,6 +4,8 @@
 
 This document explains the `explodedSymbols` mechanic in the cascading slot game, including how boards convert to tumbles, the cascade processing, and the expected behavior patterns.
 
+> **📖 For Complete PreGeneratedResult Integration Guide**: See **[PREGENERATEDRESULT_COMPATIBLE_GUIDE.md](./PREGENERATEDRESULT_COMPATIBLE_GUIDE.md)** for comprehensive guidelines on creating compatible preGeneratedResult data, including critical cascade data placement patterns and format conversion rules.
+
 ## Table of Contents
 
 - [Core Concepts](#core-concepts)

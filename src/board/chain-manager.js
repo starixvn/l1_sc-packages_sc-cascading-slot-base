@@ -221,20 +221,36 @@ export default class ChainManager {
 
     convertChainBoardToResult(chainBoard) {
         if (chainBoard.settlementResult && chainBoard.settlementResult.tumbles) {
-            return chainBoard.settlementResult.tumbles.map((tumble) => ({
-                newBoard: tumble.originalBoard ? tumble.originalBoard.split(",").map((x) => parseInt(x)) : chainBoard.board,
-                multipliers: tumble.multipliers || chainBoard.multipliers || [],
-                icons: tumble.icons || {},
-                explodedSymbols: tumble.explodedSymbols || [],
-                newSymbols: tumble.newSymbols || [],
-            }));
+            const tumbles = chainBoard.settlementResult.tumbles;
+            const result = [];
+
+            for (let i = 0; i < tumbles.length; i++) {
+                const tumble = tumbles[i];
+                const preGeneratedItem = {
+                    newBoard: tumble.originalBoard ? tumble.originalBoard.split(",").map((x) => parseInt(x)) : chainBoard.board,
+                    multipliers: tumble.multipliers || chainBoard.multipliers || [],
+                    explodedSymbols: [],
+                    newSymbols: [],
+                };
+
+                // Settlement data from current tumble goes to the NEXT preGeneratedResult item
+                // This is because cascade data describes what happens AFTER the current tumble
+                if (i > 0) {
+                    const previousTumble = tumbles[i - 1];
+                    preGeneratedItem.explodedSymbols = previousTumble.explodedSymbols || [];
+                    preGeneratedItem.newSymbols = previousTumble.newSymbols || [];
+                }
+
+                result.push(preGeneratedItem);
+            }
+
+            return result;
         }
 
         return [
             {
                 newBoard: chainBoard.board,
                 multipliers: chainBoard.multipliers || [],
-                icons: {},
                 explodedSymbols: [],
                 newSymbols: [],
             },
