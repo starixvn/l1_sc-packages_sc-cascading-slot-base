@@ -4,20 +4,13 @@ import { isBuyFreeSpinEnabled } from "../utils";
 
 export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue {
     async proceedBet(player, payload) {
-        if (payload.buyFreeSpin && this.freeSpinsConsumer.hasFreeSpin(player)) {
-            this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.cannotPlaceBet } });
+        const { features } = this.gameData.gameConfigs.cascadingSlotsConfig;
+
+        if (payload.buyFreeSpin && (this.freeSpinsConsumer.hasFreeSpin(player) || !isBuyFreeSpinEnabled(features?.buyFreeSpins, player.session))) {
+            this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.invalidBet } });
             return;
         }
 
-        if (payload.buyFreeSpin) {
-            const { features } = this.gameData.gameConfigs.cascadingSlotsConfig;
-            const buyFreeSpinConfig = features?.buyFreeSpins;
-            const isBuyFreeSpinValid = isBuyFreeSpinEnabled(buyFreeSpinConfig, player.session) && buyFreeSpinConfig?.multiplier;
-            if (!isBuyFreeSpinValid) {
-                this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.invalidBet } });
-                return;
-            }
-        }
         await super.proceedBet(player, payload);
     }
 
