@@ -24,26 +24,33 @@ export default class UserChainConsumer {
      */
     async loadActiveChains() {
         try {
-            const activeAssignments = await this.assignmentRepository.find({ status: ASSIGNMENT_STATUS.ACTIVE }).lean().exec();
+            const activeAssignments = await this.assignmentRepository
+                .find({
+                    status: ASSIGNMENT_STATUS.ACTIVE,
+                    gameId: this.gameData.gameConfigs.gameId,
+                })
+                .lean()
+                .exec();
 
             for (const assignment of activeAssignments) {
                 // Find the corresponding chain data
                 const chain = this.chainManager.availableChains.find((c) => c.name === assignment.chainName);
 
                 if (chain) {
-                    // Restore player chain to memory
-                    this.gameData.playerChains[assignment.playerName] = {
+                    // Create composite key for multiple chains per player
+                    const chainKey = `${assignment.playerName}-${assignment.betLevel}-${assignment.coinValue}`;
+
+                    // Restore player chain to memory with composite key
+                    this.gameData.playerChains[chainKey] = {
                         name: assignment.chainName,
                         boards: [...chain.boards],
                         currentIndex: assignment.currentBoardIndex,
                         totalBoards: assignment.totalBoards,
                         assignedAt: assignment.assignedAt,
-                        isFreeSpin: false,
-                        freeSpinChain: [],
-                        // Store additional context for filtering
                         betLevel: assignment.betLevel,
                         coinValue: assignment.coinValue,
                         playerId: assignment.playerId,
+                        playerName: assignment.playerName,
                     };
                 }
             }
@@ -153,6 +160,7 @@ export default class UserChainConsumer {
                     betLevel,
                     coinValue,
                     status: ASSIGNMENT_STATUS.ACTIVE,
+                    gameId: this.gameData.gameConfigs.gameId,
                 },
                 {
                     $inc: {
@@ -196,6 +204,7 @@ export default class UserChainConsumer {
                         betLevel,
                         coinValue,
                         status: statusFilter,
+                        gameId: this.gameData.gameConfigs.gameId,
                     },
                     { chainName: 1, _id: 0 }
                 )

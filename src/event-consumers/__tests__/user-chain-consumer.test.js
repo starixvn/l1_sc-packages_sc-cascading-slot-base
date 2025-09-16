@@ -129,15 +129,15 @@ describe("UserChainConsumer", () => {
 
             await userChainConsumer.loadActiveChains();
 
-            expect(mockGameData.playerChains["activePlayer1"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer1"].name).toBe("test-chain-1");
-            expect(mockGameData.playerChains["activePlayer1"].currentIndex).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1"].coinValue).toBe(0.1);
+            expect(mockGameData.playerChains["activePlayer1-1-0.1"]).toBeDefined();
+            expect(mockGameData.playerChains["activePlayer1-1-0.1"].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains["activePlayer1-1-0.1"].currentIndex).toBe(1);
+            expect(mockGameData.playerChains["activePlayer1-1-0.1"].betLevel).toBe(1);
+            expect(mockGameData.playerChains["activePlayer1-1-0.1"].coinValue).toBe(0.1);
 
-            expect(mockGameData.playerChains["activePlayer2"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer2"].name).toBe("test-chain-2");
-            expect(mockGameData.playerChains["activePlayer2"].currentIndex).toBe(0);
+            expect(mockGameData.playerChains["activePlayer2-2-0.2"]).toBeDefined();
+            expect(mockGameData.playerChains["activePlayer2-2-0.2"].name).toBe("test-chain-2");
+            expect(mockGameData.playerChains["activePlayer2-2-0.2"].currentIndex).toBe(0);
         });
 
         it("should warn when chain is not found in available chains", async () => {
@@ -162,7 +162,7 @@ describe("UserChainConsumer", () => {
 
             await userChainConsumer.loadActiveChains();
 
-            expect(mockGameData.playerChains["missingChainPlayer"]).toBeUndefined();
+            expect(mockGameData.playerChains["missingChainPlayer-1-0.1"]).toBeUndefined();
             // No warning should be logged since missing chains are normal
         });
 
@@ -318,6 +318,7 @@ describe("UserChainConsumer", () => {
                     betLevel: 1,
                     coinValue: 0.1,
                     status: "active",
+                    gameId: "test-game-123",
                 },
                 {
                     $inc: {
@@ -432,6 +433,7 @@ describe("UserChainConsumer", () => {
                     betLevel: 1,
                     coinValue: 0.1,
                     status: "active",
+                    gameId: "test-game-123",
                 },
                 { chainName: 1, _id: 0 }
             );
