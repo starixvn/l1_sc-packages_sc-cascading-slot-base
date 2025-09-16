@@ -61,6 +61,9 @@ describe("gameCron", () => {
     const resultChainManager = {
         loadChainData: jest.fn().mockResolvedValue(),
     };
+    const userChainConsumer = {
+        loadActiveChains: jest.fn().mockResolvedValue(),
+    };
 
     // Mock the boardGenerator.initialize() method
     boardGenerator.initialize.mockReturnValue({
@@ -100,6 +103,7 @@ describe("gameCron", () => {
             gameManagementApiClientFactory,
             promotionFreeSpinsConsumer,
             resultChainManager,
+            userChainConsumer,
         });
     });
 
