@@ -153,14 +153,14 @@ describe("ChainManager", () => {
 
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
-            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(1);
+            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
-        it("should return free spin board when requested", async () => {
+        it("should return current board regardless of free spin context", async () => {
             const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
 
             expect(result).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(2); // Should skip to free spin board
+            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
         it("should return null for player without chain", async () => {
@@ -168,15 +168,33 @@ describe("ChainManager", () => {
             expect(result).toBeNull();
         });
 
-        it("should clean up and return null when chain is complete", async () => {
-            // Use up all boards
-            await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Board 1
-            await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Board 2
-            await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Board 3
+        it("should return null when chain is complete", async () => {
+            // Helper to simulate complete processing
+            const processBoard = async () => {
+                const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false });
+                if (result) {
+                    await chainManager.updateChainProgress({
+                        playerId: "test-player-123",
+                        playerName: "testPlayer",
+                        betLevel: 1,
+                        coinValue: 0.1,
+                        roundBetAmount: 10,
+                        roundWinAmount: 0,
+                    });
+                }
+                return result;
+            };
 
-            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false }); // Should be null
+            // Use up all boards (there are 3 boards in the mock data)
+            await processBoard(); // Board 0
+            await processBoard(); // Board 1
+            await processBoard(); // Board 2
+
+            // Chain should be completed - getNextResult should return null but chain cleanup happens in updateChainProgress
+            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: false });
 
             expect(result).toBeNull();
+            // Chain should be cleaned up by the last updateChainProgress call
             expect(mockGameData.playerChains["testPlayer"]).toBeUndefined();
         });
     });

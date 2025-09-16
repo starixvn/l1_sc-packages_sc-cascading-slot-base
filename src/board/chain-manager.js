@@ -119,28 +119,11 @@ export default class ChainManager {
         }
 
         if (playerChain.currentIndex >= playerChain.totalBoards) {
-            delete this.gameData.playerChains[playerName];
             return null;
         }
 
         const currentBoard = playerChain.boards[playerChain.currentIndex];
-        let boardResult = null;
-        let newIndex = playerChain.currentIndex + 1;
-        const isFreeSpin = roundContext.isFreeSpin || false;
-
-        if (isFreeSpin) {
-            const freeSpinBoard = this.findNextFreeSpinBoard(playerChain, playerChain.currentIndex);
-            if (freeSpinBoard) {
-                newIndex = freeSpinBoard.index + 1;
-                boardResult = this.convertChainBoardToResult(freeSpinBoard.board);
-            }
-        }
-
-        if (!boardResult) {
-            boardResult = this.convertChainBoardToResult(currentBoard);
-        }
-
-        playerChain.currentIndex = newIndex;
+        const boardResult = this.convertChainBoardToResult(currentBoard);
 
         return boardResult;
     }
@@ -148,18 +131,30 @@ export default class ChainManager {
     /**
      * Update chain progress after a spin
      */
-    async updateChainProgress({ playerId, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0, currentBoardIndex, totalBoards }) {
+    async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0 }) {
         try {
-            // Build completion status based on current progress
+            // Get current chain state from in-memory data
+            const playerChain = this.gameData.playerChains[playerName];
+            if (!playerChain) {
+                this.logService.logWarning(`No chain found for player ${playerName}`);
+
+                return null;
+            }
+
+            // Since we always process boards sequentially, just increment by 1
+            playerChain.currentIndex += 1;
+
+            // Build completion status based on the NEW progress
             const setOptions = {
                 lastActivityAt: new Date(),
             };
 
-            // Check if chain will be completed after this increment
-            const newBoardIndex = currentBoardIndex + 1;
-            if (newBoardIndex === totalBoards) {
+            // Check if chain is completed after this increment
+            if (playerChain.currentIndex >= playerChain.totalBoards) {
                 setOptions.status = ASSIGNMENT_STATUS.COMPLETED;
                 setOptions.completedAt = new Date();
+                // Clean up completed chain from memory
+                delete this.gameData.playerChains[playerName];
             }
 
             const updatedAssignment = await this.assignmentRepository.findOneAndUpdate(
@@ -204,19 +199,11 @@ export default class ChainManager {
             this.logService.logError("Failed to update chain progress", {
                 error: error.message,
                 playerId,
+                playerName,
             });
+
             return null;
         }
-    }
-
-    findNextFreeSpinBoard(playerChain, startIndex) {
-        for (let i = startIndex; i < playerChain.boards.length; i++) {
-            const board = playerChain.boards[i];
-            if (board.isFreeSpin === true || board.remainingFreeSpins > 0) {
-                return { board, index: i };
-            }
-        }
-        return null;
     }
 
     convertChainBoardToResult(chainBoard) {

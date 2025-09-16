@@ -78,24 +78,19 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
             ? this.freeSpinsConsumer.getBuyFreeSpinBoard()
             : this.selectPreGeneratedResult(player, round);
 
-        round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, presetBoard);
+        round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, preGeneratedResultInfo?.data);
 
-        // Now track chain progress with ACTUAL calculated values
-        if (preGeneratedResult) {
-            // We got a chain result, so player has an active chain - track progress
+        // Track chain progress only when result is from chain data
+        if (preGeneratedResultInfo?.isFromChain) {
             try {
-                const playerChain = this.chainManager.gameData.playerChains[playerName];
-                if (playerChain) {
-                    await this.chainManager.updateChainProgress({
-                        playerId: player.session?.playerId || player.UID,
-                        betLevel: round.betLevel,
-                        coinValue: round.coinValue,
-                        roundBetAmount: round.totalAmount,
-                        roundWinAmount: round.betwin || 0, // Now this has the ACTUAL win amount!
-                        currentBoardIndex: playerChain.currentIndex,
-                        totalBoards: playerChain.boards.length,
-                    });
-                }
+                await this.chainManager.updateChainProgress({
+                    playerId: player.session?.playerId || player.UID,
+                    playerName: playerName,
+                    betLevel: round.betLevel,
+                    coinValue: round.coinValue,
+                    roundBetAmount: round.totalAmount,
+                    roundWinAmount: round.betwin || 0, // Now this has the ACTUAL win amount!
+                });
             } catch (error) {
                 this.logService.logError(`Failed to update chain progress for ${playerName}`, error);
                 // Continue with game flow even if tracking fails
@@ -114,7 +109,14 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const adminResult = this.getAdminResult(playerName);
         const chainResult = await this.getChainResult(player, round, round.freeSpin);
 
-        return this.chooseResult(adminResult, chainResult);
+        const result = this.chooseResult(adminResult, chainResult);
+
+        // Return both result and source information
+        return {
+            data: result,
+            isFromChain: !adminResult && !!chainResult,
+            isFromAdmin: !!adminResult,
+        };
     }
 
     getAdminResult(playerName) {
