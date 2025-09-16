@@ -15,13 +15,42 @@ export default class ChainManager {
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.availableChains = [];
 
-        if (this.appConfigs.resultChains === undefined) {
-            this.appConfigs.resultChains = { enabled: false };
+        // Initialize chain configurations (can be overridden by gameConfigs)
+        this.chainConfigs = { enabled: false, reload: false };
+    }
+
+    /**
+     * Update chain configurations from gameConfigs and handle reloading if needed
+     * @param {Object} newChainConfigs - Configuration object with enabled and reload properties
+     */
+    async updateChainConfigs(newChainConfigs) {
+        const previousConfigs = { ...this.chainConfigs };
+        this.chainConfigs = { ...this.chainConfigs, ...newChainConfigs };
+
+        // Log configuration changes
+        if (previousConfigs.enabled !== this.chainConfigs.enabled) {
+            this.logService.logError(
+                `[GameID: ${this.gameData.gameConfigs?.gameId}] Result chains ${this.chainConfigs.enabled ? "enabled" : "disabled"} via gameConfigs`
+            );
+        }
+
+        // Handle reload: reload chains if both enabled and reload are true
+        if (this.chainConfigs.enabled && this.chainConfigs.reload) {
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Reloading result chains due to configuration`);
+            await this.reloadChainData();
         }
     }
 
+    /**
+     * Check if result chains are enabled from gameConfigs
+     * @returns {boolean} - True if chains are enabled
+     */
+    isChainEnabled() {
+        return this.chainConfigs.enabled;
+    }
+
     async loadChainData() {
-        if (!this.appConfigs.resultChains?.enabled) {
+        if (!this.isChainEnabled()) {
             return;
         }
 
@@ -30,24 +59,44 @@ export default class ChainManager {
 
             for (const chain of resultChains) {
                 if (chain.boardsData && chain.boardsData.length > 0) {
-                    this.availableChains.push({
-                        name: chain.name,
-                        boards: chain.boardsData,
-                        metadata: {
+                    // Check if chain already exists to prevent duplicates during reload
+                    const existingChain = this.availableChains.find((existing) => existing.name === chain.name);
+
+                    if (!existingChain) {
+                        this.availableChains.push({
                             name: chain.name,
-                            createdAt: chain.createdAt,
-                        },
-                    });
+                            boards: chain.boardsData,
+                            metadata: {
+                                name: chain.name,
+                                createdAt: chain.createdAt,
+                            },
+                        });
+                    }
                 }
             }
         } catch (error) {
-            this.logService.logError(error);
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chain data:`, error);
         }
+    }
+
+    /**
+     * Reload chain data - appends new chains without disrupting active player chains
+     */
+    async reloadChainData() {
+        const previousChainCount = this.availableChains.length;
+
+        // Load fresh chain data (will append to existing availableChains)
+        await this.loadChainData();
+
+        const newChainCount = this.availableChains.length - previousChainCount;
+        this.logService.logError(
+            `[GameID: ${this.gameData.gameConfigs?.gameId}] Reloaded chains: ${newChainCount} new chains added, ${this.availableChains.length} total available`
+        );
     }
 
     async assignChain(playerName, playerContext = {}) {
         if (this.availableChains.length === 0) {
-            this.logService.logWarning(`No chains available to assign to player ${playerName}`);
+            this.logService.logWarning(`[GameID: ${this.gameData.gameConfigs?.gameId}] No chains available to assign to player ${playerName}`);
             return false;
         }
 
@@ -91,24 +140,27 @@ export default class ChainManager {
             await this.assignmentRepository.create(assignmentData);
         } catch (error) {
             const { playerId, betLevel, coinValue, operatorId, gameId, chainId, currency } = playerContext;
-            this.logService.logError(`Failed to create persistent chain assignment for ${playerName}`, {
-                error: error.message,
-                playerId,
-                chainName: chain.name,
-                betLevel,
-                coinValue,
-                operatorId,
-                gameId,
-                chainId,
-                currency,
-            });
+            this.logService.logError(
+                `[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to create persistent chain assignment for ${playerName}`,
+                {
+                    error: error.message,
+                    playerId,
+                    chainName: chain.name,
+                    betLevel,
+                    coinValue,
+                    operatorId,
+                    gameId,
+                    chainId,
+                    currency,
+                }
+            );
         }
 
         return true;
     }
 
     async getNextResult(playerName, playerContext = {}, roundContext = {}) {
-        if (!this.appConfigs.resultChains?.enabled) {
+        if (!this.isChainEnabled()) {
             return null;
         }
 
@@ -136,7 +188,7 @@ export default class ChainManager {
             // Get current chain state from in-memory data
             const playerChain = this.gameData.playerChains[playerName];
             if (!playerChain) {
-                this.logService.logWarning(`No chain found for player ${playerName}`);
+                this.logService.logWarning(`[GameID: ${this.gameData.gameConfigs?.gameId}] No chain found for player ${playerName}`);
 
                 return null;
             }
@@ -180,23 +232,26 @@ export default class ChainManager {
             );
 
             if (!updatedAssignment) {
-                this.logService.logWarning(`No active chain assignment found for player ${playerId}`);
+                this.logService.logWarning(`[GameID: ${this.gameData.gameConfigs?.gameId}] No active chain assignment found for player ${playerId}`);
                 return null;
             }
 
             // Log completion if chain was completed
             if (updatedAssignment.status === ASSIGNMENT_STATUS.COMPLETED) {
-                this.logService.logInfo(`Chain completed: ${updatedAssignment.chainName} for player ${updatedAssignment.playerName}`, {
-                    assignmentId: updatedAssignment._id,
-                    totalBoards: updatedAssignment.totalBoards,
-                    totalWin: updatedAssignment.totalWinAmount,
-                    totalBet: updatedAssignment.totalBetAmount,
-                });
+                this.logService.logError(
+                    `[GameID: ${this.gameData.gameConfigs?.gameId}] Chain completed: ${updatedAssignment.chainName} for player ${updatedAssignment.playerName}`,
+                    {
+                        assignmentId: updatedAssignment._id,
+                        totalBoards: updatedAssignment.totalBoards,
+                        totalWin: updatedAssignment.totalWinAmount,
+                        totalBet: updatedAssignment.totalBetAmount,
+                    }
+                );
             }
 
             return updatedAssignment;
         } catch (error) {
-            this.logService.logError("Failed to update chain progress", {
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to update chain progress`, {
                 error: error.message,
                 playerId,
                 playerName,
@@ -245,7 +300,7 @@ export default class ChainManager {
     }
 
     shouldAssignChain(playerName) {
-        if (!this.appConfigs.resultChains?.enabled) {
+        if (!this.isChainEnabled()) {
             return false;
         }
         return !this.gameData.playerChains[playerName];

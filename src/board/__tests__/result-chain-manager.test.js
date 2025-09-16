@@ -1,11 +1,14 @@
 import ChainManager from "../chain-manager";
 
-const mockGameData = {};
+const mockGameData = {
+    gameConfigs: {
+        gameId: "test-game-123",
+    },
+};
 const mockLogService = {
     log: jest.fn(),
     logWarning: jest.fn(),
     logError: jest.fn(),
-    logInfo: jest.fn(),
 };
 
 const mockResultChainRepository = {
@@ -91,6 +94,8 @@ describe("ChainManager", () => {
         });
 
         chainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, mockAssignmentRepository, mockAppConfigs);
+        // Enable chains via chainConfigs for tests
+        chainManager.chainConfigs.enabled = true;
         await chainManager.loadChainData();
     });
 
@@ -103,24 +108,148 @@ describe("ChainManager", () => {
             expect(chainManager.appConfigs).toBe(mockAppConfigs);
         });
 
+        it("should initialize chainConfigs with default values", () => {
+            const freshChainManager = new ChainManager(
+                mockGameData,
+                mockLogService,
+                mockResultChainRepository,
+                mockAssignmentRepository,
+                mockAppConfigs
+            );
+            expect(freshChainManager.chainConfigs).toEqual({
+                enabled: false,
+                reload: false,
+            });
+        });
+
         it("should load chain data on initialization", () => {
             expect(chainManager.availableChains).toHaveLength(1);
             expect(chainManager.availableChains[0].name).toBe("test-chain");
         });
     });
 
-    describe("loadChainData", () => {
-        it("should not load chains when feature is disabled", async () => {
+    describe("updateChainConfigs", () => {
+        it("should update chainConfigs with new values", async () => {
+            const newConfigs = { enabled: true, reload: false };
+
+            await chainManager.updateChainConfigs(newConfigs);
+
+            expect(chainManager.chainConfigs.enabled).toBe(true);
+            expect(chainManager.chainConfigs.reload).toBe(false);
+        });
+
+        it("should log configuration changes with gameId", async () => {
+            // Reset to false first to ensure there's a change to log
+            chainManager.chainConfigs.enabled = false;
             jest.clearAllMocks();
 
-            const disabledChainManager = new ChainManager(mockGameData, mockLogService, mockResultChainRepository, mockAssignmentRepository, {
-                resultChains: { enabled: false },
-            });
+            await chainManager.updateChainConfigs({ enabled: true });
+
+            expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Result chains enabled via gameConfigs");
+        });
+
+        it("should trigger reload when both enabled and reload are true", async () => {
+            // Spy on reloadChainData method
+            const reloadSpy = jest.spyOn(chainManager, "reloadChainData").mockResolvedValue();
+
+            await chainManager.updateChainConfigs({ enabled: true, reload: true });
+
+            expect(reloadSpy).toHaveBeenCalled();
+            expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloading result chains due to configuration");
+
+            reloadSpy.mockRestore();
+        });
+
+        it("should not trigger reload when only enabled is true", async () => {
+            const reloadSpy = jest.spyOn(chainManager, "reloadChainData").mockResolvedValue();
+
+            await chainManager.updateChainConfigs({ enabled: true, reload: false });
+
+            expect(reloadSpy).not.toHaveBeenCalled();
+            reloadSpy.mockRestore();
+        });
+    });
+
+    describe("reloadChainData", () => {
+        it("should append new chains without disrupting active player chains", async () => {
+            // Set up initial state
+            chainManager.availableChains = [{ name: "old-chain" }];
+            chainManager.gameData.playerChains = { player1: {} };
+
+            await chainManager.reloadChainData();
+
+            expect(chainManager.availableChains).toHaveLength(2); // old-chain + test-chain
+            expect(chainManager.availableChains.some((chain) => chain.name === "old-chain")).toBe(true);
+            expect(chainManager.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
+            // Player chains should remain intact
+            expect(chainManager.gameData.playerChains).toEqual({ player1: {} });
+            expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloaded chains: 1 new chains added, 2 total available");
+        });
+
+        it("should not add duplicate chains during reload", async () => {
+            // Set up initial state with existing test-chain
+            chainManager.availableChains = [
+                { name: "test-chain", boards: [], metadata: { name: "test-chain" } },
+                { name: "other-chain", boards: [], metadata: { name: "other-chain" } },
+            ];
+
+            await chainManager.reloadChainData();
+
+            // Should not add duplicate test-chain
+            expect(chainManager.availableChains).toHaveLength(2);
+            expect(chainManager.availableChains.filter((chain) => chain.name === "test-chain")).toHaveLength(1);
+            expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloaded chains: 0 new chains added, 2 total available");
+        });
+    });
+
+    describe("isChainEnabled", () => {
+        it("should return true when chainConfigs.enabled is true", () => {
+            chainManager.chainConfigs.enabled = true;
+            expect(chainManager.isChainEnabled()).toBe(true);
+        });
+
+        it("should return false when chainConfigs.enabled is false", () => {
+            chainManager.chainConfigs.enabled = false;
+            expect(chainManager.isChainEnabled()).toBe(false);
+        });
+
+        it("should not check appConfigs (only gameConfigs)", () => {
+            chainManager.chainConfigs.enabled = false;
+            chainManager.appConfigs.resultChains.enabled = true;
+            expect(chainManager.isChainEnabled()).toBe(false);
+        });
+    });
+
+    describe("loadChainData", () => {
+        it("should not load chains when feature is disabled via chainConfigs", async () => {
+            jest.clearAllMocks();
+
+            const disabledChainManager = new ChainManager(
+                mockGameData,
+                mockLogService,
+                mockResultChainRepository,
+                mockAssignmentRepository,
+                mockAppConfigs
+            );
+            disabledChainManager.chainConfigs.enabled = false;
 
             await disabledChainManager.loadChainData();
 
             expect(disabledChainManager.availableChains).toHaveLength(0);
             expect(mockResultChainRepository.find).not.toHaveBeenCalled();
+        });
+
+        it("should prevent duplicate chains during multiple loads", async () => {
+            // Load chains initially
+            await chainManager.loadChainData();
+            const initialCount = chainManager.availableChains.length;
+
+            // Load again - should not add duplicates
+            await chainManager.loadChainData();
+
+            expect(chainManager.availableChains).toHaveLength(initialCount);
+            // Ensure we still have the same chain
+            expect(chainManager.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
         });
     });
 
@@ -139,7 +268,7 @@ describe("ChainManager", () => {
             const result = await chainManager.assignChain("testPlayer");
 
             expect(result).toBe(false);
-            expect(mockLogService.logWarning).toHaveBeenCalled();
+            expect(mockLogService.logWarning).toHaveBeenCalledWith("[GameID: test-game-123] No chains available to assign to player testPlayer");
         });
     });
 
@@ -201,16 +330,18 @@ describe("ChainManager", () => {
 
     describe("shouldAssignChain", () => {
         it("should return true for player without chain when enabled", () => {
+            chainManager.chainConfigs.enabled = true;
             expect(chainManager.shouldAssignChain("newPlayer")).toBe(true);
         });
 
         it("should return false for player with chain", () => {
+            chainManager.chainConfigs.enabled = true;
             chainManager.assignChain("testPlayer");
             expect(chainManager.shouldAssignChain("testPlayer")).toBe(false);
         });
 
-        it("should return false when feature is disabled", () => {
-            chainManager.appConfigs.resultChains.enabled = false;
+        it("should return false when feature is disabled via chainConfigs", () => {
+            chainManager.chainConfigs.enabled = false;
             expect(chainManager.shouldAssignChain("newPlayer")).toBe(false);
         });
     });

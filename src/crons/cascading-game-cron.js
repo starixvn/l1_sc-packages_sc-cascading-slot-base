@@ -125,5 +125,22 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.promotionFreeSpinsConsumer.checkExpiry(this.gameData.gameConfigs.gameId);
     }
 
+    async checkGameStatus() {
+        await super.checkGameStatus();
+
+        if (!this.gameData.disabled) {
+            const {
+                multiplierBonus,
+                mode: difficulty,
+                resultChains = { enabled: false, reload: false },
+            } = this.gameData.gameConfigs.cascadingSlotsConfig;
+
+            this.boardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
+
+            // Update chain manager with new configurations
+            await this.chainManager.updateChainConfigs(resultChains);
+        }
+    }
+
     initTrialMode() {}
 }
