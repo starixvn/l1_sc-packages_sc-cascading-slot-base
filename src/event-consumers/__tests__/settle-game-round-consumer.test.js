@@ -11,6 +11,7 @@ import { definition, gameConfigs } from "../../test-data";
 import FreeSpinsConsumer from "../free-spins-consumer";
 import SettleGameRoundConsumer from "../settle-game-round-consumer";
 import TotalMultiplierConsumer from "../total-multiplier-consumer";
+import UserChainConsumer from "../user-chain-consumer";
 
 const currencyGroupSetting = {
     groupId: "g1",
@@ -70,6 +71,7 @@ gameManagementApiClientFactory.instance.mockReturnValue(gameManagementApiClient)
 
 const promotionBetInterceptor = stub(EventInterceptors.SlotPromotionInterceptor);
 const resultChainManager = stub(ChainManager);
+const userChainConsumer = stub(UserChainConsumer);
 
 function initConsumer() {
     return new SettleGameRoundConsumer({
@@ -86,6 +88,7 @@ function initConsumer() {
         gameManagementApiClientFactory,
         logService: { logInfo: jest.fn(), logWarning: jest.fn(), logError: jest.fn() },
         resultChainManager,
+        userChainConsumer,
     });
 }
 

@@ -25,6 +25,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         gameManagementApiClientFactory,
         logService,
         resultChainManager,
+        userChainConsumer,
     }) {
         super({
             definition,
@@ -41,6 +42,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         this.totalMultiplierConsumer = totalMultiplierConsumer;
         this.roundCalculator = roundCalculator;
         this.chainManager = resultChainManager;
+        this.userChainConsumer = userChainConsumer;
     }
 
     async settleRound(player, roundId) {
@@ -83,7 +85,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         // Track chain progress only when result is from chain data
         if (preGeneratedResultInfo?.isFromChain) {
             try {
-                await this.chainManager.updateChainProgress({
+                await this.userChainConsumer.updateChainProgress({
                     playerId: player.session?.playerId || player.UID,
                     playerName: playerName,
                     betLevel: round.betLevel,
