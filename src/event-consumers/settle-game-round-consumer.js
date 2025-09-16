@@ -126,7 +126,14 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     async getChainResult(player, round, isFreeSpin) {
         const playerName = player.profile.name;
 
-        return this.chainManager.getNextResult(playerName, {}, { isFreeSpin });
+        return this.chainManager.getNextResult(
+            playerName,
+            {
+                betLevel: round.betLevel,
+                coinValue: round.coinValue,
+            },
+            { isFreeSpin }
+        );
     }
 
     chooseResult(adminResult, chainResult) {

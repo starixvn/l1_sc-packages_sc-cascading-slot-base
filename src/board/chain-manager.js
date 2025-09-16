@@ -5,7 +5,15 @@ const ASSIGNMENT_STATUS = {
 };
 
 export default class ChainManager {
-    constructor(gameData, logService, resultChainRepository, assignmentRepository, appConfigs) {
+    /**
+     * @param {Object} dependencies - Destructured dependencies for proxy injection
+     * @param {SlotGameData} dependencies.gameData
+     * @param {logger} dependencies.logService
+     * @param {mongoose.Model} dependencies.resultChainRepository
+     * @param {mongoose.Model} dependencies.assignmentRepository
+     * @param {Object} dependencies.appConfigs
+     */
+    constructor({ gameData, logService, resultChainRepository, assignmentRepository, appConfigs }) {
         this.gameData = gameData;
         this.logService = logService;
         this.resultChainRepository = resultChainRepository;
@@ -74,6 +82,8 @@ export default class ChainManager {
                     }
                 }
             }
+
+            // Active player chains will be loaded by UserChainConsumer
         } catch (error) {
             this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chain data:`, error);
         }
@@ -94,77 +104,16 @@ export default class ChainManager {
         );
     }
 
-    async assignChain(playerName, playerContext = {}) {
-        if (this.availableChains.length === 0) {
-            this.logService.logWarning(`[GameID: ${this.gameData.gameConfigs?.gameId}] No chains available to assign to player ${playerName}`);
-            return false;
-        }
-
-        const chain = this.availableChains[0];
-
-        // Create in-memory assignment (for backward compatibility)
-        this.gameData.playerChains[playerName] = {
-            name: chain.name,
-            boards: [...chain.boards],
-            currentIndex: 0,
-            totalBoards: chain.boards.length,
-            assignedAt: new Date(),
-            isFreeSpin: false,
-            freeSpinChain: [],
-        };
-
-        // Create persistent assignment
-        try {
-            // Destructure required and optional fields from playerContext
-            const { playerId, betLevel, coinValue, operatorId, gameId, chainId, currency } = playerContext;
-
-            const assignmentData = {
-                playerId,
-                playerName,
-                chainName: chain.name,
-                currentBoardIndex: 0,
-                totalBoards: chain.boards.length,
-                assignedAt: new Date(),
-                lastActivityAt: new Date(),
-                status: ASSIGNMENT_STATUS.ACTIVE,
-                totalWinAmount: 0,
-                totalBetAmount: 0,
-                betLevel,
-                coinValue,
-                operatorId,
-                gameId,
-                chainId,
-                currency,
-            };
-
-            await this.assignmentRepository.create(assignmentData);
-        } catch (error) {
-            const { playerId, betLevel, coinValue, operatorId, gameId, chainId, currency } = playerContext;
-            this.logService.logError(
-                `[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to create persistent chain assignment for ${playerName}`,
-                {
-                    error: error.message,
-                    playerId,
-                    chainName: chain.name,
-                    betLevel,
-                    coinValue,
-                    operatorId,
-                    gameId,
-                    chainId,
-                    currency,
-                }
-            );
-        }
-
-        return true;
-    }
-
     async getNextResult(playerName, playerContext = {}, roundContext = {}) {
         if (!this.isChainEnabled()) {
             return null;
         }
 
-        const playerChain = this.gameData.playerChains[playerName];
+        const { betLevel, coinValue } = playerContext;
+
+        // Create composite key for multiple chains per player
+        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        const playerChain = this.gameData.playerChains[chainKey];
 
         if (!playerChain) {
             return null;
@@ -178,87 +127,6 @@ export default class ChainManager {
         const boardResult = this.convertChainBoardToResult(currentBoard);
 
         return boardResult;
-    }
-
-    /**
-     * Update chain progress after a spin
-     */
-    async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0 }) {
-        try {
-            // Get current chain state from in-memory data
-            const playerChain = this.gameData.playerChains[playerName];
-            if (!playerChain) {
-                this.logService.logWarning(`[GameID: ${this.gameData.gameConfigs?.gameId}] No chain found for player ${playerName}`);
-
-                return null;
-            }
-
-            // Since we always process boards sequentially, just increment by 1
-            playerChain.currentIndex += 1;
-
-            // Build completion status based on the NEW progress
-            const setOptions = {
-                lastActivityAt: new Date(),
-            };
-
-            // Check if chain is completed after this increment
-            if (playerChain.currentIndex >= playerChain.totalBoards) {
-                setOptions.status = ASSIGNMENT_STATUS.COMPLETED;
-                setOptions.completedAt = new Date();
-                // Clean up completed chain from memory
-                delete this.gameData.playerChains[playerName];
-            }
-
-            const updatedAssignment = await this.assignmentRepository.findOneAndUpdate(
-                {
-                    playerId,
-                    betLevel,
-                    coinValue,
-                    status: ASSIGNMENT_STATUS.ACTIVE,
-                },
-                {
-                    $inc: {
-                        currentBoardIndex: 1,
-                        totalBetAmount: roundBetAmount,
-                        totalWinAmount: roundWinAmount,
-                    },
-                    $set: {
-                        ...setOptions,
-                    },
-                },
-                {
-                    new: true,
-                }
-            );
-
-            if (!updatedAssignment) {
-                this.logService.logWarning(`[GameID: ${this.gameData.gameConfigs?.gameId}] No active chain assignment found for player ${playerId}`);
-                return null;
-            }
-
-            // Log completion if chain was completed
-            if (updatedAssignment.status === ASSIGNMENT_STATUS.COMPLETED) {
-                this.logService.logError(
-                    `[GameID: ${this.gameData.gameConfigs?.gameId}] Chain completed: ${updatedAssignment.chainName} for player ${updatedAssignment.playerName}`,
-                    {
-                        assignmentId: updatedAssignment._id,
-                        totalBoards: updatedAssignment.totalBoards,
-                        totalWin: updatedAssignment.totalWinAmount,
-                        totalBet: updatedAssignment.totalBetAmount,
-                    }
-                );
-            }
-
-            return updatedAssignment;
-        } catch (error) {
-            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to update chain progress`, {
-                error: error.message,
-                playerId,
-                playerName,
-            });
-
-            return null;
-        }
     }
 
     convertChainBoardToResult(chainBoard) {
@@ -299,15 +167,18 @@ export default class ChainManager {
         ];
     }
 
-    shouldAssignChain(playerName) {
+    shouldAssignChain(playerName, betLevel, coinValue) {
         if (!this.isChainEnabled()) {
             return false;
         }
-        return !this.gameData.playerChains[playerName];
+
+        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        return !this.gameData.playerChains[chainKey];
     }
 
-    getChainStatus(playerName) {
-        const playerChain = this.gameData.playerChains[playerName];
+    getChainStatus(playerName, betLevel, coinValue) {
+        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        const playerChain = this.gameData.playerChains[chainKey];
 
         if (!playerChain) {
             return { hasChain: false };
@@ -318,6 +189,8 @@ export default class ChainManager {
             chainName: playerChain.name,
             progress: `${playerChain.currentIndex}/${playerChain.totalBoards}`,
             assignedAt: playerChain.assignedAt,
+            betLevel: playerChain.betLevel,
+            coinValue: playerChain.coinValue,
         };
     }
 }

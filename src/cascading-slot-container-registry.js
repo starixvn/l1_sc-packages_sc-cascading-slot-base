@@ -13,6 +13,7 @@ import {
     PromotionFreeSpinsConsumer,
     SettleGameRoundConsumer,
     TotalMultiplierConsumer,
+    UserChainConsumer,
     UserSignInConsumer,
 } from "./event-consumers";
 import { ChainInterceptor, CascadingSlotPromotionInterceptor } from "./event-interceptors";
@@ -22,6 +23,7 @@ import UserSession from "./models/user-session";
 export default class CascadingSlotContainerRegistry extends SlotContainerRegistry {
     register(appConfigs, definition, gameData) {
         this.registerBoardUtilities();
+        this.registerResultChains();
         super.register(appConfigs, definition, gameData);
 
         return this.container;
@@ -44,7 +46,18 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             tumbleCalculator: asClass(TumbleCalculator),
             roundCalculator: asClass(RoundCalculator).proxy(),
             boardGenerator: asClass(CascadingBoardGenerator).singleton(),
-            resultChainManager: asClass(ChainManager).singleton(),
+        });
+    }
+
+    /**
+     * Register all result chain related dependencies in a modular way
+     * This includes chain manager, user chain consumer, and chain interceptor
+     */
+    registerResultChains() {
+        this.container.register({
+            resultChainManager: asClass(ChainManager).singleton().proxy(),
+            userChainConsumer: asClass(UserChainConsumer).singleton().proxy(),
+            chainInterceptor: asClass(ChainInterceptor).singleton().proxy(),
         });
     }
 
@@ -67,6 +80,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             inGameConsumer: asClass(InGameConsumer).singleton().proxy(),
             userSignInConsumer: asClass(UserSignInConsumer).singleton().proxy(),
             promotionFreeSpinsConsumer: asClass(PromotionFreeSpinsConsumer).singleton().proxy(),
+            // userChainConsumer is now registered in registerResultChains()
         });
     }
 
@@ -92,7 +106,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         super.registerInterceptors();
 
         this.container.register({
-            chainInterceptor: asClass(ChainInterceptor).singleton().proxy(),
+            // chainInterceptor is now registered in registerResultChains()
             promotionBetInterceptor: asClass(CascadingSlotPromotionInterceptor).singleton().proxy(),
         });
     }
