@@ -9,6 +9,10 @@ describe("ChainInterceptor", () => {
 
     beforeEach(() => {
         chainManager = stub(ChainManager);
+        const userChainConsumer = {
+            assignChain: jest.fn(),
+        };
+
         logService = {
             log: jest.fn(),
             logWarning: jest.fn(),
@@ -24,10 +28,15 @@ describe("ChainInterceptor", () => {
 
         interceptor = new ChainInterceptor({
             resultChainManager: chainManager,
+            userChainConsumer,
             logService,
             definition,
             gameData,
         });
+
+        // Store references for test assertions
+        interceptor.chainManager = chainManager;
+        interceptor.userChainConsumer = userChainConsumer;
     });
 
     describe("shouldIntercept", () => {
@@ -65,12 +74,12 @@ describe("ChainInterceptor", () => {
 
         it("should assign chain when player needs assignment", async () => {
             chainManager.shouldAssignChain.mockReturnValue(true);
-            chainManager.assignChain.mockReturnValue(true);
+            interceptor.userChainConsumer.assignChain.mockReturnValue(true);
 
             const result = await interceptor.afterSuccessEvent(context);
 
-            expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer");
-            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+            expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer", 5, 0.1);
+            expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
                 playerId: "player123",
                 sessionId: "session456",
                 operatorId: "operator789",
@@ -89,8 +98,8 @@ describe("ChainInterceptor", () => {
 
             const result = await interceptor.afterSuccessEvent(context);
 
-            expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer");
-            expect(chainManager.assignChain).not.toHaveBeenCalled();
+            expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer", 5, 0.1);
+            expect(interceptor.userChainConsumer.assignChain).not.toHaveBeenCalled();
             expect(logService.log).not.toHaveBeenCalled();
             expect(logService.logWarning).not.toHaveBeenCalled();
             expect(result).toBe(context);
@@ -102,7 +111,7 @@ describe("ChainInterceptor", () => {
 
             const result = await interceptor.afterSuccessEvent(context);
 
-            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+            expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
                 playerId: "player123",
                 sessionId: "session456",
                 operatorId: "operator789",
@@ -135,7 +144,7 @@ describe("ChainInterceptor", () => {
 
             const result = await interceptor.afterSuccessEvent(contextWithoutBet);
 
-            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+            expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
                 playerId: undefined,
                 sessionId: undefined,
                 operatorId: undefined,
@@ -166,7 +175,7 @@ describe("ChainInterceptor", () => {
 
             const result = await interceptor.afterSuccessEvent(contextWithBetLevels);
 
-            expect(chainManager.assignChain).toHaveBeenCalledWith("testPlayer", {
+            expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
                 playerId: "player123",
                 sessionId: "session456",
                 operatorId: "operator789",

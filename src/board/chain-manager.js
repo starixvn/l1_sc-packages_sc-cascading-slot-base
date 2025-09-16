@@ -23,8 +23,9 @@ export default class ChainManager {
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.availableChains = [];
 
-        // Initialize chain configurations (can be overridden by gameConfigs)
-        this.chainConfigs = { enabled: false, reload: false };
+        // Initialize chain configurations from gameConfigs
+        const { enabled = false, reload = false } = this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains || {};
+        this.chainConfigs = { enabled, reload };
     }
 
     /**

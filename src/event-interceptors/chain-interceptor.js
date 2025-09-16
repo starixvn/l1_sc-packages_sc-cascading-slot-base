@@ -1,10 +1,11 @@
 import { EventInterceptors } from "sc-game-base/src/core";
 
 export default class ChainInterceptor extends EventInterceptors.BaseEventInterceptor {
-    constructor({ logService, definition, gameData, resultChainManager }) {
+    constructor({ logService, definition, gameData, resultChainManager, userChainConsumer }) {
         super({ logService, definition });
         this.gameData = gameData;
         this.chainManager = resultChainManager;
+        this.userChainConsumer = userChainConsumer;
     }
 
     async afterSuccessEvent(context) {
@@ -12,7 +13,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
             const { player, bet } = context;
             const playerName = player.profile.name;
 
-            if (this.chainManager.shouldAssignChain(playerName)) {
+            if (this.chainManager.shouldAssignChain(playerName, bet?.betLevel, bet?.coinValue)) {
                 const playerContext = {
                     playerId: player.session?.playerId || player.UID,
                     sessionId: player.session?.sessionId,
@@ -23,7 +24,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
                     coinValue: bet?.coinValue,
                 };
 
-                const success = await this.chainManager.assignChain(playerName, playerContext);
+                const success = await this.userChainConsumer.assignChain(playerName, playerContext);
 
                 if (!success) {
                     this.logService.logWarning(`No chains available for ${playerName}`);
