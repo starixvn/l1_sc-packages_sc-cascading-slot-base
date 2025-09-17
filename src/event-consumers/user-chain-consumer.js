@@ -8,13 +8,11 @@ export default class UserChainConsumer {
     /**
      * @param {Object} dependencies - Destructured dependencies for proxy injection
      * @param {SlotGameData} dependencies.gameData
-     * @param {ChainManager} dependencies.resultChainManager
      * @param {mongoose.Model} dependencies.assignmentRepository
      * @param {logger} dependencies.logService
      */
-    constructor({ gameData, resultChainManager, assignmentRepository, logService }) {
+    constructor({ gameData, assignmentRepository, logService }) {
         this.gameData = gameData;
-        this.chainManager = resultChainManager;
         this.assignmentRepository = assignmentRepository;
         this.logService = logService;
     }
@@ -33,14 +31,11 @@ export default class UserChainConsumer {
                 .exec();
 
             for (const assignment of activeAssignments) {
-                // Find the corresponding chain data
-                const chain = this.chainManager.availableChains.find((c) => c.name === assignment.chainName);
+                const chain = this.gameData.availableChains?.find((c) => c.name === assignment.chainName);
 
                 if (chain) {
-                    // Create composite key for multiple chains per player
-                    const chainKey = `${assignment.playerName}-${assignment.betLevel}-${assignment.coinValue}`;
-
-                    // Restore player chain to memory with composite key
+                    const baseBetAmount = assignment.betLevel * assignment.coinValue;
+                    const chainKey = `${assignment.playerName}-${baseBetAmount}`;
                     this.gameData.playerChains[chainKey] = {
                         name: assignment.chainName,
                         boards: [...chain.boards],
@@ -62,23 +57,31 @@ export default class UserChainConsumer {
     async assignChain(playerName, playerContext = {}) {
         const { betLevel, coinValue } = playerContext;
 
-        // Create composite key for multiple chains per player
-        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        const baseBetAmount = betLevel * coinValue;
+        const chainKey = `${playerName}-${baseBetAmount}`;
 
-        // Check if player already has an active chain for this bet configuration
         if (this.gameData.playerChains[chainKey]) {
             return false;
         }
 
-        // Simple random selection from all available chains
-        if (this.chainManager.availableChains.length === 0) {
+        const applicableBoardCount = this.getApplicableBoardCount(playerContext, baseBetAmount);
+
+        if (applicableBoardCount === -1) {
             return false;
         }
 
-        const randomIndex = Math.floor(Math.random() * this.chainManager.availableChains.length);
-        const chain = this.chainManager.availableChains[randomIndex];
+        const availableChains = this.gameData.availableChains || [];
+        const matchingChains = availableChains.filter((chain) => {
+            return chain.baseBetAmount === baseBetAmount && (chain.totalBoardCount || chain.boards?.length || 0) <= applicableBoardCount;
+        });
 
-        // Create in-memory assignment with composite key
+        if (matchingChains.length === 0) {
+            return false;
+        }
+
+        const randomIndex = Math.floor(Math.random() * matchingChains.length);
+        const chain = matchingChains[randomIndex];
+
         this.gameData.playerChains[chainKey] = {
             name: chain.name,
             boards: [...chain.boards],
@@ -91,9 +94,7 @@ export default class UserChainConsumer {
             playerName,
         };
 
-        // Create persistent assignment
         try {
-            // Destructure required and optional fields from playerContext
             const { playerId, operatorId, gameId, chainId, currency } = playerContext;
 
             const assignmentData = {
@@ -129,28 +130,21 @@ export default class UserChainConsumer {
      */
     async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0 }) {
         try {
-            // Create composite key for multiple chains per player
-            const chainKey = `${playerName}-${betLevel}-${coinValue}`;
-
-            // Get current chain state from in-memory data
+            const baseBetAmount = betLevel * coinValue;
+            const chainKey = `${playerName}-${baseBetAmount}`;
             const playerChain = this.gameData.playerChains[chainKey];
             if (!playerChain) {
                 return null;
             }
 
-            // Since we always process boards sequentially, just increment by 1
             playerChain.currentIndex += 1;
 
-            // Build completion status based on the NEW progress
             const setOptions = {
                 lastActivityAt: new Date(),
             };
-
-            // Check if chain is completed after this increment
             if (playerChain.currentIndex >= playerChain.totalBoards) {
                 setOptions.status = ASSIGNMENT_STATUS.COMPLETED;
                 setOptions.completedAt = new Date();
-                // Clean up completed chain from memory
                 delete this.gameData.playerChains[chainKey];
             }
 
@@ -181,8 +175,6 @@ export default class UserChainConsumer {
                 return null;
             }
 
-            // Chain completion is handled silently
-
             return updatedAssignment;
         } catch (error) {
             this.logService.logError(`Failed to update chain progress for ${playerName}: ${error.message}`);
@@ -211,11 +203,37 @@ export default class UserChainConsumer {
                 .lean()
                 .exec();
 
-            // Extract unique chain names
             return [...new Set(assignments.map((a) => a.chainName))];
         } catch (error) {
             this.logService.logError(`Failed to find chains by bet params: ${error.message}`);
             return [];
         }
+    }
+
+    /**
+     * Calculate applicable board count using formula with betMultiplier from gameConfigs
+     * @param {Object} playerContext - Player context with balance and bet information
+     * @param {number} playerContext.balance - Player's current balance
+     * @param {number} baseBetAmount - Base bet amount (betLevel * coinValue)
+     * @returns {number} - Applicable board count from valid range [50, 75, 100, ..., 200] or -1 if invalid
+     */
+    getApplicableBoardCount(playerContext, baseBetAmount) {
+        const { balance = 0 } = playerContext;
+
+        if (baseBetAmount <= 0 || balance <= 0) {
+            return -1;
+        }
+
+        const betMultiplier = this.gameData.gameConfigs?.cascadingSlotsConfig?.betMultiplier || 1;
+        const affordableSpins = Math.floor(balance / baseBetAmount / betMultiplier);
+        const calculatedBoardCount = Math.floor(affordableSpins + 0.25 * affordableSpins * betMultiplier);
+        const assignedBoardCount = Math.max(calculatedBoardCount, 200);
+
+        const validBoardCounts = [50, 75, 100, 125, 150, 175, 200];
+        const closestBoardCount = validBoardCounts.reduce((closest, current) => {
+            return Math.abs(current - assignedBoardCount) < Math.abs(closest - assignedBoardCount) ? current : closest;
+        });
+
+        return closestBoardCount;
     }
 }

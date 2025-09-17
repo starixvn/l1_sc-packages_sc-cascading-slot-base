@@ -2,7 +2,12 @@ import UserChainConsumer from "../user-chain-consumer";
 
 // Mock data structures
 const mockGameData = {
-    gameConfigs: { gameId: "test-game-123" },
+    gameConfigs: {
+        gameId: "test-game-123",
+        cascadingSlotsConfig: {
+            betMultiplier: 1,
+        },
+    },
     playerChains: {},
 };
 
@@ -19,11 +24,15 @@ const mockChainManager = {
                 { board: [1, 2, 3], multipliers: [] },
                 { board: [4, 5, 6], multipliers: [] },
             ],
+            baseBetAmount: 0.1,
+            totalBoardCount: 75,
             metadata: { name: "test-chain-1" },
         },
         {
             name: "test-chain-2",
             boards: [{ board: [7, 8, 9], multipliers: [] }],
+            baseBetAmount: 0.1,
+            totalBoardCount: 50,
             metadata: { name: "test-chain-2" },
         },
     ],
@@ -54,19 +63,23 @@ describe("UserChainConsumer", () => {
         jest.clearAllMocks();
         mockGameData.playerChains = {};
 
-        // Reset chainManager available chains to prevent test contamination
-        mockChainManager.availableChains = [
+        // Reset available chains in gameData to prevent test contamination
+        mockGameData.availableChains = [
             {
                 name: "test-chain-1",
                 boards: [
                     { board: [1, 2, 3], multipliers: [] },
                     { board: [4, 5, 6], multipliers: [] },
                 ],
+                baseBetAmount: 0.1,
+                totalBoardCount: 75,
                 metadata: { name: "test-chain-1" },
             },
             {
                 name: "test-chain-2",
                 boards: [{ board: [7, 8, 9], multipliers: [] }],
+                baseBetAmount: 0.1,
+                totalBoardCount: 50,
                 metadata: { name: "test-chain-2" },
             },
         ];
@@ -81,7 +94,6 @@ describe("UserChainConsumer", () => {
 
         userChainConsumer = new UserChainConsumer({
             gameData: mockGameData,
-            resultChainManager: mockChainManager,
             assignmentRepository: mockAssignmentRepository,
             logService: mockLogService,
         });
@@ -90,7 +102,6 @@ describe("UserChainConsumer", () => {
     describe("constructor", () => {
         it("should initialize with correct dependencies", () => {
             expect(userChainConsumer.gameData).toBe(mockGameData);
-            expect(userChainConsumer.chainManager).toBe(mockChainManager);
             expect(userChainConsumer.assignmentRepository).toBe(mockAssignmentRepository);
             expect(userChainConsumer.logService).toBe(mockLogService);
         });
@@ -129,15 +140,15 @@ describe("UserChainConsumer", () => {
 
             await userChainConsumer.loadActiveChains();
 
-            expect(mockGameData.playerChains["activePlayer1-1-0.1"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer1-1-0.1"].name).toBe("test-chain-1");
-            expect(mockGameData.playerChains["activePlayer1-1-0.1"].currentIndex).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1-1-0.1"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1-1-0.1"].coinValue).toBe(0.1);
+            expect(mockGameData.playerChains["activePlayer1-0.1"]).toBeDefined();
+            expect(mockGameData.playerChains["activePlayer1-0.1"].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains["activePlayer1-0.1"].currentIndex).toBe(1);
+            expect(mockGameData.playerChains["activePlayer1-0.1"].betLevel).toBe(1);
+            expect(mockGameData.playerChains["activePlayer1-0.1"].coinValue).toBe(0.1);
 
-            expect(mockGameData.playerChains["activePlayer2-2-0.2"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer2-2-0.2"].name).toBe("test-chain-2");
-            expect(mockGameData.playerChains["activePlayer2-2-0.2"].currentIndex).toBe(0);
+            expect(mockGameData.playerChains["activePlayer2-0.4"]).toBeDefined();
+            expect(mockGameData.playerChains["activePlayer2-0.4"].name).toBe("test-chain-2");
+            expect(mockGameData.playerChains["activePlayer2-0.4"].currentIndex).toBe(0);
         });
 
         it("should warn when chain is not found in available chains", async () => {
@@ -162,7 +173,7 @@ describe("UserChainConsumer", () => {
 
             await userChainConsumer.loadActiveChains();
 
-            expect(mockGameData.playerChains["missingChainPlayer-1-0.1"]).toBeUndefined();
+            expect(mockGameData.playerChains["missingChainPlayer-0.1"]).toBeUndefined();
             // No warning should be logged since missing chains are normal
         });
 
@@ -185,6 +196,7 @@ describe("UserChainConsumer", () => {
                 playerId: "player-123",
                 betLevel: 1,
                 coinValue: 0.1,
+                balance: 100,
                 operatorId: "test-operator",
                 gameId: "test-game",
                 currency: "USD",
@@ -193,15 +205,15 @@ describe("UserChainConsumer", () => {
             const result = await userChainConsumer.assignChain("testPlayer", playerContext);
 
             expect(result).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-1-0.1"]).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer-1-0.1"].currentIndex).toBe(0);
-            expect(mockGameData.playerChains["testPlayer-1-0.1"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["testPlayer-1-0.1"].coinValue).toBe(0.1);
+            expect(mockGameData.playerChains["testPlayer-0.1"]).toBeDefined();
+            expect(mockGameData.playerChains["testPlayer-0.1"].currentIndex).toBe(0);
+            expect(mockGameData.playerChains["testPlayer-0.1"].betLevel).toBe(1);
+            expect(mockGameData.playerChains["testPlayer-0.1"].coinValue).toBe(0.1);
             expect(mockAssignmentRepository.create).toHaveBeenCalled();
         });
 
         it("should return false when player already has an active chain", async () => {
-            mockGameData.playerChains["existingPlayer-1-0.1"] = {
+            mockGameData.playerChains["existingPlayer-0.1"] = {
                 name: "existing-chain",
                 boards: [],
                 currentIndex: 0,
@@ -210,6 +222,7 @@ describe("UserChainConsumer", () => {
             const result = await userChainConsumer.assignChain("existingPlayer", {
                 betLevel: 1,
                 coinValue: 0.1,
+                balance: 100,
             });
 
             expect(result).toBe(false);
@@ -217,13 +230,16 @@ describe("UserChainConsumer", () => {
         });
 
         it("should return false when no chains are available", async () => {
-            mockChainManager.availableChains = [];
+            mockGameData.availableChains = [];
 
-            const result = await userChainConsumer.assignChain("testPlayer", {});
+            const result = await userChainConsumer.assignChain("testPlayer", {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 100,
+            });
 
             expect(result).toBe(false);
             // No warning should be logged since missing chains are handled silently
-            expect(result).toBe(false);
         });
 
         it("should use random selection when multiple chains are available", async () => {
@@ -234,10 +250,11 @@ describe("UserChainConsumer", () => {
                 playerId: "randomTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
+                balance: 100,
             });
 
             expect(result).toBe(true);
-            expect(mockGameData.playerChains["randomTestPlayer-1-0.1"].name).toBe("test-chain-2");
+            expect(mockGameData.playerChains["randomTestPlayer-0.1"].name).toBe("test-chain-2");
 
             Math.random = originalMathRandom;
         });
@@ -250,6 +267,7 @@ describe("UserChainConsumer", () => {
                 playerId: "noFilterTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
+                balance: 100,
                 operatorId: "test-operator",
                 gameId: "test-game",
                 currency: "USD",
@@ -257,9 +275,31 @@ describe("UserChainConsumer", () => {
 
             expect(result).toBe(true);
             // Should not query assignments for filtering - assignChain no longer does this
-            expect(mockGameData.playerChains["noFilterTestPlayer-1-0.1"].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains["noFilterTestPlayer-0.1"].name).toBe("test-chain-1");
 
             Math.random = originalMathRandom;
+        });
+
+        it("should return false when player balance is insufficient", async () => {
+            const result = await userChainConsumer.assignChain("poorPlayer", {
+                playerId: "poorPlayer",
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 0,
+            });
+
+            expect(result).toBe(false);
+        });
+
+        it("should return false when baseBetAmount is zero", async () => {
+            const result = await userChainConsumer.assignChain("zeroPlayer", {
+                playerId: "zeroPlayer",
+                betLevel: 0,
+                coinValue: 0.1,
+                balance: 100,
+            });
+
+            expect(result).toBe(false);
         });
 
         it("should handle assignment repository errors gracefully", async () => {
@@ -269,6 +309,7 @@ describe("UserChainConsumer", () => {
                 playerId: "errorTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
+                balance: 100,
             });
 
             expect(result).toBe(true); // Assignment to memory should still succeed
@@ -278,7 +319,7 @@ describe("UserChainConsumer", () => {
 
     describe("updateChainProgress", () => {
         beforeEach(() => {
-            mockGameData.playerChains["progressPlayer-1-0.1"] = {
+            mockGameData.playerChains["progressPlayer-0.1"] = {
                 name: "test-chain-1",
                 boards: [{ board: [1, 2, 3] }, { board: [4, 5, 6] }],
                 currentIndex: 0,
@@ -311,7 +352,7 @@ describe("UserChainConsumer", () => {
             });
 
             expect(result).toEqual(updatedAssignment);
-            expect(mockGameData.playerChains["progressPlayer-1-0.1"].currentIndex).toBe(1);
+            expect(mockGameData.playerChains["progressPlayer-0.1"].currentIndex).toBe(1);
             expect(mockAssignmentRepository.findOneAndUpdate).toHaveBeenCalledWith(
                 {
                     playerId: "player-123",
@@ -335,7 +376,7 @@ describe("UserChainConsumer", () => {
         });
 
         it("should complete chain when reaching total boards", async () => {
-            mockGameData.playerChains["completionPlayer-1-0.1"] = {
+            mockGameData.playerChains["completionPlayer-0.1"] = {
                 name: "test-chain-1",
                 boards: [{ board: [1, 2, 3] }],
                 currentIndex: 0,
@@ -368,7 +409,7 @@ describe("UserChainConsumer", () => {
             });
 
             expect(result).toEqual(completedAssignment);
-            expect(mockGameData.playerChains["completionPlayer-1-0.1"]).toBeUndefined();
+            expect(mockGameData.playerChains["completionPlayer-0.1"]).toBeUndefined();
             // No completion log since it's handled silently
         });
 
@@ -450,6 +491,72 @@ describe("UserChainConsumer", () => {
 
             expect(result).toEqual([]);
             expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to find chains by bet params"));
+        });
+    });
+
+    describe("getApplicableBoardCount", () => {
+        it("should return -1 for zero balance", () => {
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 0 }, 0.1);
+            expect(result).toBe(-1);
+        });
+
+        it("should return -1 for zero baseBetAmount", () => {
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 0);
+            expect(result).toBe(-1);
+        });
+
+        it("should return -1 for negative values", () => {
+            const result1 = userChainConsumer.getApplicableBoardCount({ balance: -10 }, 0.1);
+            const result2 = userChainConsumer.getApplicableBoardCount({ balance: 100 }, -0.1);
+            expect(result1).toBe(-1);
+            expect(result2).toBe(-1);
+        });
+
+        it("should calculate board count using betMultiplier from gameConfigs", () => {
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 2;
+
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 0.1);
+
+            // affordableSpins = floor(100 / 0.1 / 2) = floor(500) = 500
+            // calculatedBoardCount = floor(500 + 0.25 * 500 * 2) = floor(500 + 250) = 750
+            // assignedBoardCount = max(750, 200) = 750
+            // Should round to nearest valid count, which is 200 (closest to 750 in range [50, 75, 100, 125, 150, 175, 200])
+            expect(result).toBe(200);
+        });
+
+        it("should enforce minimum of 200 boards", () => {
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 10 }, 1);
+
+            // Small balance should still result in minimum 200 boards
+            expect(result).toBe(200);
+        });
+
+        it("should enforce minimum board count and round to nearest valid count", () => {
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
+
+            // Test different scenarios - small values get enforced to minimum 200
+            const result1 = userChainConsumer.getApplicableBoardCount({ balance: 60 }, 1);
+            // affordableSpins = 60, calculated = 60 + 15 = 75, but Math.max ensures minimum 200
+            expect(result1).toBe(200);
+
+            const result2 = userChainConsumer.getApplicableBoardCount({ balance: 85 }, 1);
+            // affordableSpins = 85, calculated = 85 + 21.25 = 106.25, but Math.max ensures minimum 200
+            expect(result2).toBe(200);
+
+            // Test with larger balance that exceeds 200
+            const result3 = userChainConsumer.getApplicableBoardCount({ balance: 500 }, 1);
+            // affordableSpins = 500, calculated = 500 + 125 = 625, should round to nearest valid count which is 200 (max in range)
+            expect(result3).toBe(200);
+        });
+
+        it("should use default betMultiplier when not configured", () => {
+            delete mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier;
+
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 1);
+
+            // Should use default multiplier of 1
+            // affordableSpins = 100, calculated = 100 + 25 = 125, but Math.max ensures minimum 200
+            expect(result).toBe(200);
         });
     });
 });

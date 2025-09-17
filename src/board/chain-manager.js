@@ -21,7 +21,7 @@ export default class ChainManager {
         this.appConfigs = appConfigs;
 
         this.gameData.playerChains = this.gameData.playerChains || {};
-        this.availableChains = [];
+        this.gameData.availableChains = this.gameData.availableChains || [];
 
         // Initialize chain configurations from gameConfigs
         const { enabled = false, reload = false } = this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains || {};
@@ -68,13 +68,14 @@ export default class ChainManager {
 
             for (const chain of resultChains) {
                 if (chain.boardsData && chain.boardsData.length > 0) {
-                    // Check if chain already exists to prevent duplicates during reload
-                    const existingChain = this.availableChains.find((existing) => existing.name === chain.name);
+                    const existingChain = this.gameData.availableChains.find((existing) => existing.name === chain.name);
 
                     if (!existingChain) {
-                        this.availableChains.push({
+                        this.gameData.availableChains.push({
                             name: chain.name,
                             boards: chain.boardsData,
+                            baseBetAmount: chain.baseBetAmount,
+                            totalBoardCount: chain.totalBoardCount,
                             metadata: {
                                 name: chain.name,
                                 createdAt: chain.createdAt,
@@ -94,14 +95,14 @@ export default class ChainManager {
      * Reload chain data - appends new chains without disrupting active player chains
      */
     async reloadChainData() {
-        const previousChainCount = this.availableChains.length;
+        const previousChainCount = this.gameData.availableChains.length;
 
         // Load fresh chain data (will append to existing availableChains)
         await this.loadChainData();
 
-        const newChainCount = this.availableChains.length - previousChainCount;
+        const newChainCount = this.gameData.availableChains.length - previousChainCount;
         this.logService.logError(
-            `[GameID: ${this.gameData.gameConfigs?.gameId}] Reloaded chains: ${newChainCount} new chains added, ${this.availableChains.length} total available`
+            `[GameID: ${this.gameData.gameConfigs?.gameId}] Reloaded chains: ${newChainCount} new chains added, ${this.gameData.availableChains.length} total available`
         );
     }
 
@@ -112,8 +113,8 @@ export default class ChainManager {
 
         const { betLevel, coinValue } = playerContext;
 
-        // Create composite key for multiple chains per player
-        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        const baseBetAmount = betLevel * coinValue;
+        const chainKey = `${playerName}-${baseBetAmount}`;
         const playerChain = this.gameData.playerChains[chainKey];
 
         if (!playerChain) {
@@ -173,12 +174,14 @@ export default class ChainManager {
             return false;
         }
 
-        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        const baseBetAmount = betLevel * coinValue;
+        const chainKey = `${playerName}-${baseBetAmount}`;
         return !this.gameData.playerChains[chainKey];
     }
 
     getChainStatus(playerName, betLevel, coinValue) {
-        const chainKey = `${playerName}-${betLevel}-${coinValue}`;
+        const baseBetAmount = betLevel * coinValue;
+        const chainKey = `${playerName}-${baseBetAmount}`;
         const playerChain = this.gameData.playerChains[chainKey];
 
         if (!playerChain) {

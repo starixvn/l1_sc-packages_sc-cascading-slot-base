@@ -137,8 +137,8 @@ describe("ChainManager", () => {
         });
 
         it("should load chain data on initialization", () => {
-            expect(chainManager.availableChains).toHaveLength(1);
-            expect(chainManager.availableChains[0].name).toBe("test-chain");
+            expect(mockGameData.availableChains).toHaveLength(1);
+            expect(mockGameData.availableChains[0].name).toBe("test-chain");
         });
     });
 
@@ -187,22 +187,22 @@ describe("ChainManager", () => {
     describe("reloadChainData", () => {
         it("should append new chains without disrupting active player chains", async () => {
             // Set up initial state
-            chainManager.availableChains = [{ name: "old-chain" }];
-            chainManager.gameData.playerChains = { player1: {} };
+            mockGameData.availableChains = [{ name: "old-chain" }];
+            mockGameData.playerChains = { player1: {} };
 
             await chainManager.reloadChainData();
 
-            expect(chainManager.availableChains).toHaveLength(2); // old-chain + test-chain
-            expect(chainManager.availableChains.some((chain) => chain.name === "old-chain")).toBe(true);
-            expect(chainManager.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
+            expect(mockGameData.availableChains).toHaveLength(2); // old-chain + test-chain
+            expect(mockGameData.availableChains.some((chain) => chain.name === "old-chain")).toBe(true);
+            expect(mockGameData.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
             // Player chains should remain intact
-            expect(chainManager.gameData.playerChains).toEqual({ player1: {} });
+            expect(mockGameData.playerChains).toEqual({ player1: {} });
             expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloaded chains: 1 new chains added, 2 total available");
         });
 
         it("should not add duplicate chains during reload", async () => {
             // Set up initial state with existing test-chain
-            chainManager.availableChains = [
+            mockGameData.availableChains = [
                 { name: "test-chain", boards: [], metadata: { name: "test-chain" } },
                 { name: "other-chain", boards: [], metadata: { name: "other-chain" } },
             ];
@@ -210,8 +210,8 @@ describe("ChainManager", () => {
             await chainManager.reloadChainData();
 
             // Should not add duplicate test-chain
-            expect(chainManager.availableChains).toHaveLength(2);
-            expect(chainManager.availableChains.filter((chain) => chain.name === "test-chain")).toHaveLength(1);
+            expect(mockGameData.availableChains).toHaveLength(2);
+            expect(mockGameData.availableChains.filter((chain) => chain.name === "test-chain")).toHaveLength(1);
             expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloaded chains: 0 new chains added, 2 total available");
         });
     });
@@ -238,8 +238,15 @@ describe("ChainManager", () => {
         it("should not load chains when feature is disabled via chainConfigs", async () => {
             jest.clearAllMocks();
 
+            // Create clean gameData for isolated test
+            const cleanGameData = {
+                gameConfigs: { gameId: "test-game-123" },
+                playerChains: {},
+                availableChains: [],
+            };
+
             const disabledChainManager = new ChainManager({
-                gameData: mockGameData,
+                gameData: cleanGameData,
                 logService: mockLogService,
                 resultChainRepository: mockResultChainRepository,
                 assignmentRepository: mockAssignmentRepository,
@@ -249,21 +256,21 @@ describe("ChainManager", () => {
 
             await disabledChainManager.loadChainData();
 
-            expect(disabledChainManager.availableChains).toHaveLength(0);
+            expect(cleanGameData.availableChains).toHaveLength(0);
             expect(mockResultChainRepository.find).not.toHaveBeenCalled();
         });
 
         it("should prevent duplicate chains during multiple loads", async () => {
             // Load chains initially
             await chainManager.loadChainData();
-            const initialCount = chainManager.availableChains.length;
+            const initialCount = mockGameData.availableChains.length;
 
             // Load again - should not add duplicates
             await chainManager.loadChainData();
 
-            expect(chainManager.availableChains).toHaveLength(initialCount);
+            expect(mockGameData.availableChains).toHaveLength(initialCount);
             // Ensure we still have the same chain
-            expect(chainManager.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
+            expect(mockGameData.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
         });
 
         it("should indicate that active player chains will be loaded by UserChainConsumer", async () => {
@@ -294,8 +301,8 @@ describe("ChainManager", () => {
         });
 
         it("should return first board result", async () => {
-            // Set up player chain with composite key
-            mockGameData.playerChains["testPlayer-1-0.1"] = {
+            // Set up player chain with composite key using baseBetAmount
+            mockGameData.playerChains["testPlayer-0.1"] = {
                 name: "test-chain",
                 boards: [...mockDatabaseChains[0].boardsData],
                 currentIndex: 0,
@@ -310,7 +317,7 @@ describe("ChainManager", () => {
 
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-1-0.1"].currentIndex).toBe(0); // getNextResult no longer increments
+            expect(mockGameData.playerChains["testPlayer-0.1"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
         it("should return current board regardless of free spin context", async () => {
@@ -341,8 +348,8 @@ describe("ChainManager", () => {
 
         it("should return false for player with chain", () => {
             chainManager.chainConfigs.enabled = true;
-            // Manually set up a player chain for testing with composite key
-            mockGameData.playerChains["testPlayer-1-0.1"] = {
+            // Manually set up a player chain for testing with composite key using baseBetAmount
+            mockGameData.playerChains["testPlayer-0.1"] = {
                 name: "test-chain",
                 boards: [],
                 currentIndex: 0,
@@ -367,9 +374,9 @@ describe("ChainManager", () => {
         });
 
         it("should return chain status for player with chain", () => {
-            // Manually set up a player chain for testing with composite key
+            // Manually set up a player chain for testing with composite key using baseBetAmount
             const assignedAt = new Date();
-            mockGameData.playerChains["testPlayer-1-0.1"] = {
+            mockGameData.playerChains["testPlayer-0.1"] = {
                 name: "test-chain",
                 boards: [],
                 currentIndex: 0,
