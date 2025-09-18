@@ -70,7 +70,7 @@ describe("ChainInterceptor", () => {
                 currencyName: "USD",
             },
         };
-        const context = { player, bet: { totalAmount: 10, betLevel: 5, coinValue: 0.1 }, balance: 100 };
+        const context = { player, bet: { totalAmount: 10, betLevel: 5, coinValue: 0.1 }, balance: { red: 100, minBet: 1, maxBet: 3000 } };
 
         it("should assign chain when player needs assignment", async () => {
             chainManager.shouldAssignChain.mockReturnValue(true);
@@ -87,6 +87,7 @@ describe("ChainInterceptor", () => {
                 currency: "USD",
                 betLevel: 5,
                 coinValue: 0.1,
+                balance: 100,
             });
             expect(logService.log).not.toHaveBeenCalled();
             expect(logService.logWarning).not.toHaveBeenCalled();
@@ -119,6 +120,7 @@ describe("ChainInterceptor", () => {
                 currency: "USD",
                 betLevel: 5,
                 coinValue: 0.1,
+                balance: 100,
             });
             expect(logService.logWarning).toHaveBeenCalledWith("No chains available for testPlayer");
             expect(result).toBe(context);
@@ -138,7 +140,7 @@ describe("ChainInterceptor", () => {
 
         it("should assign chain even when bet information is missing", async () => {
             const playerWithoutSession = { profile: { name: "testPlayer" } };
-            const contextWithoutBet = { player: playerWithoutSession, balance: 100 };
+            const contextWithoutBet = { player: playerWithoutSession, balance: { red: 100, minBet: 1, maxBet: 3000 } };
             chainManager.shouldAssignChain.mockReturnValue(true);
             chainManager.assignChain.mockReturnValue(true);
 
@@ -151,6 +153,7 @@ describe("ChainInterceptor", () => {
                 gameId: 1,
                 currency: "",
                 betLevel: undefined,
+                balance: 100,
                 coinValue: undefined,
             });
             expect(result).toBe(contextWithoutBet);
@@ -167,7 +170,7 @@ describe("ChainInterceptor", () => {
                     roundId: "round123",
                     betWin: 75,
                 },
-                balance: 200,
+                balance: { red: 200, minBet: 1, maxBet: 3000 },
             };
 
             chainManager.shouldAssignChain.mockReturnValue(true);
@@ -183,6 +186,7 @@ describe("ChainInterceptor", () => {
                 currency: "USD",
                 betLevel: 10, // ✅ Must match bet.betLevel
                 coinValue: 2.5, // ✅ Must match bet.coinValue
+                balance: 200,
             });
             expect(result).toBe(contextWithBetLevels);
         });
