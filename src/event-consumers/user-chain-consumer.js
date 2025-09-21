@@ -1,25 +1,21 @@
-// Status constants
 const ASSIGNMENT_STATUS = {
     ACTIVE: "active",
     COMPLETED: "completed",
 };
 
+const CHAIN_CONSTANTS = {
+    MINIMUM_PLAYABLE_BOARDS: 50,
+    APPLICABLE_BOARDS_MULTIPLIER: 0.25,
+    VALID_BOARD_COUNTS: [50, 75, 100, 125, 150, 175, 200],
+};
+
 export default class UserChainConsumer {
-    /**
-     * @param {Object} dependencies - Destructured dependencies for proxy injection
-     * @param {SlotGameData} dependencies.gameData
-     * @param {mongoose.Model} dependencies.assignmentRepository
-     * @param {logger} dependencies.logService
-     */
     constructor({ gameData, assignmentRepository, logService }) {
         this.gameData = gameData;
         this.assignmentRepository = assignmentRepository;
         this.logService = logService;
     }
 
-    /**
-     * Load active player chain assignments from database and restore them to memory
-     */
     async loadActiveChains() {
         try {
             const activeAssignments = await this.assignmentRepository
@@ -71,8 +67,10 @@ export default class UserChainConsumer {
         }
 
         const availableChains = this.gameData.availableChains || [];
+
         const matchingChains = availableChains.filter((chain) => {
-            return chain.baseBetAmount === baseBetAmount && (chain.totalBoardCount || chain.boards?.length || 0) <= applicableBoardCount;
+            const chainBoardCount = chain.totalBoardCount || chain.boards?.length || 0;
+            return chainBoardCount <= applicableBoardCount;
         });
 
         if (matchingChains.length === 0) {
@@ -125,9 +123,6 @@ export default class UserChainConsumer {
         return true;
     }
 
-    /**
-     * Update chain progress after a spin
-     */
     async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0 }) {
         try {
             const baseBetAmount = betLevel * coinValue;
@@ -183,9 +178,6 @@ export default class UserChainConsumer {
         }
     }
 
-    /**
-     * Find chains that have been used with specific betLevel and coinValue
-     */
     async findChainsByBet(betLevel, coinValue, status = ASSIGNMENT_STATUS.ACTIVE) {
         try {
             const statusFilter = Array.isArray(status) ? { $in: status } : status;
@@ -210,30 +202,47 @@ export default class UserChainConsumer {
         }
     }
 
-    /**
-     * Calculate applicable board count using formula with betMultiplier from gameConfigs
-     * @param {Object} playerContext - Player context with balance and bet information
-     * @param {number} playerContext.balance - Player's current balance
-     * @param {number} baseBetAmount - Base bet amount (betLevel * coinValue)
-     * @returns {number} - Applicable board count from valid range [50, 75, 100, ..., 200] or -1 if invalid
-     */
-    getApplicableBoardCount(playerContext, baseBetAmount) {
-        const { balance = 0 } = playerContext;
-
+    getPlayableBoards(balance, baseBetAmount, betMultiplier) {
         if (baseBetAmount <= 0 || balance <= 0) {
             return -1;
         }
 
-        const betMultiplier = this.gameData.gameConfigs?.cascadingSlotsConfig?.betMultiplier || 1;
-        const affordableSpins = Math.floor(balance / baseBetAmount / betMultiplier);
-        const calculatedBoardCount = Math.floor(affordableSpins + 0.25 * affordableSpins * betMultiplier);
-        const assignedBoardCount = Math.max(calculatedBoardCount, 200);
+        return Math.floor(balance / baseBetAmount / betMultiplier);
+    }
 
-        const validBoardCounts = [50, 75, 100, 125, 150, 175, 200];
-        const closestBoardCount = validBoardCounts.reduce((closest, current) => {
-            return Math.abs(current - assignedBoardCount) < Math.abs(closest - assignedBoardCount) ? current : closest;
+    getApplicableBoards(playableBoards) {
+        if (playableBoards < CHAIN_CONSTANTS.MINIMUM_PLAYABLE_BOARDS) {
+            return -1;
+        }
+
+        return Math.floor(playableBoards + CHAIN_CONSTANTS.APPLICABLE_BOARDS_MULTIPLIER * playableBoards);
+    }
+
+    getClosestValidBoardCount(applicableBoards) {
+        return CHAIN_CONSTANTS.VALID_BOARD_COUNTS.reduce((closest, current) => {
+            return Math.abs(current - applicableBoards) < Math.abs(closest - applicableBoards) ? current : closest;
         });
+    }
 
-        return closestBoardCount;
+    getApplicableBoardCount(playerContext, baseBetAmount) {
+        const { balance = 0 } = playerContext;
+
+        if (balance === 0) {
+            return -1;
+        }
+
+        const betMultiplier = this.gameData.gameConfigs?.cascadingSlotsConfig?.betMultiplier || 1;
+
+        const playableBoards = this.getPlayableBoards(balance, baseBetAmount, betMultiplier);
+        if (playableBoards === -1) {
+            return -1;
+        }
+
+        const applicableBoards = this.getApplicableBoards(playableBoards);
+        if (applicableBoards === -1) {
+            return -1;
+        }
+
+        return this.getClosestValidBoardCount(applicableBoards);
     }
 }

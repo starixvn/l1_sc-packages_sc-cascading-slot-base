@@ -495,7 +495,7 @@ describe("UserChainConsumer", () => {
     });
 
     describe("getApplicableBoardCount", () => {
-        it("should return -1 for zero balance", () => {
+        it("should return -1 immediately for zero balance", () => {
             const result = userChainConsumer.getApplicableBoardCount({ balance: 0 }, 0.1);
             expect(result).toBe(-1);
         });
@@ -524,28 +524,41 @@ describe("UserChainConsumer", () => {
             expect(result).toBe(200);
         });
 
-        it("should enforce minimum of 200 boards", () => {
-            const result = userChainConsumer.getApplicableBoardCount({ balance: 10 }, 1);
-
-            // Small balance should still result in minimum 200 boards
-            expect(result).toBe(200);
-        });
-
-        it("should enforce minimum board count and round to nearest valid count", () => {
+        it("should return -1 when playable boards less than 50", () => {
             mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
 
-            // Test different scenarios - small values get enforced to minimum 200
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 10 }, 1);
+
+            // playableBoards = 10, which is < 50, so should return -1 (no chain assignment)
+            expect(result).toBe(-1);
+        });
+
+        it("should apply chain when playable boards equals exactly 50", () => {
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
+
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 50 }, 1);
+
+            // playableBoards = 50, applicableBoards = 50 + 12.5 = 62.5 -> 62
+            // Valid counts: [50, 75, 100, 125, 150, 175, 200]
+            // Distance from 62: |50-62|=12, |75-62|=13, so closest is 50
+            expect(result).toBe(50);
+        });
+
+        it("should calculate board count and round to nearest valid count", () => {
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
+
+            // Test different scenarios with new formula
             const result1 = userChainConsumer.getApplicableBoardCount({ balance: 60 }, 1);
-            // affordableSpins = 60, calculated = 60 + 15 = 75, but Math.max ensures minimum 200
-            expect(result1).toBe(200);
+            // playableBoards = 60, applicableBoards = 60 + 15 = 75, closest valid = 75
+            expect(result1).toBe(75);
 
             const result2 = userChainConsumer.getApplicableBoardCount({ balance: 85 }, 1);
-            // affordableSpins = 85, calculated = 85 + 21.25 = 106.25, but Math.max ensures minimum 200
-            expect(result2).toBe(200);
+            // playableBoards = 85, applicableBoards = 85 + 21.25 = 106.25 -> 106, closest valid = 100
+            expect(result2).toBe(100);
 
-            // Test with larger balance that exceeds 200
+            // Test with larger balance
             const result3 = userChainConsumer.getApplicableBoardCount({ balance: 500 }, 1);
-            // affordableSpins = 500, calculated = 500 + 125 = 625, should round to nearest valid count which is 200 (max in range)
+            // playableBoards = 500, applicableBoards = 500 + 125 = 625, closest valid = 200 (max in range)
             expect(result3).toBe(200);
         });
 
@@ -555,8 +568,68 @@ describe("UserChainConsumer", () => {
             const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 1);
 
             // Should use default multiplier of 1
-            // affordableSpins = 100, calculated = 100 + 25 = 125, but Math.max ensures minimum 200
-            expect(result).toBe(200);
+            // playableBoards = 100, applicableBoards = 100 + 25 = 125, closest valid = 125
+            expect(result).toBe(125);
+        });
+    });
+
+    describe("getPlayableBoards", () => {
+        it("should return -1 for invalid inputs", () => {
+            expect(userChainConsumer.getPlayableBoards(0, 1, 1)).toBe(-1);
+            expect(userChainConsumer.getPlayableBoards(-10, 1, 1)).toBe(-1);
+            expect(userChainConsumer.getPlayableBoards(100, 0, 1)).toBe(-1);
+            expect(userChainConsumer.getPlayableBoards(100, -1, 1)).toBe(-1);
+        });
+
+        it("should calculate playable boards correctly", () => {
+            expect(userChainConsumer.getPlayableBoards(100, 1, 1)).toBe(100);
+            expect(userChainConsumer.getPlayableBoards(100, 2, 1)).toBe(50);
+            expect(userChainConsumer.getPlayableBoards(100, 1, 2)).toBe(50);
+            expect(userChainConsumer.getPlayableBoards(150, 1.5, 2)).toBe(50);
+        });
+
+        it("should handle decimal calculations with Math.floor", () => {
+            expect(userChainConsumer.getPlayableBoards(99, 1, 1)).toBe(99);
+            expect(userChainConsumer.getPlayableBoards(99.9, 1, 1)).toBe(99);
+            expect(userChainConsumer.getPlayableBoards(100, 3, 1)).toBe(33); // 100/3 = 33.33 -> 33
+        });
+    });
+
+    describe("getApplicableBoards", () => {
+        it("should return -1 for playable boards less than minimum threshold", () => {
+            expect(userChainConsumer.getApplicableBoards(-1)).toBe(-1);
+            expect(userChainConsumer.getApplicableBoards(0)).toBe(-1);
+            expect(userChainConsumer.getApplicableBoards(10)).toBe(-1);
+            expect(userChainConsumer.getApplicableBoards(49)).toBe(-1);
+        });
+
+        it("should calculate applicable boards using 25% formula", () => {
+            expect(userChainConsumer.getApplicableBoards(50)).toBe(62); // 50 + 12.5 = 62.5 -> 62
+            expect(userChainConsumer.getApplicableBoards(100)).toBe(125); // 100 + 25 = 125
+            expect(userChainConsumer.getApplicableBoards(80)).toBe(100); // 80 + 20 = 100
+            expect(userChainConsumer.getApplicableBoards(200)).toBe(250); // 200 + 50 = 250
+        });
+
+        it("should handle decimal calculations with Math.floor", () => {
+            expect(userChainConsumer.getApplicableBoards(51)).toBe(63); // 51 + 12.75 = 63.75 -> 63
+            expect(userChainConsumer.getApplicableBoards(83)).toBe(103); // 83 + 20.75 = 103.75 -> 103
+        });
+    });
+
+    describe("getClosestValidBoardCount", () => {
+        it("should return closest valid board count", () => {
+            expect(userChainConsumer.getClosestValidBoardCount(50)).toBe(50);
+            expect(userChainConsumer.getClosestValidBoardCount(62)).toBe(50); // |50-62|=12, |75-62|=13
+            expect(userChainConsumer.getClosestValidBoardCount(63)).toBe(75); // |50-63|=13, |75-63|=12
+            expect(userChainConsumer.getClosestValidBoardCount(100)).toBe(100);
+            expect(userChainConsumer.getClosestValidBoardCount(125)).toBe(125);
+            expect(userChainConsumer.getClosestValidBoardCount(250)).toBe(200); // Max value
+        });
+
+        it("should handle edge cases", () => {
+            expect(userChainConsumer.getClosestValidBoardCount(0)).toBe(50); // Closest to minimum
+            expect(userChainConsumer.getClosestValidBoardCount(1000)).toBe(200); // Closest to maximum
+            expect(userChainConsumer.getClosestValidBoardCount(87.5)).toBe(75); // |75-87.5|=12.5, |100-87.5|=12.5, returns first (75)
         });
     });
 });
