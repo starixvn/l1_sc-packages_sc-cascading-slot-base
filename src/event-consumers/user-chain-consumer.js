@@ -10,10 +10,11 @@ const CHAIN_CONSTANTS = {
 };
 
 export default class UserChainConsumer {
-    constructor({ gameData, assignmentRepository, logService }) {
+    constructor({ gameData, assignmentRepository, logService, resultChainManager }) {
         this.gameData = gameData;
         this.assignmentRepository = assignmentRepository;
         this.logService = logService;
+        this.chainManager = resultChainManager;
     }
 
     async loadActiveChains() {
@@ -30,19 +31,22 @@ export default class UserChainConsumer {
                 const chain = this.gameData.availableChains?.find((c) => c.name === assignment.chainName);
 
                 if (chain) {
-                    const baseBetAmount = assignment.betLevel * assignment.coinValue;
-                    const chainKey = `${assignment.playerName}-${baseBetAmount}`;
-                    this.gameData.playerChains[chainKey] = {
-                        name: assignment.chainName,
-                        boards: [...chain.boards],
-                        currentIndex: assignment.currentBoardIndex,
-                        totalBoards: assignment.totalBoards,
-                        assignedAt: assignment.assignedAt,
-                        betLevel: assignment.betLevel,
-                        coinValue: assignment.coinValue,
-                        playerId: assignment.playerId,
-                        playerName: assignment.playerName,
-                    };
+                    const boards = await this.chainManager.getBoardsByChainName(assignment.chainName);
+                    if (boards) {
+                        const baseBetAmount = assignment.betLevel * assignment.coinValue;
+                        const chainKey = `${assignment.playerName}-${baseBetAmount}`;
+                        this.gameData.playerChains[chainKey] = {
+                            name: assignment.chainName,
+                            boards: [...boards],
+                            currentIndex: assignment.currentBoardIndex,
+                            totalBoards: assignment.totalBoards,
+                            assignedAt: assignment.assignedAt,
+                            betLevel: assignment.betLevel,
+                            coinValue: assignment.coinValue,
+                            playerId: assignment.playerId,
+                            playerName: assignment.playerName,
+                        };
+                    }
                 }
             }
         } catch (error) {
@@ -69,8 +73,7 @@ export default class UserChainConsumer {
         const availableChains = this.gameData.availableChains || [];
 
         const matchingChains = availableChains.filter((chain) => {
-            const chainBoardCount = chain.totalBoardCount || chain.boards?.length || 0;
-            return chainBoardCount <= applicableBoardCount;
+            return chain.totalBoardCount <= applicableBoardCount;
         });
 
         if (matchingChains.length === 0) {
@@ -78,13 +81,18 @@ export default class UserChainConsumer {
         }
 
         const randomIndex = Math.floor(Math.random() * matchingChains.length);
-        const chain = matchingChains[randomIndex];
+        const selectedChain = matchingChains[randomIndex];
+
+        const boards = await this.chainManager.getBoardsByChainName(selectedChain.name);
+        if (!boards) {
+            return false;
+        }
 
         this.gameData.playerChains[chainKey] = {
-            name: chain.name,
-            boards: [...chain.boards],
+            name: selectedChain.name,
+            boards: [...boards],
             currentIndex: 0,
-            totalBoards: chain.boards.length,
+            totalBoards: boards.length,
             assignedAt: new Date(),
             betLevel,
             coinValue,
@@ -98,9 +106,9 @@ export default class UserChainConsumer {
             const assignmentData = {
                 playerId,
                 playerName,
-                chainName: chain.name,
+                chainName: selectedChain.name,
                 currentBoardIndex: 0,
-                totalBoards: chain.boards.length,
+                totalBoards: boards.length,
                 assignedAt: new Date(),
                 lastActivityAt: new Date(),
                 status: ASSIGNMENT_STATUS.ACTIVE,

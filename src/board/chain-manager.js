@@ -73,13 +73,8 @@ export default class ChainManager {
                     if (!existingChain) {
                         this.gameData.availableChains.push({
                             name: chain.name,
-                            boards: chain.boardsData,
                             baseBetAmount: chain.baseBetAmount,
                             totalBoardCount: chain.totalBoardCount,
-                            metadata: {
-                                name: chain.name,
-                                createdAt: chain.createdAt,
-                            },
                         });
                     }
                 }
@@ -104,6 +99,16 @@ export default class ChainManager {
         this.logService.logError(
             `[GameID: ${this.gameData.gameConfigs?.gameId}] Reloaded chains: ${newChainCount} new chains added, ${this.gameData.availableChains.length} total available`
         );
+    }
+
+    async getBoardsByChainName(chainName) {
+        try {
+            const chain = await this.resultChainRepository.findOne({ name: chainName }).lean().exec();
+            return chain?.boardsData || null;
+        } catch (error) {
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load boards for chain ${chainName}:`, error);
+            return null;
+        }
     }
 
     async getNextResult(playerName, playerContext = {}, roundContext = {}) {

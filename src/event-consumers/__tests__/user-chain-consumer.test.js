@@ -17,25 +17,7 @@ const mockLogService = {
 };
 
 const mockChainManager = {
-    availableChains: [
-        {
-            name: "test-chain-1",
-            boards: [
-                { board: [1, 2, 3], multipliers: [] },
-                { board: [4, 5, 6], multipliers: [] },
-            ],
-            baseBetAmount: 0.1,
-            totalBoardCount: 75,
-            metadata: { name: "test-chain-1" },
-        },
-        {
-            name: "test-chain-2",
-            boards: [{ board: [7, 8, 9], multipliers: [] }],
-            baseBetAmount: 0.1,
-            totalBoardCount: 50,
-            metadata: { name: "test-chain-2" },
-        },
-    ],
+    getBoardsByChainName: jest.fn(),
 };
 
 const mockAssignmentRepository = {
@@ -67,20 +49,13 @@ describe("UserChainConsumer", () => {
         mockGameData.availableChains = [
             {
                 name: "test-chain-1",
-                boards: [
-                    { board: [1, 2, 3], multipliers: [] },
-                    { board: [4, 5, 6], multipliers: [] },
-                ],
                 baseBetAmount: 0.1,
                 totalBoardCount: 75,
-                metadata: { name: "test-chain-1" },
             },
             {
                 name: "test-chain-2",
-                boards: [{ board: [7, 8, 9], multipliers: [] }],
                 baseBetAmount: 0.1,
                 totalBoardCount: 50,
-                metadata: { name: "test-chain-2" },
             },
         ];
 
@@ -92,10 +67,25 @@ describe("UserChainConsumer", () => {
             }),
         });
 
+        // Setup chainManager mock
+        mockChainManager.getBoardsByChainName.mockImplementation((chainName) => {
+            if (chainName === "test-chain-1") {
+                return Promise.resolve([
+                    { board: [1, 2, 3], multipliers: [] },
+                    { board: [4, 5, 6], multipliers: [] },
+                ]);
+            }
+            if (chainName === "test-chain-2") {
+                return Promise.resolve([{ board: [7, 8, 9], multipliers: [] }]);
+            }
+            return Promise.resolve(null);
+        });
+
         userChainConsumer = new UserChainConsumer({
             gameData: mockGameData,
             assignmentRepository: mockAssignmentRepository,
             logService: mockLogService,
+            resultChainManager: mockChainManager,
         });
     });
 
