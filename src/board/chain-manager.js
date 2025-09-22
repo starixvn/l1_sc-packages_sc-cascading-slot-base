@@ -111,7 +111,7 @@ export default class ChainManager {
         }
     }
 
-    async getNextResult(playerName, playerContext = {}, roundContext = {}) {
+    getNextResult(playerName, playerContext = {}, roundContext = {}) {
         if (!this.isChainEnabled()) {
             return null;
         }
@@ -127,6 +127,10 @@ export default class ChainManager {
         }
 
         if (playerChain.currentIndex >= playerChain.totalBoards) {
+            return null;
+        }
+
+        if (!playerChain.boardsLoaded || !playerChain.boards) {
             return null;
         }
 

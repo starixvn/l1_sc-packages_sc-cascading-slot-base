@@ -31,22 +31,20 @@ export default class UserChainConsumer {
                 const chain = this.gameData.availableChains?.find((c) => c.name === assignment.chainName);
 
                 if (chain) {
-                    const boards = await this.chainManager.getBoardsByChainName(assignment.chainName);
-                    if (boards) {
-                        const baseBetAmount = assignment.betLevel * assignment.coinValue;
-                        const chainKey = `${assignment.playerName}-${baseBetAmount}`;
-                        this.gameData.playerChains[chainKey] = {
-                            name: assignment.chainName,
-                            boards: [...boards],
-                            currentIndex: assignment.currentBoardIndex,
-                            totalBoards: assignment.totalBoards,
-                            assignedAt: assignment.assignedAt,
-                            betLevel: assignment.betLevel,
-                            coinValue: assignment.coinValue,
-                            playerId: assignment.playerId,
-                            playerName: assignment.playerName,
-                        };
-                    }
+                    const baseBetAmount = assignment.betLevel * assignment.coinValue;
+                    const chainKey = `${assignment.playerName}-${baseBetAmount}`;
+                    this.gameData.playerChains[chainKey] = {
+                        name: assignment.chainName,
+                        boards: null,
+                        currentIndex: assignment.currentBoardIndex,
+                        totalBoards: assignment.totalBoards,
+                        assignedAt: assignment.assignedAt,
+                        betLevel: assignment.betLevel,
+                        coinValue: assignment.coinValue,
+                        playerId: assignment.playerId,
+                        playerName: assignment.playerName,
+                        boardsLoaded: false,
+                    };
                 }
             }
         } catch (error) {
@@ -60,7 +58,15 @@ export default class UserChainConsumer {
         const baseBetAmount = betLevel * coinValue;
         const chainKey = `${playerName}-${baseBetAmount}`;
 
-        if (this.gameData.playerChains[chainKey]) {
+        const existingChain = this.gameData.playerChains[chainKey];
+        if (existingChain) {
+            if (!existingChain.boardsLoaded) {
+                const boards = await this.chainManager.getBoardsByChainName(existingChain.name);
+                if (boards) {
+                    existingChain.boards = [...boards];
+                    existingChain.boardsLoaded = true;
+                }
+            }
             return false;
         }
 
@@ -98,6 +104,7 @@ export default class UserChainConsumer {
             coinValue,
             playerId: playerContext.playerId,
             playerName,
+            boardsLoaded: true,
         };
 
         try {

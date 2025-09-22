@@ -297,10 +297,11 @@ describe("ChainManager", () => {
                 assignedAt: new Date(),
                 isFreeSpin: false,
                 freeSpinChain: [],
+                boardsLoaded: true,
             };
         });
 
-        it("should return first board result", async () => {
+        it("should return first board result", () => {
             // Set up player chain with composite key using baseBetAmount
             mockGameData.playerChains["testPlayer-0.1"] = {
                 name: "test-chain",
@@ -311,31 +312,32 @@ describe("ChainManager", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "testPlayer",
+                boardsLoaded: true,
             };
 
-            const result = await chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
+            const result = chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
 
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
             expect(mockGameData.playerChains["testPlayer-0.1"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
-        it("should return current board regardless of free spin context", async () => {
-            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
+        it("should return current board regardless of free spin context", () => {
+            const result = chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
 
             expect(result).toBeDefined();
             expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
-        it("should return null for player without chain", async () => {
-            const result = await chainManager.getNextResult("unknownPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
+        it("should return null for player without chain", () => {
+            const result = chainManager.getNextResult("unknownPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
             expect(result).toBeNull();
         });
 
-        it("should return null when chain is complete", async () => {
+        it("should return null when chain is complete", () => {
             // Simulate chain completion by setting currentIndex to total boards
             mockGameData.playerChains["testPlayer"].currentIndex = 3;
-            const result = await chainManager.getNextResult("testPlayer");
+            const result = chainManager.getNextResult("testPlayer");
             expect(result).toBeNull();
         });
     });
@@ -357,6 +359,7 @@ describe("ChainManager", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "testPlayer",
+                boardsLoaded: true,
             };
             expect(chainManager.shouldAssignChain("testPlayer", 1, 0.1)).toBe(false);
         });
@@ -385,6 +388,7 @@ describe("ChainManager", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "testPlayer",
+                boardsLoaded: true,
             };
             const status = chainManager.getChainStatus("testPlayer", 1, 0.1);
 

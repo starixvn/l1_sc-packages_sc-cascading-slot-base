@@ -207,6 +207,7 @@ describe("UserChainConsumer", () => {
                 name: "existing-chain",
                 boards: [],
                 currentIndex: 0,
+                boardsLoaded: true,
             };
 
             const result = await userChainConsumer.assignChain("existingPlayer", {
@@ -317,6 +318,7 @@ describe("UserChainConsumer", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "progressPlayer",
+                boardsLoaded: true,
             };
         });
 
@@ -374,6 +376,7 @@ describe("UserChainConsumer", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "completionPlayer",
+                boardsLoaded: true,
             };
 
             const completedAssignment = {
