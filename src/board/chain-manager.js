@@ -64,7 +64,19 @@ export default class ChainManager {
         }
 
         try {
-            const resultChains = await this.resultChainRepository.find({}).lean().exec();
+            // Limit MongoDB query to reduce payload and only load if we haven't reached the chain limit
+            const currentChainCount = this.gameData.availableChains.length;
+            if (currentChainCount >= 100) {
+                return; // Don't load more chains if we already have 100
+            }
+
+            const remainingSlots = 100 - currentChainCount;
+            const resultChains = await this.resultChainRepository
+                .find({ totalBoardCount: { $lt: 100 } })
+                .sort({ _id: -1 }) // Sort by _id descending to get newest chains first
+                .limit(remainingSlots)
+                .lean()
+                .exec();
 
             for (const chain of resultChains) {
                 if (chain.boardsData && chain.boardsData.length > 0) {
@@ -80,6 +92,7 @@ export default class ChainManager {
                 }
             }
 
+            this.logService.log(`[GameID: ${this.gameData.gameConfigs?.gameId}] Loaded ${resultChains.length} chains`);
             // Active player chains will be loaded by UserChainConsumer
         } catch (error) {
             this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chain data:`, error);

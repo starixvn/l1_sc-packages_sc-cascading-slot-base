@@ -37,6 +37,7 @@ const mockDatabaseChains = [
     {
         _id: "68ba82677350005bcefd0fbe",
         name: "test-chain",
+        totalBoardCount: 50,
         boardsData: [
             {
                 board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
@@ -95,10 +96,30 @@ describe("ChainManager", () => {
         jest.clearAllMocks();
 
         // Mock repository to return our test data
-        mockResultChainRepository.find.mockReturnValue({
-            lean: jest.fn().mockReturnValue({
-                exec: jest.fn().mockResolvedValue(mockDatabaseChains),
-            }),
+        mockResultChainRepository.find.mockImplementation((query = {}) => {
+            // Filter chains based on query
+            let filteredChains = mockDatabaseChains;
+            if (query.totalBoardCount && query.totalBoardCount.$lt) {
+                filteredChains = mockDatabaseChains.filter((chain) => chain.totalBoardCount < query.totalBoardCount.$lt);
+            }
+
+            return {
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(filteredChains.sort((a, b) => b._id.localeCompare(a._id))),
+                        }),
+                    }),
+                }),
+                limit: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(filteredChains),
+                    }),
+                }),
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(filteredChains),
+                }),
+            };
         });
 
         chainManager = new ChainManager({
@@ -187,7 +208,7 @@ describe("ChainManager", () => {
     describe("reloadChainData", () => {
         it("should append new chains without disrupting active player chains", async () => {
             // Set up initial state
-            mockGameData.availableChains = [{ name: "old-chain" }];
+            mockGameData.availableChains = [{ name: "old-chain", baseBetAmount: 0.05, totalBoardCount: 75 }];
             mockGameData.playerChains = { player1: {} };
 
             await chainManager.reloadChainData();
