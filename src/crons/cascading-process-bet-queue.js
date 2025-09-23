@@ -97,7 +97,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
 
         if (bet.freeSpin) {
             const freeSpin = await this.freeSpinsConsumer.useFreeSpin(player);
-            buyFreeSpinRefRoundId = freeSpin.buyFreeSpinRefRoundId;
+            buyFreeSpinRefRoundId = freeSpin?.buyFreeSpinRefRoundId;
         }
 
         const rate = this.calculateCurrencyRate(player.session);
