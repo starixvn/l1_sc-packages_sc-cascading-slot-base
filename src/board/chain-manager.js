@@ -189,6 +189,9 @@ export default class ChainManager {
             playerChain.boardsLoaded = true;
         }
 
+        // Update activity timestamp when chain is accessed
+        playerChain.lastActivityAt = new Date();
+
         const currentBoard = playerChain.boards[playerChain.currentIndex];
         const boardResult = this.convertChainBoardToResult(currentBoard);
 
@@ -227,6 +230,7 @@ export default class ChainManager {
                 currentIndex: activeAssignment.currentBoardIndex,
                 totalBoards: activeAssignment.totalBoards,
                 assignedAt: new Date(activeAssignment.assignedAt),
+                lastActivityAt: new Date(activeAssignment.lastActivityAt || activeAssignment.assignedAt),
                 betLevel: activeAssignment.betLevel,
                 coinValue: activeAssignment.coinValue,
                 playerId: activeAssignment.playerId,

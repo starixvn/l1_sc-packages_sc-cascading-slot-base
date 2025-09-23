@@ -63,6 +63,7 @@ describe("gameCron", () => {
     };
     const userChainConsumer = {
         loadActiveChains: jest.fn().mockResolvedValue(),
+        cleanExpiredChains: jest.fn(),
     };
 
     // Mock the boardGenerator.initialize() method

@@ -125,6 +125,9 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             await this.promotionFreeSpinsConsumer.loadPromotionsRunning();
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
+
+            // Perform chain memory cleanup every round (every ~60 seconds)
+            this.userChainConsumer.cleanExpiredChains();
         }
         await this.promotionFreeSpinsConsumer.checkExpiry(this.gameData.gameConfigs.gameId);
     }

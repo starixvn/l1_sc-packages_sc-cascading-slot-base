@@ -7,6 +7,8 @@ const CHAIN_CONSTANTS = {
     MINIMUM_PLAYABLE_BOARDS: 50,
     APPLICABLE_BOARDS_MULTIPLIER: 0.25,
     VALID_BOARD_COUNTS: [50, 75, 100, 125, 150, 175, 200],
+    // Memory expiration settings
+    MEMORY_EXPIRATION_MINUTES: 30, // Remove from memory after 30 minutes of inactivity
 };
 
 export default class UserChainConsumer {
@@ -96,12 +98,41 @@ export default class UserChainConsumer {
     }
 
     /**
+     * Clean up expired chains from memory based on last activity
+     */
+    cleanExpiredChains() {
+        const expirationThreshold = new Date(Date.now() - CHAIN_CONSTANTS.MEMORY_EXPIRATION_MINUTES * 60 * 1000);
+
+        const expiredChainKeys = Object.keys(this.gameData.playerChains).filter((chainKey) => {
+            const chain = this.gameData.playerChains[chainKey];
+            const lastActivity = new Date(chain.lastActivityAt || chain.assignedAt);
+
+            return lastActivity < expirationThreshold;
+        });
+
+        expiredChainKeys.forEach((chainKey) => {
+            delete this.gameData.playerChains[chainKey];
+        });
+    }
+
+    /**
+     * Update last activity timestamp for a player chain
+     * @param {string} chainKey - Chain identifier
+     */
+    updateChainActivity(chainKey) {
+        const chain = this.gameData.playerChains[chainKey];
+        if (chain) {
+            chain.lastActivityAt = new Date();
+        }
+    }
+
+    /**
      * Filter available chains by applicable board count
      * @param {Array} availableChains - All available chains
      * @param {number} applicableBoardCount - Maximum boards player can handle
      * @returns {Array} Matching chains
      */
-    filterChainsByBoardCount(availableChains, applicableBoardCount) {
+    filterChains(availableChains, applicableBoardCount) {
         return availableChains.filter((chain) => chain.totalBoardCount <= applicableBoardCount);
     }
 
@@ -128,12 +159,14 @@ export default class UserChainConsumer {
      */
     createPlayerChainEntry(selectedChain, boards, playerContext, playerName) {
         const { betLevel, coinValue, playerId } = playerContext;
+        const now = new Date();
         return {
             name: selectedChain.name,
             boards: [...boards],
             currentIndex: 0,
             totalBoards: boards.length,
-            assignedAt: new Date(),
+            assignedAt: now,
+            lastActivityAt: now, // Track activity for expiration
             betLevel,
             coinValue,
             playerId,
@@ -193,6 +226,7 @@ export default class UserChainConsumer {
                         currentIndex: assignment.currentBoardIndex,
                         totalBoards: assignment.totalBoards,
                         assignedAt: assignment.assignedAt,
+                        lastActivityAt: assignment.lastActivityAt || assignment.assignedAt, // For expiration tracking
                         betLevel: assignment.betLevel,
                         coinValue: assignment.coinValue,
                         playerId: assignment.playerId,
@@ -225,7 +259,7 @@ export default class UserChainConsumer {
 
         // Filter and select chain
         const availableChains = this.gameData.availableChains || [];
-        const matchingChains = this.filterChainsByBoardCount(availableChains, applicableBoardCount);
+        const matchingChains = this.filterChains(availableChains, applicableBoardCount);
         const selectedChain = this.selectRandomChain(matchingChains);
         if (!selectedChain) {
             return false;
@@ -267,6 +301,7 @@ export default class UserChainConsumer {
                 existingChain.boardsLoaded = true;
             }
         }
+
         return false; // Chain already exists
     }
 
