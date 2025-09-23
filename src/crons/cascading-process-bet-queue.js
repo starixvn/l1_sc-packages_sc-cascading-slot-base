@@ -6,12 +6,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     async proceedBet(player, payload) {
         const { features } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
-        if (
-            payload.buyFreeSpin &&
-            (this.freeSpinsConsumer.hasFreeSpin(player) ||
-                this.hasValidPromotion(player) ||
-                !isBuyFreeSpinEnabled(features?.buyFreeSpins, player.session))
-        ) {
+        if (payload.buyFreeSpin && (this.freeSpinsConsumer.hasFreeSpin(player) || !isBuyFreeSpinEnabled(features?.buyFreeSpins, player.session))) {
             this.placeBetPublisher.publishGameFailedBet(player.UID, { endBet: -1, notice: { errorCode: helpers.noticeHelper.invalidBet } });
             return;
         }
