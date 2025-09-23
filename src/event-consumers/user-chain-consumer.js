@@ -49,6 +49,53 @@ export default class UserChainConsumer {
     }
 
     /**
+     * Count active chains for a specific player in memory
+     * @param {string} playerName - Player identifier
+     * @returns {number} Number of active chains for the player
+     */
+    countPlayerChainsInMemory(playerName) {
+        return Object.keys(this.gameData.playerChains).filter((key) => key.startsWith(`${playerName}-`)).length;
+    }
+
+    /**
+     * Get the oldest chain for a player (by assignedAt date)
+     * @param {string} playerName - Player identifier
+     * @returns {string|null} Chain key of oldest chain or null
+     */
+    getOldestPlayerChain(playerName) {
+        const playerChainKeys = Object.keys(this.gameData.playerChains).filter((key) => key.startsWith(`${playerName}-`));
+
+        if (playerChainKeys.length === 0) {
+            return null;
+        }
+
+        return playerChainKeys.reduce((oldest, current) => {
+            const oldestChain = this.gameData.playerChains[oldest];
+            const currentChain = this.gameData.playerChains[current];
+
+            return currentChain.assignedAt < oldestChain.assignedAt ? current : oldest;
+        });
+    }
+
+    /**
+     * Remove oldest chain from memory if player has reached the limit
+     * @param {string} playerName - Player identifier
+     */
+    enforcePlayerChainLimit(playerName) {
+        const MAX_CHAINS_PER_PLAYER = 2;
+
+        while (this.countPlayerChainsInMemory(playerName) >= MAX_CHAINS_PER_PLAYER) {
+            const oldestChainKey = this.getOldestPlayerChain(playerName);
+            if (oldestChainKey) {
+                delete this.gameData.playerChains[oldestChainKey];
+                this.logService.log(`Removed oldest chain ${oldestChainKey} from memory to enforce limit`);
+            } else {
+                break; // Safety break
+            }
+        }
+    }
+
+    /**
      * Filter available chains by applicable board count
      * @param {Array} availableChains - All available chains
      * @param {number} applicableBoardCount - Maximum boards player can handle
@@ -189,6 +236,9 @@ export default class UserChainConsumer {
         if (!boards) {
             return false;
         }
+
+        // Enforce player chain limit before adding new chain
+        this.enforcePlayerChainLimit(playerName);
 
         // Create memory and database entries
         const playerChainEntry = this.createPlayerChainEntry(selectedChain, boards, playerContext, playerName);

@@ -13,7 +13,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
             const { player, bet, balance } = context;
             const playerName = player.profile.name;
 
-            if (this.chainManager.shouldAssignChain(playerName, bet?.betLevel, bet?.coinValue)) {
+            if (await this.chainManager.shouldAssignChain(playerName, bet?.betLevel, bet?.coinValue)) {
                 const playerContext = {
                     playerId: player.session?.playerId || player.UID,
                     sessionId: player.session?.sessionId,

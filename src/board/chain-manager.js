@@ -157,7 +157,7 @@ export default class ChainManager {
         }
     }
 
-    getNextResult(playerName, playerContext = {}, roundContext = {}) {
+    async getNextResult(playerName, playerContext = {}, roundContext = {}) {
         if (!this.isChainEnabled()) {
             return null;
         }
@@ -165,24 +165,84 @@ export default class ChainManager {
         const { betLevel, coinValue } = playerContext;
 
         const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
-        const playerChain = this.findExistingChain(chainKey);
+        let playerChain = this.findExistingChain(chainKey);
 
+        // If chain not in memory, try to reload from database
         if (!playerChain) {
-            return null;
+            playerChain = await this.reloadChainFromDatabase(playerName, betLevel, coinValue);
+            if (!playerChain) {
+                return null; // No active assignment found
+            }
         }
 
         if (playerChain.currentIndex >= playerChain.totalBoards) {
             return null;
         }
 
+        // If boards not loaded, load them
         if (!playerChain.boardsLoaded || !playerChain.boards) {
-            return null;
+            const boards = await this.getBoardsByChainName(playerChain.name);
+            if (!boards) {
+                return null;
+            }
+            playerChain.boards = [...boards];
+            playerChain.boardsLoaded = true;
         }
 
         const currentBoard = playerChain.boards[playerChain.currentIndex];
         const boardResult = this.convertChainBoardToResult(currentBoard);
 
         return boardResult;
+    }
+
+    /**
+     * Reload chain from database when not found in memory
+     * @param {string} playerName - Player identifier
+     * @param {number} betLevel - Bet level
+     * @param {number} coinValue - Coin value
+     * @returns {Promise<Object|null>} Reloaded chain or null
+     */
+    async reloadChainFromDatabase(playerName, betLevel, coinValue) {
+        try {
+            const activeAssignment = await this.assignmentRepository
+                .findOne({
+                    playerName,
+                    betLevel,
+                    coinValue,
+                    status: ASSIGNMENT_STATUS.ACTIVE,
+                    gameId: this.gameData.gameConfigs.gameId,
+                })
+                .lean()
+                .exec();
+
+            if (!activeAssignment) {
+                return null; // No active assignment
+            }
+
+            // Create chain entry in memory from database data
+            const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
+            const playerChain = {
+                name: activeAssignment.chainName,
+                boards: null, // Will be loaded on-demand
+                currentIndex: activeAssignment.currentBoardIndex,
+                totalBoards: activeAssignment.totalBoards,
+                assignedAt: new Date(activeAssignment.assignedAt),
+                betLevel: activeAssignment.betLevel,
+                coinValue: activeAssignment.coinValue,
+                playerId: activeAssignment.playerId,
+                playerName: activeAssignment.playerName,
+                boardsLoaded: false,
+            };
+
+            // Add to memory (this might evict other chains due to limit)
+            this.gameData.playerChains[chainKey] = playerChain;
+
+            this.logService.log(`Reloaded chain ${chainKey} from database for processing`);
+            return playerChain;
+        } catch (error) {
+            this.logService.logError(`Failed to reload chain from database: ${error.message}`);
+            return null;
+        }
     }
 
     convertChainBoardToResult(chainBoard) {
@@ -223,13 +283,37 @@ export default class ChainManager {
         ];
     }
 
-    shouldAssignChain(playerName, betLevel, coinValue) {
+    async shouldAssignChain(playerName, betLevel, coinValue) {
         if (!this.isChainEnabled()) {
             return false;
         }
 
         const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
-        return !this.findExistingChain(chainKey);
+
+        // First check memory
+        const memoryChain = this.findExistingChain(chainKey);
+        if (memoryChain) {
+            return false; // Chain exists in memory
+        }
+
+        // Then check database for active assignments
+        try {
+            const activeAssignment = await this.assignmentRepository
+                .findOne({
+                    playerName,
+                    betLevel,
+                    coinValue,
+                    status: ASSIGNMENT_STATUS.ACTIVE,
+                    gameId: this.gameData.gameConfigs.gameId,
+                })
+                .lean()
+                .exec();
+
+            return !activeAssignment; // Return false if active assignment exists
+        } catch (error) {
+            this.logService.logError(`Failed to check database for active chain assignment: ${error.message}`);
+            return false; // Conservative approach - don't assign if we can't check
+        }
     }
 
     getChainStatus(playerName, betLevel, coinValue) {

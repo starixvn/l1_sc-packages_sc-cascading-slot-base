@@ -322,7 +322,7 @@ describe("ChainManager", () => {
             };
         });
 
-        it("should return first board result", () => {
+        it("should return first board result", async () => {
             // Set up player chain with composite key using baseBetAmount
             mockGameData.playerChains["testPlayer-0.10"] = {
                 name: "test-chain",
@@ -336,40 +336,86 @@ describe("ChainManager", () => {
                 boardsLoaded: true,
             };
 
-            const result = chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
+            const result = await chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
 
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
             expect(mockGameData.playerChains["testPlayer-0.10"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
-        it("should return current board regardless of free spin context", () => {
-            const result = chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
+        it("should return current board regardless of free spin context", async () => {
+            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
 
             expect(result).toBeDefined();
             expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
-        it("should return null for player without chain", () => {
-            const result = chainManager.getNextResult("unknownPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
+        it("should return null for player without chain", async () => {
+            // Mock assignmentRepository to return no active assignment
+            mockAssignmentRepository.findOne.mockReturnValue({
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(null),
+                }),
+            });
+
+            const result = await chainManager.getNextResult("unknownPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
             expect(result).toBeNull();
         });
 
-        it("should return null when chain is complete", () => {
+        it("should return null when chain is complete", async () => {
             // Simulate chain completion by setting currentIndex to total boards
             mockGameData.playerChains["testPlayer"].currentIndex = 3;
-            const result = chainManager.getNextResult("testPlayer");
+            const result = await chainManager.getNextResult("testPlayer");
             expect(result).toBeNull();
+        });
+
+        it("should reload chain from database when not in memory", async () => {
+            // Mock active assignment in database
+            const mockAssignment = {
+                chainName: "test-chain",
+                currentBoardIndex: 1,
+                totalBoards: 3,
+                assignedAt: new Date(),
+                betLevel: 1,
+                coinValue: 0.1,
+                playerId: "player123",
+                playerName: "testPlayer",
+            };
+
+            mockAssignmentRepository.findOne.mockReturnValue({
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(mockAssignment),
+                }),
+            });
+
+            // Mock getBoardsByChainName on the chainManager instance
+            chainManager.getBoardsByChainName = jest.fn().mockResolvedValue([...mockDatabaseChains[0].boardsData]);
+
+            const result = await chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
+
+            expect(result).toBeDefined();
+            expect(Array.isArray(result)).toBe(true);
+            expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["testPlayer-0.10"].boardsLoaded).toBe(true);
         });
     });
 
     describe("shouldAssignChain", () => {
-        it("should return true for player without chain when enabled", () => {
+        it("should return true for player without chain when enabled", async () => {
             chainManager.chainConfigs.enabled = true;
-            expect(chainManager.shouldAssignChain("newPlayer")).toBe(true);
+
+            // Mock assignmentRepository to return no active assignment
+            mockAssignmentRepository.findOne.mockReturnValue({
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(null),
+                }),
+            });
+
+            const result = await chainManager.shouldAssignChain("newPlayer", 1, 0.1);
+            expect(result).toBe(true);
         });
 
-        it("should return false for player with chain", () => {
+        it("should return false for player with chain", async () => {
             chainManager.chainConfigs.enabled = true;
             // Manually set up a player chain for testing with composite key using baseBetAmount
             mockGameData.playerChains["testPlayer-0.10"] = {
@@ -382,12 +428,15 @@ describe("ChainManager", () => {
                 playerName: "testPlayer",
                 boardsLoaded: true,
             };
-            expect(chainManager.shouldAssignChain("testPlayer", 1, 0.1)).toBe(false);
+
+            const result = await chainManager.shouldAssignChain("testPlayer", 1, 0.1);
+            expect(result).toBe(false);
         });
 
-        it("should return false when feature is disabled via chainConfigs", () => {
+        it("should return false when feature is disabled via chainConfigs", async () => {
             chainManager.chainConfigs.enabled = false;
-            expect(chainManager.shouldAssignChain("newPlayer")).toBe(false);
+            const result = await chainManager.shouldAssignChain("newPlayer", 1, 0.1);
+            expect(result).toBe(false);
         });
     });
 
