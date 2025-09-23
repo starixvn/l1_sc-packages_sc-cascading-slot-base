@@ -130,15 +130,15 @@ describe("UserChainConsumer", () => {
 
             await userChainConsumer.loadActiveChains();
 
-            expect(mockGameData.playerChains["activePlayer1-0.1"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer1-0.1"].name).toBe("test-chain-1");
-            expect(mockGameData.playerChains["activePlayer1-0.1"].currentIndex).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1-0.1"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1-0.1"].coinValue).toBe(0.1);
+            expect(mockGameData.playerChains["activePlayer1-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["activePlayer1-0.10"].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains["activePlayer1-0.10"].currentIndex).toBe(1);
+            expect(mockGameData.playerChains["activePlayer1-0.10"].betLevel).toBe(1);
+            expect(mockGameData.playerChains["activePlayer1-0.10"].coinValue).toBe(0.1);
 
-            expect(mockGameData.playerChains["activePlayer2-0.4"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer2-0.4"].name).toBe("test-chain-2");
-            expect(mockGameData.playerChains["activePlayer2-0.4"].currentIndex).toBe(0);
+            expect(mockGameData.playerChains["activePlayer2-0.40"]).toBeDefined();
+            expect(mockGameData.playerChains["activePlayer2-0.40"].name).toBe("test-chain-2");
+            expect(mockGameData.playerChains["activePlayer2-0.40"].currentIndex).toBe(0);
         });
 
         it("should warn when chain is not found in available chains", async () => {
@@ -195,15 +195,15 @@ describe("UserChainConsumer", () => {
             const result = await userChainConsumer.assignChain("testPlayer", playerContext);
 
             expect(result).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-0.1"]).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer-0.1"].currentIndex).toBe(0);
-            expect(mockGameData.playerChains["testPlayer-0.1"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["testPlayer-0.1"].coinValue).toBe(0.1);
+            expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["testPlayer-0.10"].currentIndex).toBe(0);
+            expect(mockGameData.playerChains["testPlayer-0.10"].betLevel).toBe(1);
+            expect(mockGameData.playerChains["testPlayer-0.10"].coinValue).toBe(0.1);
             expect(mockAssignmentRepository.create).toHaveBeenCalled();
         });
 
         it("should return false when player already has an active chain", async () => {
-            mockGameData.playerChains["existingPlayer-0.1"] = {
+            mockGameData.playerChains["existingPlayer-0.10"] = {
                 name: "existing-chain",
                 boards: [],
                 currentIndex: 0,
@@ -245,7 +245,7 @@ describe("UserChainConsumer", () => {
             });
 
             expect(result).toBe(true);
-            expect(mockGameData.playerChains["randomTestPlayer-0.1"].name).toBe("test-chain-2");
+            expect(mockGameData.playerChains["randomTestPlayer-0.10"].name).toBe("test-chain-2");
 
             Math.random = originalMathRandom;
         });
@@ -266,7 +266,7 @@ describe("UserChainConsumer", () => {
 
             expect(result).toBe(true);
             // Should not query assignments for filtering - assignChain no longer does this
-            expect(mockGameData.playerChains["noFilterTestPlayer-0.1"].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains["noFilterTestPlayer-0.10"].name).toBe("test-chain-1");
 
             Math.random = originalMathRandom;
         });
@@ -310,7 +310,7 @@ describe("UserChainConsumer", () => {
 
     describe("updateChainProgress", () => {
         beforeEach(() => {
-            mockGameData.playerChains["progressPlayer-0.1"] = {
+            mockGameData.playerChains["progressPlayer-0.10"] = {
                 name: "test-chain-1",
                 boards: [{ board: [1, 2, 3] }, { board: [4, 5, 6] }],
                 currentIndex: 0,
@@ -344,7 +344,7 @@ describe("UserChainConsumer", () => {
             });
 
             expect(result).toEqual(updatedAssignment);
-            expect(mockGameData.playerChains["progressPlayer-0.1"].currentIndex).toBe(1);
+            expect(mockGameData.playerChains["progressPlayer-0.10"].currentIndex).toBe(1);
             expect(mockAssignmentRepository.findOneAndUpdate).toHaveBeenCalledWith(
                 {
                     playerId: "player-123",
@@ -368,7 +368,7 @@ describe("UserChainConsumer", () => {
         });
 
         it("should complete chain when reaching total boards", async () => {
-            mockGameData.playerChains["completionPlayer-0.1"] = {
+            mockGameData.playerChains["completionPlayer-0.10"] = {
                 name: "test-chain-1",
                 boards: [{ board: [1, 2, 3] }],
                 currentIndex: 0,
@@ -402,7 +402,7 @@ describe("UserChainConsumer", () => {
             });
 
             expect(result).toEqual(completedAssignment);
-            expect(mockGameData.playerChains["completionPlayer-0.1"]).toBeUndefined();
+            expect(mockGameData.playerChains["completionPlayer-0.10"]).toBeUndefined();
             // No completion log since it's handled silently
         });
 

@@ -29,6 +29,37 @@ export default class ChainManager {
     }
 
     /**
+     * Calculate normalized base bet amount with floating point precision fix
+     * @param {number} betLevel - Bet level
+     * @param {number} coinValue - Coin value
+     * @returns {number} Normalized base bet amount
+     */
+    calculateBaseBetAmount(betLevel, coinValue) {
+        return Math.round(betLevel * coinValue * 100) / 100;
+    }
+
+    /**
+     * Generate consistent chain key from player name and bet parameters
+     * @param {string} playerName - Player identifier
+     * @param {number} betLevel - Bet level
+     * @param {number} coinValue - Coin value
+     * @returns {string} Normalized chain key
+     */
+    generateChainKey(playerName, betLevel, coinValue) {
+        const baseBetAmount = this.calculateBaseBetAmount(betLevel, coinValue);
+        return `${playerName}-${baseBetAmount.toFixed(2)}`;
+    }
+
+    /**
+     * Check if player already has an active chain
+     * @param {string} chainKey - Chain identifier
+     * @returns {Object|null} Existing chain or null
+     */
+    findExistingChain(chainKey) {
+        return this.gameData.playerChains[chainKey] || null;
+    }
+
+    /**
      * Update chain configurations from gameConfigs and handle reloading if needed
      * @param {Object} newChainConfigs - Configuration object with enabled and reload properties
      */
@@ -133,9 +164,8 @@ export default class ChainManager {
 
         const { betLevel, coinValue } = playerContext;
 
-        const baseBetAmount = betLevel * coinValue;
-        const chainKey = `${playerName}-${baseBetAmount}`;
-        const playerChain = this.gameData.playerChains[chainKey];
+        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
+        const playerChain = this.findExistingChain(chainKey);
 
         if (!playerChain) {
             return null;
@@ -198,15 +228,13 @@ export default class ChainManager {
             return false;
         }
 
-        const baseBetAmount = betLevel * coinValue;
-        const chainKey = `${playerName}-${baseBetAmount}`;
-        return !this.gameData.playerChains[chainKey];
+        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
+        return !this.findExistingChain(chainKey);
     }
 
     getChainStatus(playerName, betLevel, coinValue) {
-        const baseBetAmount = betLevel * coinValue;
-        const chainKey = `${playerName}-${baseBetAmount}`;
-        const playerChain = this.gameData.playerChains[chainKey];
+        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
+        const playerChain = this.findExistingChain(chainKey);
 
         if (!playerChain) {
             return { hasChain: false };

@@ -324,7 +324,7 @@ describe("ChainManager", () => {
 
         it("should return first board result", () => {
             // Set up player chain with composite key using baseBetAmount
-            mockGameData.playerChains["testPlayer-0.1"] = {
+            mockGameData.playerChains["testPlayer-0.10"] = {
                 name: "test-chain",
                 boards: [...mockDatabaseChains[0].boardsData],
                 currentIndex: 0,
@@ -340,7 +340,7 @@ describe("ChainManager", () => {
 
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-0.1"].currentIndex).toBe(0); // getNextResult no longer increments
+            expect(mockGameData.playerChains["testPlayer-0.10"].currentIndex).toBe(0); // getNextResult no longer increments
         });
 
         it("should return current board regardless of free spin context", () => {
@@ -372,7 +372,7 @@ describe("ChainManager", () => {
         it("should return false for player with chain", () => {
             chainManager.chainConfigs.enabled = true;
             // Manually set up a player chain for testing with composite key using baseBetAmount
-            mockGameData.playerChains["testPlayer-0.1"] = {
+            mockGameData.playerChains["testPlayer-0.10"] = {
                 name: "test-chain",
                 boards: [],
                 currentIndex: 0,
@@ -400,7 +400,7 @@ describe("ChainManager", () => {
         it("should return chain status for player with chain", () => {
             // Manually set up a player chain for testing with composite key using baseBetAmount
             const assignedAt = new Date();
-            mockGameData.playerChains["testPlayer-0.1"] = {
+            mockGameData.playerChains["testPlayer-0.10"] = {
                 name: "test-chain",
                 boards: [],
                 currentIndex: 0,
