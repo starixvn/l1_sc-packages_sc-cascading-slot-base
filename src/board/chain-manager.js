@@ -103,7 +103,9 @@ export default class ChainManager {
 
     async getBoardsByChainName(chainName) {
         try {
+            this.logService.log(`[GameID: ${this.gameData.gameConfigs?.gameId}] Loading boards for chain ${chainName}`);
             const chain = await this.resultChainRepository.findOne({ name: chainName }).lean().exec();
+
             return chain?.boardsData || null;
         } catch (error) {
             this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load boards for chain ${chainName}:`, error);
