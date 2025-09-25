@@ -130,7 +130,6 @@ describe("InGameConsumer", () => {
                         betLevel: undefined,
                         coinValue: undefined,
                         betMultiplier: undefined,
-                        promotionId: undefined,
                         buyFreeSpins: false,
                     },
                     totalMultiplier: 10,
@@ -143,7 +142,7 @@ describe("InGameConsumer", () => {
                             enabled: true,
                             multiplier: 2,
                         },
-                    }
+                    },
                 };
 
                 // Act
@@ -179,6 +178,7 @@ describe("InGameConsumer", () => {
                                 additionalOdds: [],
                             },
                         },
+                        defaultCoinValue: 1,
                     },
                     freeSpins: {
                         total: 10,
@@ -219,6 +219,8 @@ describe("InGameConsumer", () => {
                     profile: { name: "player2" },
                 };
 
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
+
                 // Arrange
                 const expectedValue = {
                     gameConfigs: {
@@ -240,7 +242,6 @@ describe("InGameConsumer", () => {
                         betLevel: 2,
                         betMultiplier: 20,
                         coinValue: 10,
-                        promotionId: undefined,
                         buyFreeSpins: true,
                     },
                     totalMultiplier: 0,
@@ -273,6 +274,8 @@ describe("InGameConsumer", () => {
                     profile: { name: "player2" },
                 };
 
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
+
                 // Act
                 const actualValue = await consumer.buildPayload(realPlayer);
 
@@ -302,6 +305,8 @@ describe("InGameConsumer", () => {
                     },
                     profile: { name: "player2" },
                 };
+
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
 
                 // Act
                 const actualValue = await consumer.buildPayload(realPlayer);
@@ -333,6 +338,8 @@ describe("InGameConsumer", () => {
                     profile: { name: "player2" },
                 };
 
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
+
                 // Act
                 const actualValue = await consumer.buildPayload(realPlayer);
 
@@ -356,6 +363,8 @@ describe("InGameConsumer", () => {
                     },
                     profile: { name: "player2" },
                 };
+
+                getBalance.mockResolvedValueOnce({ isOk: true, response: { red: 100 } });
 
                 // Act
                 const actualValue = await consumer.buildPayload(realPlayer);

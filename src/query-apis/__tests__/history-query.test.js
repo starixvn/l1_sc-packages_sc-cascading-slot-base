@@ -21,7 +21,7 @@ describe("queryHistory", () => {
             const actualResult = await historyQuery.queryHistory({}, 0, 10);
 
             // Assert
-            expect(actualResult).toBeEmpty();
+            expect(actualResult).toEqual({});
         });
     });
 
@@ -32,7 +32,7 @@ describe("queryHistory", () => {
                 const actualResult = await historyQuery.queryHistory(null, 1, 10);
 
                 // Assert
-                expect(actualResult).toBeEmpty();
+                expect(actualResult).toEqual({});
             });
         });
 

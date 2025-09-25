@@ -94,7 +94,7 @@ describe("handleSetBoard", () => {
                 router.handleSetBoard(validParams, res);
 
                 //Assert
-                expect(gameData.settlementResultFromAdmin[validParams.name]).toBeArray();
+                expect(Array.isArray(gameData.settlementResultFromAdmin[validParams.name])).toBe(true);
             });
 
             afterEach(() => {

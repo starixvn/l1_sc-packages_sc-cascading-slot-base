@@ -144,7 +144,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.validateBetRequest(player, payload);
 
                     // Assert
-                    expect(actualValue).toBeFalse();
+                    expect(actualValue).toBe(false);
                 });
 
                 it("should publish failed event", () => {
@@ -167,7 +167,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.validateBetRequest(player, payload);
 
                     // Assert
-                    expect(actualValue).toBeTrue();
+                    expect(actualValue).toBe(true);
                 });
             });
         });
@@ -187,7 +187,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.validateBetRequest(player, payload);
 
                     // Assert
-                    expect(actualValue).toBeFalse();
+                    expect(actualValue).toBe(false);
                 });
             });
 
@@ -201,7 +201,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.validateBetRequest(player, payload);
 
                     // Assert
-                    expect(actualValue).toBeFalse();
+                    expect(actualValue).toBe(false);
                 });
             });
 
@@ -218,7 +218,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.validateBetRequest(player, payload);
 
                     // Assert
-                    expect(actualValue).toBeFalse();
+                    expect(actualValue).toBe(false);
                 });
 
                 it("should publish failed event", () => {
@@ -241,7 +241,7 @@ describe("PlaceBetConsumer", () => {
                     const actualValue = consumer.validateBetRequest(player, payload);
 
                     // Assert
-                    expect(actualValue).toBeTrue();
+                    expect(actualValue).toBe(true);
                 });
             });
         });
