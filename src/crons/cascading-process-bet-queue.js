@@ -14,7 +14,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     }
 
     isInPromotionPeriod(player) {
-        return this.hasValidPromotion(player) && player.promotion.lastUsedDate;
+        return this.hasValidPromotion(player) && player.promotion.remainingBonusItems < player.promotion.initialBonusItem;
     }
 
     async proceedBet(player, payload) {
