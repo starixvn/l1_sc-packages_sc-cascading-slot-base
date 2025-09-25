@@ -39,7 +39,7 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
 
             this.gameData.ingame[name] = newPlayer;
         }
-
+        this.gameData.ingame[name].promotion = player.promotion ? { ...player.promotion } : null;
         this.gameData.ingame[name].betQueue.push({ player, payload });
     }
 
