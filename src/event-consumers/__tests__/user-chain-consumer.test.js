@@ -369,8 +369,7 @@ describe("UserChainConsumer", () => {
             expect(mockAssignmentRepository.findOneAndUpdate).toHaveBeenCalledWith(
                 {
                     playerId: "player-123",
-                    betLevel: 1,
-                    coinValue: 0.1,
+                    chainName: "test-chain-1",
                     status: "active",
                     gameId: "test-game-123",
                 },

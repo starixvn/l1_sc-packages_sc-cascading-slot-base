@@ -369,8 +369,7 @@ export default class UserChainConsumer {
             const updatedAssignment = await this.assignmentRepository.findOneAndUpdate(
                 {
                     playerId,
-                    betLevel,
-                    coinValue,
+                    chainName: playerChain.name,
                     status: ASSIGNMENT_STATUS.ACTIVE,
                     gameId: this.gameData.gameConfigs.gameId,
                 },
