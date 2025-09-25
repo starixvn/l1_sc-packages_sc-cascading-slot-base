@@ -23,7 +23,6 @@ export default class ChainManager {
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.gameData.availableChains = this.gameData.availableChains || [];
 
-        // Initialize chain configurations from gameConfigs
         const { enabled = false, reload = false } = this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains || {};
         this.chainConfigs = { enabled, reload };
     }
@@ -67,14 +66,12 @@ export default class ChainManager {
         const previousConfigs = { ...this.chainConfigs };
         this.chainConfigs = { ...this.chainConfigs, ...newChainConfigs };
 
-        // Log configuration changes
         if (previousConfigs.enabled !== this.chainConfigs.enabled) {
             this.logService.logError(
                 `[GameID: ${this.gameData.gameConfigs?.gameId}] Result chains ${this.chainConfigs.enabled ? "enabled" : "disabled"} via gameConfigs`
             );
         }
 
-        // Handle reload: reload chains if both enabled and reload are true
         if (this.chainConfigs.enabled && this.chainConfigs.reload) {
             this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Reloading result chains due to configuration`);
             await this.reloadChainData();
@@ -89,65 +86,75 @@ export default class ChainManager {
         return this.chainConfigs.enabled;
     }
 
-    async loadChainData() {
+    /**
+     * Load chains from database with configurable options
+     * @param {Object} options - Loading options
+     * @param {boolean} options.validateBoardsData - Whether to validate boardsData exists
+     * @param {boolean} options.includeMetadata - Whether to include metadata and boards array
+     */
+    async loadChainsFromDatabase(options = {}) {
+        const { validateBoardsData = false, includeMetadata = false } = options;
+
         if (!this.isChainEnabled()) {
             return;
         }
 
         try {
-            // Limit MongoDB query to reduce payload and only load if we haven't reached the chain limit
             const currentChainCount = this.gameData.availableChains.length;
             if (currentChainCount >= 200) {
-                return; // Don't load more chains if we already have 100
+                return;
             }
 
             const remainingSlots = 200 - currentChainCount;
             const resultChains = await this.resultChainRepository
                 .find({ totalBoardCount: { $lt: 200 } })
-                .sort({ _id: -1 }) // Sort by _id descending to get newest chains first
+                .sort({ _id: -1 })
                 .limit(remainingSlots)
                 .lean()
                 .exec();
 
             for (const chain of resultChains) {
-                if (chain.boardsData && chain.boardsData.length > 0) {
-                    const existingChain = this.gameData.availableChains.find((existing) => existing.name === chain.name);
+                if (validateBoardsData && (!chain.boardsData || chain.boardsData.length === 0)) {
+                    continue;
+                }
 
-                    if (!existingChain) {
-                        this.gameData.availableChains.push({
-                            name: chain.name,
-                            baseBetAmount: chain.baseBetAmount,
-                            totalBoardCount: chain.totalBoardCount,
-                        });
+                const existingChain = this.gameData.availableChains.find((c) => c.name === chain.name);
+                if (!existingChain) {
+                    const chainData = {
+                        name: chain.name,
+                        baseBetAmount: chain.baseBetAmount,
+                        totalBoardCount: chain.totalBoardCount,
+                    };
+
+                    if (includeMetadata) {
+                        chainData.boards = [];
+                        chainData.metadata = chain;
                     }
+
+                    this.gameData.availableChains.push(chainData);
                 }
             }
-
-            this.logService.log(`[GameID: ${this.gameData.gameConfigs?.gameId}] Loaded ${resultChains.length} chains`);
-            // Active player chains will be loaded by UserChainConsumer
         } catch (error) {
-            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chain data:`, error);
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chains from database:`, error);
         }
     }
 
-    /**
-     * Reload chain data - appends new chains without disrupting active player chains
-     */
+    async loadChainData() {
+        await this.loadChainsFromDatabase({
+            validateBoardsData: true,
+            includeMetadata: false,
+        });
+    }
+
     async reloadChainData() {
-        const previousChainCount = this.gameData.availableChains.length;
-
-        // Load fresh chain data (will append to existing availableChains)
-        await this.loadChainData();
-
-        const newChainCount = this.gameData.availableChains.length - previousChainCount;
-        this.logService.logError(
-            `[GameID: ${this.gameData.gameConfigs?.gameId}] Reloaded chains: ${newChainCount} new chains added, ${this.gameData.availableChains.length} total available`
-        );
+        await this.loadChainsFromDatabase({
+            validateBoardsData: false,
+            includeMetadata: true,
+        });
     }
 
     async getBoardsByChainName(chainName) {
         try {
-            this.logService.log(`[GameID: ${this.gameData.gameConfigs?.gameId}] Loading boards for chain ${chainName}`);
             const chain = await this.resultChainRepository.findOne({ name: chainName }).lean().exec();
 
             return chain?.boardsData || null;
@@ -157,6 +164,24 @@ export default class ChainManager {
         }
     }
 
+    /**
+     * Get or load player chain from memory or database
+     * @param {string} playerName - Player identifier
+     * @param {number} betLevel - Bet level
+     * @param {number} coinValue - Coin value
+     * @returns {Promise<Object|null>} Player chain or null
+     */
+    async getPlayerChain(playerName, betLevel, coinValue) {
+        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
+        const existingChain = this.findExistingChain(chainKey);
+
+        if (existingChain) {
+            return existingChain;
+        }
+
+        return await this.reloadChainFromDatabase(playerName, betLevel, coinValue);
+    }
+
     async getNextResult(playerName, playerContext = {}, roundContext = {}) {
         if (!this.isChainEnabled()) {
             return null;
@@ -164,15 +189,9 @@ export default class ChainManager {
 
         const { betLevel, coinValue } = playerContext;
 
-        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
-        let playerChain = this.findExistingChain(chainKey);
-
-        // If chain not in memory, try to reload from database
+        const playerChain = await this.getPlayerChain(playerName, betLevel, coinValue);
         if (!playerChain) {
-            playerChain = await this.reloadChainFromDatabase(playerName, betLevel, coinValue);
-            if (!playerChain) {
-                return null; // No active assignment found
-            }
+            return null;
         }
 
         if (playerChain.currentIndex >= playerChain.totalBoards) {
@@ -238,10 +257,8 @@ export default class ChainManager {
                 boardsLoaded: false,
             };
 
-            // Add to memory (this might evict other chains due to limit)
             this.gameData.playerChains[chainKey] = playerChain;
 
-            this.logService.log(`Reloaded chain ${chainKey} from database for processing`);
             return playerChain;
         } catch (error) {
             this.logService.logError(`Failed to reload chain from database: ${error.message}`);
@@ -293,14 +310,11 @@ export default class ChainManager {
         }
 
         const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
-
-        // First check memory
         const memoryChain = this.findExistingChain(chainKey);
         if (memoryChain) {
-            return false; // Chain exists in memory
+            return false;
         }
 
-        // Then check database for active assignments
         try {
             const activeAssignment = await this.assignmentRepository
                 .findOne({
@@ -313,10 +327,10 @@ export default class ChainManager {
                 .lean()
                 .exec();
 
-            return !activeAssignment; // Return false if active assignment exists
+            return !activeAssignment;
         } catch (error) {
             this.logService.logError(`Failed to check database for active chain assignment: ${error.message}`);
-            return false; // Conservative approach - don't assign if we can't check
+            return false;
         }
     }
 

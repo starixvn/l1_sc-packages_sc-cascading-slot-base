@@ -5,7 +5,7 @@ const mockGameData = {
     gameConfigs: {
         gameId: "test-game-123",
         cascadingSlotsConfig: {
-            betMultiplier: 1,
+            betMultiplier: 20,
         },
     },
     playerChains: {},
@@ -58,6 +58,9 @@ describe("UserChainConsumer", () => {
                 totalBoardCount: 50,
             },
         ];
+
+        // Reset bet multiplier to realistic value
+        mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
 
         // Reset repository mocks to default state
         mockAssignmentRepository.create.mockResolvedValue({ _id: "test-assignment-id" });
@@ -128,6 +131,16 @@ describe("UserChainConsumer", () => {
                 }),
             });
 
+            mockAssignmentRepository.find.mockReturnValue({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(activeAssignments),
+                        }),
+                    }),
+                }),
+            });
+
             await userChainConsumer.loadActiveChains();
 
             expect(mockGameData.playerChains["activePlayer1-0.10"]).toBeDefined();
@@ -156,8 +169,12 @@ describe("UserChainConsumer", () => {
             ];
 
             mockAssignmentRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(activeAssignments),
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(activeAssignments),
+                        }),
+                    }),
                 }),
             });
 
@@ -169,8 +186,12 @@ describe("UserChainConsumer", () => {
 
         it("should handle database errors gracefully", async () => {
             mockAssignmentRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockRejectedValue(new Error("Database error")),
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockRejectedValue(new Error("Database error")),
+                        }),
+                    }),
                 }),
             });
 
@@ -186,7 +207,7 @@ describe("UserChainConsumer", () => {
                 playerId: "player-123",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100,
+                balance: 120, // Will result in 75 applicable boards (within limit)
                 operatorId: "test-operator",
                 gameId: "test-game",
                 currency: "USD",
@@ -213,7 +234,7 @@ describe("UserChainConsumer", () => {
             const result = await userChainConsumer.assignChain("existingPlayer", {
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100,
+                balance: 120,
             });
 
             expect(result).toBe(false);
@@ -226,7 +247,7 @@ describe("UserChainConsumer", () => {
             const result = await userChainConsumer.assignChain("testPlayer", {
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100,
+                balance: 120,
             });
 
             expect(result).toBe(false);
@@ -241,7 +262,7 @@ describe("UserChainConsumer", () => {
                 playerId: "randomTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100,
+                balance: 120,
             });
 
             expect(result).toBe(true);
@@ -258,7 +279,7 @@ describe("UserChainConsumer", () => {
                 playerId: "noFilterTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100,
+                balance: 120,
                 operatorId: "test-operator",
                 gameId: "test-game",
                 currency: "USD",
@@ -300,7 +321,7 @@ describe("UserChainConsumer", () => {
                 playerId: "errorTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100,
+                balance: 120,
             });
 
             expect(result).toBe(true); // Assignment to memory should still succeed
@@ -506,63 +527,64 @@ describe("UserChainConsumer", () => {
         });
 
         it("should calculate board count using betMultiplier from gameConfigs", () => {
-            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 2;
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
 
-            const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 0.1);
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 120 }, 0.1);
 
-            // affordableSpins = floor(100 / 0.1 / 2) = floor(500) = 500
-            // calculatedBoardCount = floor(500 + 0.25 * 500 * 2) = floor(500 + 250) = 750
-            // assignedBoardCount = max(750, 200) = 750
-            // Should round to nearest valid count, which is 200 (closest to 750 in range [50, 75, 100, 125, 150, 175, 200])
-            expect(result).toBe(200);
+            // playableBoards = floor(120 / 0.1 / 20) = floor(60) = 60
+            // applicableBoards = floor(60 + 15) = 75
+            // 75 <= 100 (maximum), closest valid = 75
+            expect(result).toBe(75);
         });
 
         it("should return -1 when playable boards less than 50", () => {
-            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
 
-            const result = userChainConsumer.getApplicableBoardCount({ balance: 10 }, 1);
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 50 }, 0.1);
 
-            // playableBoards = 10, which is < 50, so should return -1 (no chain assignment)
+            // playableBoards = floor(50 / 0.1 / 20) = floor(25) = 25
+            // Since 25 < 50 (minimum), should return -1
             expect(result).toBe(-1);
         });
 
         it("should apply chain when playable boards equals exactly 50", () => {
-            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
 
-            const result = userChainConsumer.getApplicableBoardCount({ balance: 50 }, 1);
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 0.1);
 
-            // playableBoards = 50, applicableBoards = 50 + 12.5 = 62.5 -> 62
+            // playableBoards = floor(100 / 0.1 / 20) = floor(50) = 50
+            // applicableBoards = floor(50 + 12.5) = 62
             // Valid counts: [50, 75, 100, 125, 150, 175, 200]
             // Distance from 62: |50-62|=12, |75-62|=13, so closest is 50
             expect(result).toBe(50);
         });
 
         it("should calculate board count and round to nearest valid count", () => {
-            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 1;
+            mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
 
             // Test different scenarios with new formula
-            const result1 = userChainConsumer.getApplicableBoardCount({ balance: 60 }, 1);
-            // playableBoards = 60, applicableBoards = 60 + 15 = 75, closest valid = 75
+            const result1 = userChainConsumer.getApplicableBoardCount({ balance: 120 }, 0.1);
+            // playableBoards = floor(120 / 0.1 / 20) = 60, applicableBoards = 75, closest valid = 75
             expect(result1).toBe(75);
 
-            const result2 = userChainConsumer.getApplicableBoardCount({ balance: 85 }, 1);
-            // playableBoards = 85, applicableBoards = 85 + 21.25 = 106.25 -> 106, closest valid = 100
+            const result2 = userChainConsumer.getApplicableBoardCount({ balance: 160 }, 0.1);
+            // playableBoards = floor(160 / 0.1 / 20) = 80, applicableBoards = 100, closest valid = 100
             expect(result2).toBe(100);
 
-            // Test with larger balance
-            const result3 = userChainConsumer.getApplicableBoardCount({ balance: 500 }, 1);
-            // playableBoards = 500, applicableBoards = 500 + 125 = 625, closest valid = 200 (max in range)
-            expect(result3).toBe(200);
+            // Test with larger balance that exceeds maximum
+            const result3 = userChainConsumer.getApplicableBoardCount({ balance: 1000 }, 0.1);
+            // playableBoards = floor(1000 / 0.1 / 20) = 500, applicableBoards = 625, exceeds max (100), so return -1
+            expect(result3).toBe(-1);
         });
 
         it("should use default betMultiplier when not configured", () => {
             delete mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier;
 
-            const result = userChainConsumer.getApplicableBoardCount({ balance: 100 }, 1);
+            const result = userChainConsumer.getApplicableBoardCount({ balance: 80 }, 1);
 
             // Should use default multiplier of 1
-            // playableBoards = 100, applicableBoards = 100 + 25 = 125, closest valid = 125
-            expect(result).toBe(125);
+            // playableBoards = floor(80 / 1 / 1) = 80, applicableBoards = 100, closest valid = 100
+            expect(result).toBe(100);
         });
     });
 
@@ -623,6 +645,306 @@ describe("UserChainConsumer", () => {
             expect(userChainConsumer.getClosestValidBoardCount(0)).toBe(50); // Closest to minimum
             expect(userChainConsumer.getClosestValidBoardCount(1000)).toBe(200); // Closest to maximum
             expect(userChainConsumer.getClosestValidBoardCount(87.5)).toBe(75); // |75-87.5|=12.5, |100-87.5|=12.5, returns first (75)
+        });
+    });
+
+    describe("sortByActivity", () => {
+        beforeEach(() => {
+            const now = new Date();
+            mockGameData.playerChains = {
+                "player1-0.10": {
+                    lastActivityAt: new Date(now.getTime() - 1000), // 1 second ago
+                    assignedAt: new Date(now.getTime() - 5000),
+                },
+                "player2-0.20": {
+                    lastActivityAt: new Date(now.getTime() - 3000), // 3 seconds ago
+                    assignedAt: new Date(now.getTime() - 4000),
+                },
+                "player3-0.30": {
+                    // No lastActivityAt, should use assignedAt
+                    assignedAt: new Date(now.getTime() - 2000), // 2 seconds ago
+                },
+            };
+        });
+
+        it("should sort chains by most recent activity first", () => {
+            const chainKeys = ["player1-0.10", "player2-0.20", "player3-0.30"];
+            const sorted = userChainConsumer.sortByActivity(chainKeys);
+
+            // Expected order: player1 (1s ago) -> player3 (2s ago) -> player2 (3s ago)
+            expect(sorted).toEqual(["player1-0.10", "player3-0.30", "player2-0.20"]);
+        });
+
+        it("should handle empty array", () => {
+            const sorted = userChainConsumer.sortByActivity([]);
+            expect(sorted).toEqual([]);
+        });
+
+        it("should handle single item", () => {
+            const sorted = userChainConsumer.sortByActivity(["player1-0.10"]);
+            expect(sorted).toEqual(["player1-0.10"]);
+        });
+
+        it("should fallback to assignedAt when lastActivityAt is missing", () => {
+            const now = new Date();
+            mockGameData.playerChains = {
+                "player1-0.10": {
+                    assignedAt: new Date(now.getTime() - 1000), // 1 second ago
+                },
+                "player2-0.20": {
+                    assignedAt: new Date(now.getTime() - 3000), // 3 seconds ago
+                },
+            };
+
+            const sorted = userChainConsumer.sortByActivity(["player1-0.10", "player2-0.20"]);
+            expect(sorted).toEqual(["player1-0.10", "player2-0.20"]);
+        });
+    });
+
+    describe("limitPlayerChain", () => {
+        beforeEach(() => {
+            const now = new Date();
+            mockGameData.playerChains = {
+                "testPlayer-0.10": {
+                    lastActivityAt: new Date(now.getTime() - 1000),
+                    assignedAt: new Date(now.getTime() - 5000),
+                },
+                "testPlayer-0.20": {
+                    lastActivityAt: new Date(now.getTime() - 3000),
+                    assignedAt: new Date(now.getTime() - 4000),
+                },
+                "testPlayer-0.30": {
+                    lastActivityAt: new Date(now.getTime() - 2000),
+                    assignedAt: new Date(now.getTime() - 3000),
+                },
+                "otherPlayer-0.10": {
+                    lastActivityAt: new Date(now.getTime() - 1500),
+                    assignedAt: new Date(now.getTime() - 2000),
+                },
+            };
+        });
+
+        it("should not remove chains when player has less than limit", () => {
+            userChainConsumer.limitPlayerChain("singlePlayer");
+
+            // Should not affect existing chains
+            expect(Object.keys(mockGameData.playerChains)).toHaveLength(4);
+        });
+
+        it("should remove oldest chains when player exceeds limit", () => {
+            userChainConsumer.limitPlayerChain("testPlayer");
+
+            // Should keep only 2 most recent chains for testPlayer
+            const remainingChains = Object.keys(mockGameData.playerChains).filter((key) => key.startsWith("testPlayer-"));
+            expect(remainingChains).toHaveLength(2);
+
+            // Should keep most recent: testPlayer-0.10 (1s ago) and testPlayer-0.30 (2s ago)
+            expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["testPlayer-0.30"]).toBeDefined();
+            expect(mockGameData.playerChains["testPlayer-0.20"]).toBeUndefined(); // Oldest (3s ago)
+
+            // Should not affect other players
+            expect(mockGameData.playerChains["otherPlayer-0.10"]).toBeDefined();
+        });
+
+        it("should handle player with exactly the limit", () => {
+            // Remove one chain to have exactly 2
+            delete mockGameData.playerChains["testPlayer-0.30"];
+
+            userChainConsumer.limitPlayerChain("testPlayer");
+
+            // Should keep both chains
+            expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["testPlayer-0.20"]).toBeDefined();
+        });
+    });
+
+    describe("clean", () => {
+        beforeEach(() => {
+            const now = new Date();
+            const expiredTime = now.getTime() - 31 * 60 * 1000; // 31 minutes ago (expired)
+            const recentTime = now.getTime() - 10 * 60 * 1000; // 10 minutes ago (not expired)
+
+            mockGameData.playerChains = {
+                "expired1-0.10": {
+                    lastActivityAt: new Date(expiredTime),
+                    assignedAt: new Date(expiredTime),
+                },
+                "expired2-0.20": {
+                    assignedAt: new Date(expiredTime), // No lastActivityAt, uses assignedAt
+                },
+                "recent1-0.10": {
+                    lastActivityAt: new Date(recentTime),
+                    assignedAt: new Date(recentTime),
+                },
+                "recent2-0.20": {
+                    lastActivityAt: new Date(recentTime),
+                    assignedAt: new Date(recentTime),
+                },
+            };
+        });
+
+        it("should remove expired chains", () => {
+            userChainConsumer.clean();
+
+            expect(mockGameData.playerChains["expired1-0.10"]).toBeUndefined();
+            expect(mockGameData.playerChains["expired2-0.20"]).toBeUndefined();
+            expect(mockGameData.playerChains["recent1-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["recent2-0.20"]).toBeDefined();
+        });
+
+        it("should enforce global cache limit after cleaning expired chains", () => {
+            // Create many non-expired chains to exceed global limit
+            const now = new Date();
+            const recentTime = now.getTime() - 10 * 60 * 1000;
+
+            // Clear existing chains and create 302 chains (exceeds limit of 300)
+            mockGameData.playerChains = {};
+            for (let i = 0; i < 302; i++) {
+                mockGameData.playerChains[`player${i}-0.10`] = {
+                    lastActivityAt: new Date(recentTime - i * 1000), // Different times for sorting
+                    assignedAt: new Date(recentTime - i * 1000),
+                };
+            }
+
+            userChainConsumer.clean();
+
+            // Should keep only 300 most recent chains
+            expect(Object.keys(mockGameData.playerChains)).toHaveLength(300);
+
+            // Should keep the most recent ones (player0, player1, etc.)
+            expect(mockGameData.playerChains["player0-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["player299-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["player300-0.10"]).toBeUndefined();
+            expect(mockGameData.playerChains["player301-0.10"]).toBeUndefined();
+        });
+
+        it("should not enforce global limit when under threshold", () => {
+            userChainConsumer.clean();
+
+            // Should only remove expired chains, keep recent ones
+            expect(Object.keys(mockGameData.playerChains)).toHaveLength(2);
+            expect(mockGameData.playerChains["recent1-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["recent2-0.20"]).toBeDefined();
+        });
+    });
+
+    describe("findSuitableChain", () => {
+        it("should return null when applicable board count is -1", async () => {
+            const playerContext = {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 0, // Will result in -1 applicable board count
+            };
+
+            const result = await userChainConsumer.findSuitableChain(playerContext);
+            expect(result).toBeNull();
+        });
+
+        it("should return null when no matching chains available", async () => {
+            mockGameData.availableChains = [
+                { name: "chain1", totalBoardCount: 200 }, // Too many boards
+            ];
+
+            const playerContext = {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 120, // Will result in ~75 applicable boards
+            };
+
+            const result = await userChainConsumer.findSuitableChain(playerContext);
+            expect(result).toBeNull();
+        });
+
+        it("should return selected chain when matching chains exist", async () => {
+            const originalMathRandom = Math.random;
+            Math.random = jest.fn().mockReturnValue(0.0); // Select first chain
+
+            const playerContext = {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 120, // Will result in 75 applicable boards
+            };
+
+            const result = await userChainConsumer.findSuitableChain(playerContext);
+            expect(result).toEqual({
+                name: "test-chain-1",
+                baseBetAmount: 0.1,
+                totalBoardCount: 75,
+            });
+
+            Math.random = originalMathRandom;
+        });
+
+        it("should handle empty available chains", async () => {
+            mockGameData.availableChains = [];
+
+            const playerContext = {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 120,
+            };
+
+            const result = await userChainConsumer.findSuitableChain(playerContext);
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("storeChainAssignment", () => {
+        it("should store chain in memory and database successfully", async () => {
+            const chainKey = "testPlayer-0.10";
+            const selectedChain = { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 };
+            const boards = [{ board: [1, 2, 3] }, { board: [4, 5, 6] }];
+            const playerContext = {
+                playerId: "player-123",
+                betLevel: 1,
+                coinValue: 0.1,
+                operatorId: "test-operator",
+                gameId: "test-game",
+                currency: "USD",
+            };
+            const playerName = "testPlayer";
+
+            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, boards, playerContext, playerName);
+
+            // Check memory storage
+            expect(mockGameData.playerChains[chainKey]).toBeDefined();
+            expect(mockGameData.playerChains[chainKey].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains[chainKey].boards).toEqual(boards);
+            expect(mockGameData.playerChains[chainKey].currentIndex).toBe(0);
+            expect(mockGameData.playerChains[chainKey].boardsLoaded).toBe(true);
+
+            // Check database storage
+            expect(mockAssignmentRepository.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    playerId: "player-123",
+                    playerName: "testPlayer",
+                    chainName: "test-chain-1",
+                    currentBoardIndex: 0,
+                    totalBoards: 2,
+                    betLevel: 1,
+                    coinValue: 0.1,
+                    status: "active",
+                })
+            );
+        });
+
+        it("should handle database errors gracefully", async () => {
+            mockAssignmentRepository.create.mockRejectedValueOnce(new Error("Database error"));
+
+            const chainKey = "errorPlayer-0.10";
+            const selectedChain = { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 };
+            const boards = [{ board: [1, 2, 3] }];
+            const playerContext = { playerId: "player-123", betLevel: 1, coinValue: 0.1 };
+            const playerName = "errorPlayer";
+
+            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, boards, playerContext, playerName);
+
+            // Memory storage should still work
+            expect(mockGameData.playerChains[chainKey]).toBeDefined();
+
+            // Error should be logged
+            expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to create chain assignment for errorPlayer"));
         });
     });
 });

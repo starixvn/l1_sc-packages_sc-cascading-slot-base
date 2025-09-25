@@ -218,7 +218,6 @@ describe("ChainManager", () => {
             expect(mockGameData.availableChains.some((chain) => chain.name === "test-chain")).toBe(true);
             // Player chains should remain intact
             expect(mockGameData.playerChains).toEqual({ player1: {} });
-            expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloaded chains: 1 new chains added, 2 total available");
         });
 
         it("should not add duplicate chains during reload", async () => {
@@ -233,7 +232,6 @@ describe("ChainManager", () => {
             // Should not add duplicate test-chain
             expect(mockGameData.availableChains).toHaveLength(2);
             expect(mockGameData.availableChains.filter((chain) => chain.name === "test-chain")).toHaveLength(1);
-            expect(mockLogService.logError).toHaveBeenCalledWith("[GameID: test-game-123] Reloaded chains: 0 new chains added, 2 total available");
         });
     });
 

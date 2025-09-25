@@ -63,7 +63,7 @@ describe("gameCron", () => {
     };
     const userChainConsumer = {
         loadActiveChains: jest.fn().mockResolvedValue(),
-        cleanExpiredChains: jest.fn(),
+        clean: jest.fn(),
     };
 
     // Mock the boardGenerator.initialize() method
@@ -210,6 +210,14 @@ describe("gameCron", () => {
 
             // Assert
             expect(resultChainManager.loadChainData).toBeCalled();
+        });
+
+        it("should load active chains", async () => {
+            // Act
+            await gameCron.start();
+
+            // Assert
+            expect(userChainConsumer.loadActiveChains).toBeCalled();
         });
 
         it("should call boardGenerator.initialize", async () => {
@@ -419,6 +427,14 @@ describe("gameCron", () => {
 
                 // Assert
                 expect(totalMultiplierConsumer.reload).toBeCalled();
+            });
+
+            it("should clean expired chains", async () => {
+                // Act
+                await gameCron.proceed();
+
+                // Assert
+                expect(userChainConsumer.clean).toBeCalled();
             });
         });
     });
