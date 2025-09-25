@@ -69,7 +69,9 @@ export default class TotalMultiplierConsumer {
                 const latestTotalMultiplier = totalMultiplier.rounds[totalMultiplier.rounds.length - 1].totalMultiplier;
                 const isHavingFreeSpins =
                     this.freeSpinsConsumer.hasFreeSpin({ profile: { name: totalMultiplier.name } }) ||
-                    (totalMultiplier.promotionId && player?.promotion?.remainingBonusItems > 0);
+                    (totalMultiplier.promotionId && (
+                        player?.promotion?.remainingBonusItems > 0 || 
+                        this.gameData.ingame[totalMultiplier.name]?.promotion?.remainingBonusItems > 0));
 
                 if (isHavingFreeSpins) {
                     this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
