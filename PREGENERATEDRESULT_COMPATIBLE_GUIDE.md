@@ -122,10 +122,16 @@ const occurences = boardArray.filter((x) => x !== defaultDefinition.specialSymbo
    - ✅ **Final board counting**: Only final tumble's board state is used for free spin counting
 
 3. **Multiplier Accumulation Logic:**
+
    ```javascript
-   Tumble 1: 1x Symbol 10 → generates [13]
-   Tumble 2: 2x Symbol 10 → generates [14] + keeps [13] = [14, 13]
-   Final:    1x Symbol 10 → preserves [14, 13] (total = 27)
+   // Multipliers accumulate through cascades - existing values persist + new ones added
+   Tumble 1: 2x Symbol 10 → generates [6, 6]
+   Tumble 2: 1x new Symbol 10 → adds [2] to existing = [6, 6, 2]
+   Final:    No new Symbol 10s → preserves [6, 6, 2] (total = 14)
+
+   // Round multiplier calculation (from round-calculator.js:71)
+   round.multiplier = lastTumble.multipliers.reduce((total, current) => total + current, 0);
+   // Result: 6 + 6 + 2 = 14
    ```
 
 #### **Settlement Data Requirements**
@@ -174,7 +180,7 @@ const occurences = boardArray.filter((x) => x !== defaultDefinition.specialSymbo
 
 **Use case**: Board has winning combination that cascades once
 
-````javascript
+`````javascript
 // Example from corrected JSON - Board 1
 {
   "board": [6, 10, 5, 7, 8, 1, 6, 1, 0, 1, 9, 9, 6, 2, 0, 7, 0, 1, 0, 3, 2, 7, 8, 2, 0, 0, 0, 4, 0, 0],
@@ -204,6 +210,54 @@ const occurences = boardArray.filter((x) => x !== defaultDefinition.specialSymbo
   }
 }
 
+### Pattern 3: Multiplier Accumulation Through Cascades
+
+**Use case**: Multiplier symbols (Symbol 10) accumulate through multiple tumbles
+
+````javascript
+// Example: Multipliers [6, 6] → [6, 6, 2] progression
+{
+  "board": [1, 2, 3, 10, 10, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 1, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 10],
+  "multipliers": [6, 6, 2], // Final accumulated multipliers
+  "settlementResult": {
+    "tumbles": [
+      // 🔑 FIRST TUMBLE: Initial multipliers found
+      {
+        "icons": {"1": {"count": 6, "odds": 2.5, "win": 1.25}},  // Winning 1s
+        "originalBoard": "1,2,3,10,10,6,7,8,1,2,3,4,5,6,7,8,1,1,1,4,5,6,7,8,1,2,3,4,5,10",
+        "newBoard": "4,5,6,10,10,6,7,8,2,3,4,4,5,6,7,8,2,3,4,4,5,6,7,8,2,3,4,4,5,10", // Cascade + Symbol 10s preserved
+        "explodedSymbols": [1,-1,-1,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,1,1,1,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1], // Only 1s exploded
+        "newSymbols": [4,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,3,4,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1],      // New symbols
+        "multipliers": [6, 6], // Two Symbol 10s generate values 6, 6
+        "win": 1.25
+      },
+      // 🔑 SECOND TUMBLE: New multiplier appears + existing preserved
+      {
+        "icons": {"2": {"count": 4, "odds": 1.5, "win": 0.75}},  // Winning 2s
+        "originalBoard": "4,5,6,10,10,6,7,8,2,3,4,4,5,6,7,8,2,3,4,4,5,6,7,8,2,3,4,4,5,10",
+        "newBoard": "7,8,9,10,10,6,7,8,3,4,5,4,5,6,7,8,3,4,5,4,5,6,7,8,3,4,5,4,5,10", // Another cascade + Symbol 10s still preserved
+        "explodedSymbols": [-1,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1], // Only 2s exploded
+        "newSymbols": [-1,-1,-1,-1,-1,-1,-1,-1,3,-1,-1,-1,-1,-1,-1,-1,3,-1,-1,-1,-1,-1,-1,-1,3,-1,-1,-1,-1,-1],      // New symbols
+        "multipliers": [6, 6, 2], // Previous [6, 6] + new Symbol 10 generates [2] = [6, 6, 2]
+        "win": 0.75
+      },
+      // 🔑 THIRD TUMBLE: Final tumble, no more wins
+      {
+        "icons": {},  // Empty - no more wins
+        "originalBoard": "7,8,9,10,10,6,7,8,3,4,5,4,5,6,7,8,3,4,5,4,5,6,7,8,3,4,5,4,5,10", // Final board state
+        "newBoard": "7,8,9,10,10,6,7,8,3,4,5,4,5,6,7,8,3,4,5,4,5,6,7,8,3,4,5,4,5,10",      // No change
+        "multipliers": [6, 6, 2], // Same multipliers preserved
+        "win": 0
+        // No explodedSymbols or newSymbols - final tumble
+      }
+    ]
+  },
+  "totalTumbleWin": 2.0 // 1.25 + 0.75 = 2.0
+}
+// Final round multiplier calculation: 6 + 6 + 2 = 14
+// If this were a regular spin: actualBetwin = 2.0 * 14 = 28.0
+`````
+
 ## Database Storage Format
 
 ### Complete Board Document Structure
@@ -229,7 +283,7 @@ Your service should generate data following this structure for database storage:
   },
   "totalTumbleWin": 5  // Sum of all tumble wins
 }
-````
+```
 
 ### ChainManager Integration
 
@@ -722,6 +776,14 @@ Ensure your settlement data follows these rules:
 - **Multiplier Accumulation**: Each Symbol 10 generates values, accumulate in `multipliers` arrays
 - **Position Changes**: Special symbols can move during cascades but never disappear from explosions
 
+#### ✅ **Multiplier Accumulation Rules**
+
+- **Persistence**: Existing multiplier values must carry forward to subsequent tumbles
+- **Addition**: New Symbol 10s add their values to existing multiplier arrays
+- **Example Flow**: `[6, 6]` (tumble 1) → `[6, 6, 2]` (tumble 2) → `[6, 6, 2]` (final)
+- **Round Calculation**: Final multiplier = sum of all values in last tumble's multipliers array
+- **Never Reset**: Multiplier arrays never lose values during cascades, only add new ones
+
 ## Integration Points
 
 ### Database to ChainManager Flow
@@ -765,11 +827,15 @@ convertChainBoardToResult(chainBoard) {
 
 - [ ] Follow Pattern 1 for non-winning boards
 - [ ] Follow Pattern 2 for cascade scenarios
+- [ ] Follow Pattern 3 for multiplier accumulation scenarios
 - [ ] Validate all board arrays are exactly 30 elements
 - [ ] Ensure CSV strings have no spaces
 - [ ] **CRITICAL**: Never explode Symbol 10 (multiplier) or Symbol 9 (free spins)
 - [ ] Preserve special symbols in all `newBoard` states through cascades
 - [ ] Accumulate multiplier values from all Symbol 10s in `multipliers` arrays
+- [ ] **MULTIPLIER FLOW**: Carry forward existing multiplier values to next tumbles
+- [ ] **MULTIPLIER ADDITION**: Add new Symbol 10 values to existing arrays, never replace
+- [ ] **FINAL CALCULATION**: Ensure last tumble contains all accumulated multiplier values
 
 **Before Database Storage:**
 
@@ -825,7 +891,8 @@ This practical example serves as a **complete reference implementation** for ser
 This guide provides everything needed to generate correct settlement tumble data:
 
 - **Complete database storage format** with required structure
-- **Tumble structure patterns** for different scenarios
+- **Tumble structure patterns** for different scenarios (no-win, cascade, multiplier accumulation)
+- **Multiplier accumulation mechanics** showing how Symbol 10 values persist and grow through cascades
 - **Free spin processing** with automatic counting and odds
 - **Special symbol preservation** rules for Symbol 10 and 9
 - **Integration flow** from database to game engine
