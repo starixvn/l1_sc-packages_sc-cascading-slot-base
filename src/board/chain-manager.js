@@ -97,13 +97,13 @@ export default class ChainManager {
         try {
             // Limit MongoDB query to reduce payload and only load if we haven't reached the chain limit
             const currentChainCount = this.gameData.availableChains.length;
-            if (currentChainCount >= 100) {
+            if (currentChainCount >= 200) {
                 return; // Don't load more chains if we already have 100
             }
 
-            const remainingSlots = 100 - currentChainCount;
+            const remainingSlots = 200 - currentChainCount;
             const resultChains = await this.resultChainRepository
-                .find({ totalBoardCount: { $lt: 100 } })
+                .find({ totalBoardCount: { $lt: 200 } })
                 .sort({ _id: -1 }) // Sort by _id descending to get newest chains first
                 .limit(remainingSlots)
                 .lean()
