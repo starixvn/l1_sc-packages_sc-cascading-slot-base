@@ -25,7 +25,7 @@ export default class ChainManager {
         this.gameData.chainBoardsCache = this.gameData.chainBoardsCache || {};
 
         const { enabled = false, reload = false } = this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains || {};
-        const maxLoadedChains = this.appConfigs?.maxLoadedChains || 50;
+        const maxLoadedChains = this.appConfigs?.maxLoadedChains || 20;
         this.chainConfigs = { enabled, reload, maxLoadedChains };
     }
 

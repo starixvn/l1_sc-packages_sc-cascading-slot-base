@@ -32,14 +32,14 @@ const mockAssignmentRepository = {
 
 const mockAppConfigs = {
     resultChains: { enabled: true },
-    maxLoadedChains: 50,
+    maxLoadedChains: 20,
 };
 
 const mockDatabaseChains = [
     {
         _id: "68ba82677350005bcefd0fbe",
         name: "test-chain",
-        totalBoardCount: 25,
+        totalBoardCount: 15,
         boardsData: [
             {
                 board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
@@ -156,7 +156,7 @@ describe("ChainManager", () => {
             expect(freshChainManager.chainConfigs).toEqual({
                 enabled: false,
                 reload: false,
-                maxLoadedChains: 50,
+                maxLoadedChains: 20,
             });
         });
 

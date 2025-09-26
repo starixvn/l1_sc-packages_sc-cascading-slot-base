@@ -108,8 +108,8 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
 
                 res.send({
                     success: true,
-                    cacheSize: cacheEntries.length,
-                    maxCacheSize: 300, // From CHAIN_CONSTANTS.MAX_GLOBAL_CACHE_SIZE
+                    chainLoaded: cacheEntries.length,
+                    maxChainLoaded: this.appConfigs.maxLoadedChains,
                     entries: cacheEntries,
                 });
             } else {
