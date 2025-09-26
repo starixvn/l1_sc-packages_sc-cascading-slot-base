@@ -17,7 +17,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         return (
             this.hasValidPromotion(player) &&
             player.promotion.remainingBonusItems < player.promotion.initialBonusItem &&
-            !this.betEventInterceptors.shouldCompletePromotion(player)
+            (player.promotion.remainingBonusItems > 0 || player.promotion.freeSpinAvailable > 0)
         );
     }
 
