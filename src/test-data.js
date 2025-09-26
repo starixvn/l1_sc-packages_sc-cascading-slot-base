@@ -69,6 +69,10 @@ const gameConfigs = {
             min: 2,
             max: 25,
         },
+        resultChains: {
+            enabled: false,
+            reload: false,
+        },
     },
 };
 
@@ -76,6 +80,5 @@ const definition = {
     id: 47,
     name: "cascadinggame",
 };
-
 
 export { gameConfigs, definition };
