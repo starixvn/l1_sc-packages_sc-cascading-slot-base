@@ -4,6 +4,63 @@
 ### Bug Fixes
 
 * afterEventSuccess input data ([c8c4e80](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/c8c4e80d7de7e049b33c0f05f80928337d18ff6a))
+* bet with promotion free spin - Epic GL-4893 ([03d1f81](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/03d1f812ddd078e8c5f11e21ad2138c19b72711b))
+* bug reload total multiplier ([6ef1bc2](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/6ef1bc257e72d576ab118830803809f6eace6caf))
+* buy free spin condition - Epic GL-4893 ([c39b8bb](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/c39b8bb3a7c7a30af5d0780ff49bf5295599a447))
+* buy free spin on promotion period - Epic GL-4893 ([eb5d9fd](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/eb5d9fdea34092861f327925aab6090e9577c474))
+* buy free spin on promotion period - Epic GL-4893 ([25f5b43](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/25f5b43d8cce484c96e434bede2976794dc5b37a))
+* buy free spin on promotion period - Epic GL-4893 ([46a07bd](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/46a07bdd2dd778832ba462966d617a194d7f27e3))
+* check in promotion period - Epic GL-4893 ([730f2c2](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/730f2c2e9e16872cb64aca04a8a9e0812bab1940))
+* check in promotion period - Epic GL-4893 ([90b351f](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/90b351f6522452b549d42047a8046b2c385285a7))
+* check running promotion - Epic GL-4893 ([454f0c2](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/454f0c2755de7591ce7f42528a7208093b1f2dd1))
+* container registry - Epic GL-4893 ([2d9866c](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/2d9866c2c42b7cdb0ae1060e1dfa7a814e1016ad))
+* correct version of game base ([741f963](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/741f96339581f3286116a84613e2864ace42f42d))
+* cron - remove unecessary codes ([d693c6c](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/d693c6cbd5bb5388ff8d60094fe4c144b06f0f0a))
+* dependency - Epic GL-4893 ([a4f738e](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/a4f738e3ac9d9439809104b2b41d0d4e2bebe4c9))
+* end promotion after using all free spins ([334ce5a](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/334ce5a6c72e7388aae39ed8d3c2506ba3b36451))
+* import PromotionFreeSpinsConsumer - Epic GL-4893 ([f5917bb](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/f5917bb1707e0d78848b18a37b446f20736402f7))
+* missing import user sign in consumer - Epic GL-4893 ([9c62570](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/9c62570db9d6fed8987462f0fffc48b8e4ce9e6a))
+* missing util - Epic GL-4893 ([f49942f](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/f49942fa96356a6bd8a2381b757f1245c9a55f4f))
+* prohibit buy freespin when having promotion - Epic GL-4893 ([1c4d336](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/1c4d3365a6f3bf1106611bb4a2c7e1bc5304c997))
+* reload total multiplier ([a7a2294](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/a7a229472f0dd640424ac0a2248d80b3eb1ecbee))
+* remove rounding ([4dc468a](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/4dc468a6228b04dd3cbad1b008ad4c6527659ae5))
+* return betwin 0 when not exist bet ([132d39e](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/132d39e15950ede452c7e74eca3557dfa0ccf924))
+* settle expired free spin - Epic GL-4893 ([f38fe64](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/f38fe64221bcf8f0e5e9f3d73ab61baa37197cc6))
+* update container registry - Epic GL-4893 ([86c31ec](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/86c31ecbdc230e7dad1796e61332802f705d09c9))
+
+
+### Features
+
+*  update BREAKING CHANGES: sc-game-base@5.4.0 ([94d898b](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/94d898b372c5b02591395713afe2fd94dbed43b7))
+* add bet interceptor ([6735f5b](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/6735f5b5123376b7d35581595a4dba2eb7a34197))
+* add cron check promotion expiry - Epic GL-3265 ([2aa99eb](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/2aa99eb9a4fbd09705a357a7e0fba4b591e24adb))
+* add free spins promotion feature ([a24ad72](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/a24ad72f5783e482fe99e85d9102f50b5ba7f6e0))
+* add promotion feature BREAKING CHANGES ([d9bc770](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/d9bc77085fb5b3ed2cc7e7231ce43c69ad03ae60))
+* add sessionId to rounds ([0f1d1d1](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/0f1d1d1bd017933e8a449eeb3e1145979bef9a47))
+* check gain extra free spin - Epic GL-3265 ([7cf69f7](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/7cf69f7851d60598aa4b527eebe450093dcd8ee6))
+* cron - checkPromotionReadiness ([9b3a5f9](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/9b3a5f94b9d071e39ba5415198aa733ff55a04ec))
+* get all promotion running ([bdecdd0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/bdecdd0ef83948dba2ba2bd0443f9dcb2d120cb0))
+* ingame event - add promotion info to freespins section ([2cf318f](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/2cf318f78d0859c8890adf0dae033303442cbfbb))
+* integrate tracking client ([f35c0fc](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/f35c0fcf3115d3e4963bd12ea8cd0a14cea5cf68))
+* merge buy freespin & new generatorrr model - Epic GL-4893 ([179f048](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/179f04864f488c7b3aaeb8c2c31d2ed94c7c0730))
+* promotion ticket - add base currency amount ([e80709b](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/e80709b1c7675228081ae6a627cecbbcb03a27fb))
+* redeem promotion code - add coinValue ([393dba7](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/393dba737c9e2c329d39e2ba4b1de645de1ce8fd))
+* total multiplier chain with promotion free spins ([e60a253](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/e60a25391b202e948249e01da89f7e5479d2726f))
+* update version sc-slot-game-base 3.0.1-beta.5 - GL - 4625 ([b978f32](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/b978f32342d7da94575ca6f6fccb0a4c0bc16a56))
+* upgrade libraries to fix CVE issues ([e270920](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/e270920c5899241bfd871132e5abbd49124067e6))
+* user signin consumer - override promotion data ([86b5a91](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/86b5a91916d3efe38728ca01a61bea1e363a5d58))
+
+
+### BREAKING CHANGES
+
+* compatible with Node 20
+
+# [2.0.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v1.1.0...v2.0.0) (2025-09-26)
+
+
+### Bug Fixes
+
+* afterEventSuccess input data ([c8c4e80](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/c8c4e80d7de7e049b33c0f05f80928337d18ff6a))
 * bug reload total multiplier ([6ef1bc2](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/6ef1bc257e72d576ab118830803809f6eace6caf))
 * correct version of game base ([741f963](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/741f96339581f3286116a84613e2864ace42f42d))
 * cron - remove unecessary codes ([d693c6c](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/d693c6cbd5bb5388ff8d60094fe4c144b06f0f0a))
