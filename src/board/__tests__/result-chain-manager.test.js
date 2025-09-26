@@ -4,6 +4,7 @@ const mockGameData = {
     gameConfigs: {
         gameId: "test-game-123",
     },
+    chainBoardsCache: {},
 };
 const mockLogService = {
     log: jest.fn(),
@@ -31,13 +32,14 @@ const mockAssignmentRepository = {
 
 const mockAppConfigs = {
     resultChains: { enabled: true },
+    maxLoadedChains: 50,
 };
 
 const mockDatabaseChains = [
     {
         _id: "68ba82677350005bcefd0fbe",
         name: "test-chain",
-        totalBoardCount: 50,
+        totalBoardCount: 25,
         boardsData: [
             {
                 board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
@@ -149,11 +151,12 @@ describe("ChainManager", () => {
                 logService: mockLogService,
                 resultChainRepository: mockResultChainRepository,
                 assignmentRepository: mockAssignmentRepository,
-                appConfigs: mockAppConfigs,
+                appConfigs: {}, // Empty appConfigs to test defaults
             });
             expect(freshChainManager.chainConfigs).toEqual({
                 enabled: false,
                 reload: false,
+                maxLoadedChains: 50,
             });
         });
 
@@ -310,13 +313,16 @@ describe("ChainManager", () => {
             // Manually set up a player chain for testing
             mockGameData.playerChains["testPlayer"] = {
                 name: "test-chain",
-                boards: [...mockDatabaseChains[0].boardsData],
                 currentIndex: 0,
                 totalBoards: 3,
                 assignedAt: new Date(),
                 isFreeSpin: false,
                 freeSpinChain: [],
-                boardsLoaded: true,
+            };
+
+            // Set up the chain boards cache
+            mockGameData.chainBoardsCache = {
+                "test-chain": [...mockDatabaseChains[0].boardsData],
             };
         });
 
@@ -324,14 +330,12 @@ describe("ChainManager", () => {
             // Set up player chain with composite key using baseBetAmount
             mockGameData.playerChains["testPlayer-0.10"] = {
                 name: "test-chain",
-                boards: [...mockDatabaseChains[0].boardsData],
                 currentIndex: 0,
                 totalBoards: 3,
                 assignedAt: new Date(),
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "testPlayer",
-                boardsLoaded: true,
             };
 
             const result = await chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
@@ -394,7 +398,6 @@ describe("ChainManager", () => {
             expect(result).toBeDefined();
             expect(Array.isArray(result)).toBe(true);
             expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer-0.10"].boardsLoaded).toBe(true);
         });
     });
 

@@ -104,7 +104,6 @@ export default class CascadingHttpRouter extends Core.Routers.HttpRouter {
                     coinValue: chainData.coinValue,
                     assignedAt: chainData.assignedAt,
                     lastActivityAt: chainData.lastActivityAt,
-                    boardsLoaded: chainData.boardsLoaded || false,
                 }));
 
                 res.send({

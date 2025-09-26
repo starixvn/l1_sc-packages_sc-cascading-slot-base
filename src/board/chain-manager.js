@@ -22,9 +22,11 @@ export default class ChainManager {
 
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.gameData.availableChains = this.gameData.availableChains || [];
+        this.gameData.chainBoardsCache = this.gameData.chainBoardsCache || {};
 
         const { enabled = false, reload = false } = this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains || {};
-        this.chainConfigs = { enabled, reload };
+        const maxLoadedChains = this.appConfigs?.maxLoadedChains || 50;
+        this.chainConfigs = { enabled, reload, maxLoadedChains };
     }
 
     /**
@@ -101,13 +103,15 @@ export default class ChainManager {
 
         try {
             const currentChainCount = this.gameData.availableChains.length;
-            if (currentChainCount >= 200) {
+            const maxLoadedChains = this.chainConfigs.maxLoadedChains;
+
+            if (currentChainCount >= maxLoadedChains) {
                 return;
             }
 
-            const remainingSlots = 200 - currentChainCount;
+            const remainingSlots = maxLoadedChains - currentChainCount;
             const resultChains = await this.resultChainRepository
-                .find({ totalBoardCount: { $lt: 200 } })
+                .find({ totalBoardCount: { $lt: maxLoadedChains } })
                 .sort({ _id: -1 })
                 .limit(remainingSlots)
                 .lean()
@@ -155,9 +159,20 @@ export default class ChainManager {
 
     async getBoardsByChainName(chainName) {
         try {
-            const chain = await this.resultChainRepository.findOne({ name: chainName }).lean().exec();
+            // Check if boards are already cached
+            if (this.gameData.chainBoardsCache[chainName]) {
+                return this.gameData.chainBoardsCache[chainName];
+            }
 
-            return chain?.boardsData || null;
+            // Load from database and cache
+            const chain = await this.resultChainRepository.findOne({ name: chainName }).lean().exec();
+            const boardsData = chain?.boardsData || null;
+
+            if (boardsData) {
+                this.gameData.chainBoardsCache[chainName] = boardsData;
+            }
+
+            return boardsData;
         } catch (error) {
             this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load boards for chain ${chainName}:`, error);
             return null;
@@ -198,20 +213,16 @@ export default class ChainManager {
             return null;
         }
 
-        // If boards not loaded, load them
-        if (!playerChain.boardsLoaded || !playerChain.boards) {
-            const boards = await this.getBoardsByChainName(playerChain.name);
-            if (!boards) {
-                return null;
-            }
-            playerChain.boards = [...boards];
-            playerChain.boardsLoaded = true;
+        // Load boards from shared cache
+        const boards = await this.getBoardsByChainName(playerChain.name);
+        if (!boards) {
+            return null;
         }
 
         // Update activity timestamp when chain is accessed
         playerChain.lastActivityAt = new Date();
 
-        const currentBoard = playerChain.boards[playerChain.currentIndex];
+        const currentBoard = boards[playerChain.currentIndex];
         const boardResult = this.convertChainBoardToResult(currentBoard);
 
         return boardResult;
@@ -245,7 +256,6 @@ export default class ChainManager {
             const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
             const playerChain = {
                 name: activeAssignment.chainName,
-                boards: null, // Will be loaded on-demand
                 currentIndex: activeAssignment.currentBoardIndex,
                 totalBoards: activeAssignment.totalBoards,
                 assignedAt: new Date(activeAssignment.assignedAt),
@@ -254,7 +264,6 @@ export default class ChainManager {
                 coinValue: activeAssignment.coinValue,
                 playerId: activeAssignment.playerId,
                 playerName: activeAssignment.playerName,
-                boardsLoaded: false,
             };
 
             this.gameData.playerChains[chainKey] = playerChain;

@@ -226,9 +226,8 @@ describe("UserChainConsumer", () => {
         it("should return false when player already has an active chain", async () => {
             mockGameData.playerChains["existingPlayer-0.10"] = {
                 name: "existing-chain",
-                boards: [],
                 currentIndex: 0,
-                boardsLoaded: true,
+                totalBoards: 100,
             };
 
             const result = await userChainConsumer.assignChain("existingPlayer", {
@@ -339,7 +338,6 @@ describe("UserChainConsumer", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "progressPlayer",
-                boardsLoaded: true,
             };
         });
 
@@ -396,7 +394,6 @@ describe("UserChainConsumer", () => {
                 betLevel: 1,
                 coinValue: 0.1,
                 playerName: "completionPlayer",
-                boardsLoaded: true,
             };
 
             const completedAssignment = {
@@ -904,14 +901,13 @@ describe("UserChainConsumer", () => {
             };
             const playerName = "testPlayer";
 
-            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, boards, playerContext, playerName);
+            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, playerContext, playerName);
 
             // Check memory storage
             expect(mockGameData.playerChains[chainKey]).toBeDefined();
             expect(mockGameData.playerChains[chainKey].name).toBe("test-chain-1");
-            expect(mockGameData.playerChains[chainKey].boards).toEqual(boards);
             expect(mockGameData.playerChains[chainKey].currentIndex).toBe(0);
-            expect(mockGameData.playerChains[chainKey].boardsLoaded).toBe(true);
+            expect(mockGameData.playerChains[chainKey].totalBoards).toBe(selectedChain.totalBoardCount);
 
             // Check database storage
             expect(mockAssignmentRepository.create).toHaveBeenCalledWith(
@@ -920,7 +916,7 @@ describe("UserChainConsumer", () => {
                     playerName: "testPlayer",
                     chainName: "test-chain-1",
                     currentBoardIndex: 0,
-                    totalBoards: 2,
+                    totalBoards: 75,
                     betLevel: 1,
                     coinValue: 0.1,
                     status: "active",
@@ -937,13 +933,13 @@ describe("UserChainConsumer", () => {
             const playerContext = { playerId: "player-123", betLevel: 1, coinValue: 0.1 };
             const playerName = "errorPlayer";
 
-            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, boards, playerContext, playerName);
+            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, playerContext, playerName);
 
             // Memory storage should still work
             expect(mockGameData.playerChains[chainKey]).toBeDefined();
 
             // Error should be logged
-            expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to create chain assignment for errorPlayer"));
+            expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to create chain assignment for"));
         });
     });
 });

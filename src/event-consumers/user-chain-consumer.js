@@ -176,45 +176,41 @@ export default class UserChainConsumer {
     /**
      * Create player chain entry for memory storage
      * @param {Object} selectedChain - Selected chain metadata
-     * @param {Array} boards - Full board data
      * @param {Object} playerContext - Player context data
      * @param {string} playerName - Player name
      * @returns {Object} Player chain object
      */
-    createPlayerChainEntry(selectedChain, boards, playerContext, playerName) {
+    createPlayerChainEntry(selectedChain, playerContext, playerName) {
         const { betLevel, coinValue, playerId } = playerContext;
         const now = new Date();
         return {
             name: selectedChain.name,
-            boards: [...boards],
             currentIndex: 0,
-            totalBoards: boards.length,
+            totalBoards: selectedChain.totalBoardCount,
             assignedAt: now,
             lastActivityAt: now,
             betLevel,
             coinValue,
             playerId,
             playerName,
-            boardsLoaded: true,
         };
     }
 
     /**
      * Create assignment data for database storage
      * @param {Object} selectedChain - Selected chain metadata
-     * @param {Array} boards - Full board data
      * @param {Object} playerContext - Player context data
      * @param {string} playerName - Player name
      * @returns {Object} Assignment data object
      */
-    createAssignmentData(selectedChain, boards, playerContext, playerName) {
+    createAssignmentData(selectedChain, playerContext, playerName) {
         const { playerId, operatorId, gameId, chainId, currency, betLevel, coinValue } = playerContext;
         return {
             playerId,
             playerName,
             chainName: selectedChain.name,
             currentBoardIndex: 0,
-            totalBoards: boards.length,
+            totalBoards: selectedChain.totalBoardCount,
             assignedAt: new Date(),
             lastActivityAt: new Date(),
             status: ASSIGNMENT_STATUS.ACTIVE,
@@ -248,7 +244,6 @@ export default class UserChainConsumer {
                     const chainKey = this.generateChainKey(assignment.playerName, assignment.betLevel, assignment.coinValue);
                     this.gameData.playerChains[chainKey] = {
                         name: assignment.chainName,
-                        boards: null,
                         currentIndex: assignment.currentBoardIndex,
                         totalBoards: assignment.totalBoards,
                         assignedAt: assignment.assignedAt,
@@ -257,7 +252,6 @@ export default class UserChainConsumer {
                         coinValue: assignment.coinValue,
                         playerId: assignment.playerId,
                         playerName: assignment.playerName,
-                        boardsLoaded: false,
                     };
                 }
             }
@@ -287,16 +281,15 @@ export default class UserChainConsumer {
      * Store chain assignment in both memory and database
      * @param {string} chainKey - Chain identifier
      * @param {Object} selectedChain - Selected chain metadata
-     * @param {Array} boards - Chain board data
      * @param {Object} playerContext - Player context data
      * @param {string} playerName - Player name
      */
-    async storeChainAssignment(chainKey, selectedChain, boards, playerContext, playerName) {
-        const playerChainEntry = this.createPlayerChainEntry(selectedChain, boards, playerContext, playerName);
+    async storeChainAssignment(chainKey, selectedChain, playerContext, playerName) {
+        const playerChainEntry = this.createPlayerChainEntry(selectedChain, playerContext, playerName);
         this.gameData.playerChains[chainKey] = playerChainEntry;
 
         try {
-            const assignmentData = this.createAssignmentData(selectedChain, boards, playerContext, playerName);
+            const assignmentData = this.createAssignmentData(selectedChain, playerContext, playerName);
             await this.assignmentRepository.create(assignmentData);
         } catch (error) {
             this.logService.logError(`Failed to create chain assignment for ${playerName}: ${error.message}`);
@@ -317,31 +310,18 @@ export default class UserChainConsumer {
             return false;
         }
 
-        const boards = await this.chainManager.getBoardsByChainName(selectedChain.name);
-        if (!boards) {
-            return false;
-        }
-
         this.limitPlayerChain(playerName);
-        await this.storeChainAssignment(chainKey, selectedChain, boards, playerContext, playerName);
+        await this.storeChainAssignment(chainKey, selectedChain, playerContext, playerName);
 
         return true;
     }
 
     /**
-     * Handle existing chain logic - load boards if needed
+     * Handle existing chain logic
      * @param {Object} existingChain - Existing chain object
      * @returns {Promise<boolean>} Always returns false (chain already exists)
      */
     async handleExistingChain(existingChain) {
-        if (!existingChain.boardsLoaded) {
-            const boards = await this.chainManager.getBoardsByChainName(existingChain.name);
-            if (boards) {
-                existingChain.boards = [...boards];
-                existingChain.boardsLoaded = true;
-            }
-        }
-
         return false; // Chain already exists
     }
 
@@ -392,7 +372,6 @@ export default class UserChainConsumer {
                 return null;
             }
 
-            // Only delete from memory after successful database update
             if (isChainComplete) {
                 delete this.gameData.playerChains[chainKey];
             }
