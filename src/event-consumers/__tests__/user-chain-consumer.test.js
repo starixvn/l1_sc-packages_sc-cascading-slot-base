@@ -6,6 +6,9 @@ const mockGameData = {
         gameId: "test-game-123",
         cascadingSlotsConfig: {
             betMultiplier: 20,
+            resultChains: {
+                enabled: true,
+            },
         },
     },
     playerChains: {},
@@ -16,8 +19,18 @@ const mockLogService = {
     logError: jest.fn(),
 };
 
-const mockChainManager = {
-    getBoardsByChainName: jest.fn(),
+const mockAppConfigs = {
+    resultChains: {
+        maxChains: 300,
+        maxPlayerChains: 300,
+        memoryExpirationMinutes: 30,
+        assignment: {
+            minPlayableBoards: 50,
+            maxBoards: 100,
+            boardsMultiplier: 0.25,
+            boardRange: [50, 75, 100, 125, 150, 175, 200],
+        },
+    },
 };
 
 const mockAssignmentRepository = {
@@ -25,6 +38,11 @@ const mockAssignmentRepository = {
     find: jest.fn().mockReturnValue({
         lean: jest.fn().mockReturnValue({
             exec: jest.fn().mockResolvedValue([]),
+        }),
+    }),
+    findOne: jest.fn().mockReturnValue({
+        lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(null),
         }),
     }),
     distinct: jest.fn().mockReturnValue({
@@ -62,6 +80,9 @@ describe("UserChainConsumer", () => {
         // Reset bet multiplier to realistic value
         mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
 
+        // Ensure chains are enabled by default
+        mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
+
         // Reset repository mocks to default state
         mockAssignmentRepository.create.mockResolvedValue({ _id: "test-assignment-id" });
         mockAssignmentRepository.find.mockReturnValue({
@@ -69,26 +90,17 @@ describe("UserChainConsumer", () => {
                 exec: jest.fn().mockResolvedValue([]),
             }),
         });
-
-        // Setup chainManager mock
-        mockChainManager.getBoardsByChainName.mockImplementation((chainName) => {
-            if (chainName === "test-chain-1") {
-                return Promise.resolve([
-                    { board: [1, 2, 3], multipliers: [] },
-                    { board: [4, 5, 6], multipliers: [] },
-                ]);
-            }
-            if (chainName === "test-chain-2") {
-                return Promise.resolve([{ board: [7, 8, 9], multipliers: [] }]);
-            }
-            return Promise.resolve(null);
+        mockAssignmentRepository.findOne.mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+                exec: jest.fn().mockResolvedValue(null), // No active assignment by default
+            }),
         });
 
         userChainConsumer = new UserChainConsumer({
             gameData: mockGameData,
             assignmentRepository: mockAssignmentRepository,
             logService: mockLogService,
-            resultChainManager: mockChainManager,
+            appConfigs: mockAppConfigs,
         });
     });
 
@@ -100,7 +112,32 @@ describe("UserChainConsumer", () => {
         });
     });
 
-    describe("loadActiveChains", () => {
+    describe("loadActive", () => {
+        it("should log error and return early when memoryExpirationMinutes is not configured", async () => {
+            // Create consumer with missing memoryExpirationMinutes config
+            const incompleteAppConfigs = {
+                resultChains: {
+                    maxChains: 300,
+                    maxPlayerChains: 300,
+                    // memoryExpirationMinutes is missing
+                },
+            };
+
+            const consumerWithIncompleteConfig = new UserChainConsumer({
+                gameData: mockGameData,
+                assignmentRepository: mockAssignmentRepository,
+                logService: mockLogService,
+                appConfigs: incompleteAppConfigs,
+            });
+
+            await consumerWithIncompleteConfig.loadActive();
+
+            expect(mockLogService.logError).toHaveBeenCalledWith(
+                expect.stringContaining("memoryExpirationMinutes or maxPlayerChains is not configured in appConfigs.resultChains")
+            );
+            expect(mockAssignmentRepository.find).not.toHaveBeenCalled();
+        });
+
         it("should load active player chains from database", async () => {
             const activeAssignments = [
                 {
@@ -141,7 +178,7 @@ describe("UserChainConsumer", () => {
                 }),
             });
 
-            await userChainConsumer.loadActiveChains();
+            await userChainConsumer.loadActive();
 
             expect(mockGameData.playerChains["activePlayer1-0.10"]).toBeDefined();
             expect(mockGameData.playerChains["activePlayer1-0.10"].name).toBe("test-chain-1");
@@ -178,7 +215,7 @@ describe("UserChainConsumer", () => {
                 }),
             });
 
-            await userChainConsumer.loadActiveChains();
+            await userChainConsumer.loadActive();
 
             expect(mockGameData.playerChains["missingChainPlayer-0.1"]).toBeUndefined();
             // No warning should be logged since missing chains are normal
@@ -195,7 +232,7 @@ describe("UserChainConsumer", () => {
                 }),
             });
 
-            await userChainConsumer.loadActiveChains();
+            await userChainConsumer.loadActive();
 
             expect(mockLogService.logError).toHaveBeenCalledWith("Failed to load active chains:", expect.any(Error));
         });
@@ -223,6 +260,19 @@ describe("UserChainConsumer", () => {
             expect(mockAssignmentRepository.create).toHaveBeenCalled();
         });
 
+        it("should return false when chains are disabled", async () => {
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+
+            const result = await userChainConsumer.assignChain("testPlayer", {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 120,
+            });
+
+            expect(result).toBe(false);
+            expect(mockAssignmentRepository.create).not.toHaveBeenCalled();
+        });
+
         it("should return false when player already has an active chain", async () => {
             mockGameData.playerChains["existingPlayer-0.10"] = {
                 name: "existing-chain",
@@ -238,6 +288,29 @@ describe("UserChainConsumer", () => {
 
             expect(result).toBe(false);
             // No warning should be logged since this is normal behavior
+        });
+
+        it("should return false when player has active assignment in database", async () => {
+            // Mock assignmentRepository to return an active assignment
+            mockAssignmentRepository.findOne.mockReturnValueOnce({
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue({
+                        playerName: "existingPlayer",
+                        betLevel: 1,
+                        coinValue: 0.1,
+                        status: "active",
+                    }),
+                }),
+            });
+
+            const result = await userChainConsumer.assignChain("existingPlayer", {
+                betLevel: 1,
+                coinValue: 0.1,
+                balance: 120,
+            });
+
+            expect(result).toBe(false);
+            expect(mockAssignmentRepository.create).not.toHaveBeenCalled();
         });
 
         it("should return false when no chains are available", async () => {
@@ -505,6 +578,31 @@ describe("UserChainConsumer", () => {
     });
 
     describe("getApplicableBoardCount", () => {
+        it("should log error and return -1 when chain configuration is missing", () => {
+            const incompleteAppConfigs = {
+                resultChains: {
+                    maxChains: 300,
+                    maxPlayerChains: 300,
+                    memoryExpirationMinutes: 30,
+                    // Missing assignment configuration
+                },
+            };
+
+            const consumerWithIncompleteConfig = new UserChainConsumer({
+                gameData: mockGameData,
+                assignmentRepository: mockAssignmentRepository,
+                logService: mockLogService,
+                appConfigs: incompleteAppConfigs,
+            });
+
+            const result = consumerWithIncompleteConfig.getApplicableBoardCount({ balance: 1000 }, 10);
+
+            expect(result).toBe(-1);
+            expect(mockLogService.logError).toHaveBeenCalledWith(
+                expect.stringContaining("missing configuration in appConfigs.resultChains.assignment")
+            );
+        });
+
         it("should return -1 immediately for zero balance", () => {
             const result = userChainConsumer.getApplicableBoardCount({ balance: 0 }, 0.1);
             expect(result).toBe(-1);
@@ -567,10 +665,10 @@ describe("UserChainConsumer", () => {
             // playableBoards = floor(160 / 0.1 / 20) = 80, applicableBoards = 100, closest valid = 100
             expect(result2).toBe(100);
 
-            // Test with larger balance that exceeds maximum
+            // Test with larger balance
             const result3 = userChainConsumer.getApplicableBoardCount({ balance: 1000 }, 0.1);
-            // playableBoards = floor(1000 / 0.1 / 20) = 500, applicableBoards = 625, exceeds max (100), so return -1
-            expect(result3).toBe(-1);
+            // playableBoards = floor(1000 / 0.1 / 20) = 500, applicableBoards = 625, closest valid = 200
+            expect(result3).toBe(200);
         });
 
         it("should use default betMultiplier when not configured", () => {
@@ -607,6 +705,30 @@ describe("UserChainConsumer", () => {
     });
 
     describe("getApplicableBoards", () => {
+        it("should return -1 when configuration is missing", () => {
+            const incompleteAppConfigs = {
+                resultChains: {
+                    maxChains: 300,
+                    maxPlayerChains: 300,
+                    memoryExpirationMinutes: 30,
+                    // Missing assignment configuration
+                },
+            };
+
+            const consumerWithIncompleteConfig = new UserChainConsumer({
+                gameData: mockGameData,
+                assignmentRepository: mockAssignmentRepository,
+                logService: mockLogService,
+                appConfigs: incompleteAppConfigs,
+            });
+
+            const result = consumerWithIncompleteConfig.getApplicableBoards(50);
+            expect(result).toBe(-1);
+            expect(mockLogService.logError).toHaveBeenCalledWith(
+                expect.stringContaining("missing configuration in appConfigs.resultChains.assignment")
+            );
+        });
+
         it("should return -1 for playable boards less than minimum threshold", () => {
             expect(userChainConsumer.getApplicableBoards(-1)).toBe(-1);
             expect(userChainConsumer.getApplicableBoards(0)).toBe(-1);
@@ -697,7 +819,7 @@ describe("UserChainConsumer", () => {
         });
     });
 
-    describe("limitPlayerChain", () => {
+    describe("limitPerPlayer", () => {
         beforeEach(() => {
             const now = new Date();
             mockGameData.playerChains = {
@@ -717,45 +839,88 @@ describe("UserChainConsumer", () => {
                     lastActivityAt: new Date(now.getTime() - 1500),
                     assignedAt: new Date(now.getTime() - 2000),
                 },
+                "otherPlayer-0.20": {
+                    lastActivityAt: new Date(now.getTime() - 4000),
+                    assignedAt: new Date(now.getTime() - 6000),
+                },
+                "otherPlayer-0.30": {
+                    lastActivityAt: new Date(now.getTime() - 5000),
+                    assignedAt: new Date(now.getTime() - 7000),
+                },
             };
         });
 
-        it("should not remove chains when player has less than limit", () => {
-            userChainConsumer.limitPlayerChain("singlePlayer");
+        it("should not remove chains when all players have less than limit", () => {
+            // Remove chains to have only 1 per player
+            delete mockGameData.playerChains["testPlayer-0.20"];
+            delete mockGameData.playerChains["testPlayer-0.30"];
+            delete mockGameData.playerChains["otherPlayer-0.20"];
+            delete mockGameData.playerChains["otherPlayer-0.30"];
+
+            userChainConsumer.limitPerPlayer();
 
             // Should not affect existing chains
-            expect(Object.keys(mockGameData.playerChains)).toHaveLength(4);
+            expect(Object.keys(mockGameData.playerChains)).toHaveLength(2);
         });
 
-        it("should remove oldest chains when player exceeds limit", () => {
-            userChainConsumer.limitPlayerChain("testPlayer");
+        it("should remove oldest chains when players exceed limit", () => {
+            userChainConsumer.limitPerPlayer();
 
-            // Should keep only 2 most recent chains for testPlayer
-            const remainingChains = Object.keys(mockGameData.playerChains).filter((key) => key.startsWith("testPlayer-"));
-            expect(remainingChains).toHaveLength(2);
+            // Should keep only 2 most recent chains per player
+            const testPlayerChains = Object.keys(mockGameData.playerChains).filter((key) => key.startsWith("testPlayer-"));
+            const otherPlayerChains = Object.keys(mockGameData.playerChains).filter((key) => key.startsWith("otherPlayer-"));
 
-            // Should keep most recent: testPlayer-0.10 (1s ago) and testPlayer-0.30 (2s ago)
+            expect(testPlayerChains).toHaveLength(2);
+            expect(otherPlayerChains).toHaveLength(2);
+
+            // Should keep most recent for testPlayer: testPlayer-0.10 (1s ago) and testPlayer-0.30 (2s ago)
             expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
             expect(mockGameData.playerChains["testPlayer-0.30"]).toBeDefined();
             expect(mockGameData.playerChains["testPlayer-0.20"]).toBeUndefined(); // Oldest (3s ago)
 
-            // Should not affect other players
+            // Should keep most recent for otherPlayer: otherPlayer-0.10 (1.5s ago) and otherPlayer-0.20 (4s ago)
             expect(mockGameData.playerChains["otherPlayer-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["otherPlayer-0.20"]).toBeDefined();
+            expect(mockGameData.playerChains["otherPlayer-0.30"]).toBeUndefined(); // Oldest (5s ago)
         });
 
-        it("should handle player with exactly the limit", () => {
-            // Remove one chain to have exactly 2
+        it("should handle players with exactly the limit", () => {
+            // Remove one chain per player to have exactly 2 each
             delete mockGameData.playerChains["testPlayer-0.30"];
+            delete mockGameData.playerChains["otherPlayer-0.30"];
 
-            userChainConsumer.limitPlayerChain("testPlayer");
+            userChainConsumer.limitPerPlayer();
 
-            // Should keep both chains
+            // Should keep both chains for each player
             expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
             expect(mockGameData.playerChains["testPlayer-0.20"]).toBeDefined();
+            expect(mockGameData.playerChains["otherPlayer-0.10"]).toBeDefined();
+            expect(mockGameData.playerChains["otherPlayer-0.20"]).toBeDefined();
         });
     });
 
     describe("clean", () => {
+        it("should return early when memoryExpirationMinutes is not configured", () => {
+            // Create consumer with missing memoryExpirationMinutes config
+            const incompleteAppConfigs = {
+                resultChains: {
+                    maxChains: 300,
+                    maxPlayerChains: 300,
+                    // memoryExpirationMinutes is missing
+                },
+            };
+
+            const consumerWithIncompleteConfig = new UserChainConsumer({
+                gameData: mockGameData,
+                assignmentRepository: mockAssignmentRepository,
+                logService: mockLogService,
+                appConfigs: incompleteAppConfigs,
+            });
+
+            // Should not throw an error, just return early
+            expect(() => consumerWithIncompleteConfig.clean()).not.toThrow();
+        });
+
         beforeEach(() => {
             const now = new Date();
             const expiredTime = now.getTime() - 31 * 60 * 1000; // 31 minutes ago (expired)
@@ -825,7 +990,7 @@ describe("UserChainConsumer", () => {
         });
     });
 
-    describe("findSuitableChain", () => {
+    describe("findSuitable", () => {
         it("should return null when applicable board count is -1", async () => {
             const playerContext = {
                 betLevel: 1,
@@ -833,7 +998,7 @@ describe("UserChainConsumer", () => {
                 balance: 0, // Will result in -1 applicable board count
             };
 
-            const result = await userChainConsumer.findSuitableChain(playerContext);
+            const result = await userChainConsumer.findSuitable(playerContext);
             expect(result).toBeNull();
         });
 
@@ -848,7 +1013,7 @@ describe("UserChainConsumer", () => {
                 balance: 120, // Will result in ~75 applicable boards
             };
 
-            const result = await userChainConsumer.findSuitableChain(playerContext);
+            const result = await userChainConsumer.findSuitable(playerContext);
             expect(result).toBeNull();
         });
 
@@ -862,7 +1027,7 @@ describe("UserChainConsumer", () => {
                 balance: 120, // Will result in 75 applicable boards
             };
 
-            const result = await userChainConsumer.findSuitableChain(playerContext);
+            const result = await userChainConsumer.findSuitable(playerContext);
             expect(result).toEqual({
                 name: "test-chain-1",
                 baseBetAmount: 0.1,
@@ -881,12 +1046,12 @@ describe("UserChainConsumer", () => {
                 balance: 120,
             };
 
-            const result = await userChainConsumer.findSuitableChain(playerContext);
+            const result = await userChainConsumer.findSuitable(playerContext);
             expect(result).toBeNull();
         });
     });
 
-    describe("storeChainAssignment", () => {
+    describe("storeAssignment", () => {
         it("should store chain in memory and database successfully", async () => {
             const chainKey = "testPlayer-0.10";
             const selectedChain = { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 };
@@ -901,7 +1066,7 @@ describe("UserChainConsumer", () => {
             };
             const playerName = "testPlayer";
 
-            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, playerContext, playerName);
+            await userChainConsumer.storeAssignment(chainKey, selectedChain, playerContext, playerName);
 
             // Check memory storage
             expect(mockGameData.playerChains[chainKey]).toBeDefined();
@@ -933,7 +1098,7 @@ describe("UserChainConsumer", () => {
             const playerContext = { playerId: "player-123", betLevel: 1, coinValue: 0.1 };
             const playerName = "errorPlayer";
 
-            await userChainConsumer.storeChainAssignment(chainKey, selectedChain, playerContext, playerName);
+            await userChainConsumer.storeAssignment(chainKey, selectedChain, playerContext, playerName);
 
             // Memory storage should still work
             expect(mockGameData.playerChains[chainKey]).toBeDefined();

@@ -3,23 +3,12 @@ const ASSIGNMENT_STATUS = {
     COMPLETED: "completed",
 };
 
-const CHAIN_CONSTANTS = {
-    MINIMUM_PLAYABLE_BOARDS: 50,
-    MAXIMUM_APPLICABLE_BOARDS: 100, // Maximum board count for chain assignment
-    APPLICABLE_BOARDS_MULTIPLIER: 0.25,
-    VALID_BOARD_COUNTS: [50, 75, 100, 125, 150, 175, 200],
-    // Memory expiration settings
-    MEMORY_EXPIRATION_MINUTES: 30, // Remove from memory after 30 minutes of inactivity
-    // Global cache settings
-    MAX_GLOBAL_CACHE_SIZE: 300, // Maximum number of cached player chains across all players
-};
-
 export default class UserChainConsumer {
-    constructor({ gameData, assignmentRepository, logService, resultChainManager }) {
+    constructor({ gameData, assignmentRepository, logService, appConfigs }) {
         this.gameData = gameData;
         this.assignmentRepository = assignmentRepository;
         this.logService = logService;
-        this.chainManager = resultChainManager;
+        this.appConfigs = appConfigs;
     }
 
     /**
@@ -54,6 +43,14 @@ export default class UserChainConsumer {
     }
 
     /**
+     * Check if result chains are enabled from gameConfigs
+     * @returns {boolean} - True if chains are enabled
+     */
+    isChainEnabled() {
+        return this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains?.enabled || false;
+    }
+
+    /**
      * Count active chains for a specific player in memory
      * @param {string} playerName - Player identifier
      * @returns {number} Number of active chains for the player
@@ -80,23 +77,44 @@ export default class UserChainConsumer {
     }
 
     /**
-     * Remove oldest chains from memory if player has reached the limit
-     * @param {string} playerName - Player identifier
+     * Limit chains per player - remove oldest chains if any player exceeds the limit
      */
-    limitPlayerChain(playerName) {
-        const MAX_CHAINS_PER_PLAYER = 2;
+    limitPerPlayer() {
+        const MAX_PER_PLAYER = 2;
+        const { playerChains } = this.gameData;
 
-        const playerChainKeys = Object.keys(this.gameData.playerChains).filter((key) => key.startsWith(`${playerName}-`));
+        // Group chains by player name
+        const groups = this.groupChainsByPlayer();
 
-        if (playerChainKeys.length < MAX_CHAINS_PER_PLAYER) {
-            return;
-        }
-
-        const sortedChainKeys = this.sortByActivity(playerChainKeys);
-        const chainsToRemove = sortedChainKeys.slice(MAX_CHAINS_PER_PLAYER);
-        chainsToRemove.forEach((chainKey) => {
-            delete this.gameData.playerChains[chainKey];
+        // Limit chains for each player
+        Object.entries(groups).forEach(([playerName, keys]) => {
+            if (keys.length > MAX_PER_PLAYER) {
+                const sorted = this.sortByActivity(keys);
+                const toRemove = sorted.slice(MAX_PER_PLAYER);
+                toRemove.forEach((key) => {
+                    delete playerChains[key];
+                });
+            }
         });
+    }
+
+    /**
+     * Group chain keys by player name
+     * @returns {Object} Object with playerName as key and array of chainKeys as value
+     */
+    groupChainsByPlayer() {
+        const { playerChains } = this.gameData;
+        const groups = {};
+
+        Object.keys(playerChains).forEach((key) => {
+            const playerName = key.split("-")[0]; // Extract player name from "playerName-baseBetAmount"
+            if (!groups[playerName]) {
+                groups[playerName] = [];
+            }
+            groups[playerName].push(key);
+        });
+
+        return groups;
     }
 
     /**
@@ -110,31 +128,48 @@ export default class UserChainConsumer {
     /**
      * Clean up expired chains from memory based on last activity
      */
-    cleanExpiredChains() {
-        const expirationThreshold = new Date(Date.now() - CHAIN_CONSTANTS.MEMORY_EXPIRATION_MINUTES * 60 * 1000);
+    cleanExpired() {
+        const { memoryExpirationMinutes } = this.appConfigs?.resultChains;
 
-        const expiredChainKeys = Object.keys(this.gameData.playerChains).filter((chainKey) => {
-            const chain = this.gameData.playerChains[chainKey];
-            const lastActivity = new Date(chain.lastActivityAt || chain.assignedAt);
+        if (!memoryExpirationMinutes) {
+            return;
+        }
 
-            return lastActivity < expirationThreshold;
+        const threshold = new Date(Date.now() - memoryExpirationMinutes * 60 * 1000);
+        const { playerChains } = this.gameData;
+
+        const expiredKeys = Object.keys(playerChains).filter((key) => {
+            const { lastActivityAt, assignedAt } = playerChains[key];
+            const lastActivity = new Date(lastActivityAt || assignedAt);
+
+            return lastActivity < threshold;
         });
 
-        expiredChainKeys.forEach((chainKey) => {
-            delete this.gameData.playerChains[chainKey];
+        expiredKeys.forEach((key) => {
+            delete playerChains[key];
         });
     }
 
     clean() {
-        this.cleanExpiredChains();
+        this.cleanExpired();
+        this.limitPerPlayer();
+        this.enforceGlobalLimit();
+    }
 
-        const allChainKeys = Object.keys(this.gameData.playerChains);
+    /**
+     * Enforce global cache limit by removing oldest chains
+     */
+    enforceGlobalLimit() {
+        const { playerChains } = this.gameData;
+        const allKeys = Object.keys(playerChains);
+        const { maxPlayerChains } = this.appConfigs?.resultChains;
 
-        if (allChainKeys.length >= CHAIN_CONSTANTS.MAX_GLOBAL_CACHE_SIZE) {
-            const sortedChainKeys = this.sortByActivity(allChainKeys);
-            const chainsToRemove = sortedChainKeys.slice(CHAIN_CONSTANTS.MAX_GLOBAL_CACHE_SIZE);
-            chainsToRemove.forEach((chainKey) => {
-                delete this.gameData.playerChains[chainKey];
+        if (allKeys.length >= maxPlayerChains) {
+            const sortedKeys = this.sortByActivity(allKeys);
+            const toRemove = sortedKeys.slice(maxPlayerChains);
+
+            toRemove.forEach((key) => {
+                delete playerChains[key];
             });
         }
     }
@@ -165,98 +200,116 @@ export default class UserChainConsumer {
      * @param {Array} matchingChains - Filtered chains
      * @returns {Object|null} Selected chain or null
      */
-    selectRandomChain(matchingChains) {
-        if (matchingChains.length === 0) {
+    selectRandom(chains) {
+        if (chains.length === 0) {
             return null;
         }
-        const randomIndex = Math.floor(Math.random() * matchingChains.length);
-        return matchingChains[randomIndex];
+        const index = Math.floor(Math.random() * chains.length);
+        return chains[index];
     }
 
     /**
      * Create player chain entry for memory storage
-     * @param {Object} selectedChain - Selected chain metadata
-     * @param {Object} playerContext - Player context data
+     * @param {Object} chain - Selected chain metadata
+     * @param {Object} context - Player context data
      * @param {string} playerName - Player name
      * @returns {Object} Player chain object
      */
-    createPlayerChainEntry(selectedChain, playerContext, playerName) {
-        const { betLevel, coinValue, playerId } = playerContext;
+    createChainEntry(chain, context, playerName) {
         const now = new Date();
+
         return {
-            name: selectedChain.name,
+            ...context,
+            name: chain.name,
             currentIndex: 0,
-            totalBoards: selectedChain.totalBoardCount,
+            totalBoards: chain.totalBoardCount,
             assignedAt: now,
             lastActivityAt: now,
-            betLevel,
-            coinValue,
-            playerId,
             playerName,
         };
     }
 
     /**
      * Create assignment data for database storage
-     * @param {Object} selectedChain - Selected chain metadata
-     * @param {Object} playerContext - Player context data
+     * @param {Object} chain - Selected chain metadata
+     * @param {Object} context - Player context data
      * @param {string} playerName - Player name
      * @returns {Object} Assignment data object
      */
-    createAssignmentData(selectedChain, playerContext, playerName) {
-        const { playerId, operatorId, gameId, chainId, currency, betLevel, coinValue } = playerContext;
+    createAssignmentData(chain, context, playerName) {
+        const now = new Date();
         return {
-            playerId,
+            ...context,
             playerName,
-            chainName: selectedChain.name,
+            chainName: chain.name,
             currentBoardIndex: 0,
-            totalBoards: selectedChain.totalBoardCount,
-            assignedAt: new Date(),
-            lastActivityAt: new Date(),
+            totalBoards: chain.totalBoardCount,
+            assignedAt: now,
+            lastActivityAt: now,
             status: ASSIGNMENT_STATUS.ACTIVE,
             totalWinAmount: 0,
             totalBetAmount: 0,
-            betLevel,
-            coinValue,
-            operatorId,
-            gameId,
-            chainId,
-            currency,
         };
     }
 
-    async loadActiveChains() {
+    async loadActive() {
         try {
-            const activeAssignments = await this.assignmentRepository
+            const { memoryExpirationMinutes: expMinutes, maxPlayerChains: maxChains } = this.appConfigs?.resultChains;
+
+            if (!expMinutes || !maxChains) {
+                this.logService.logError(
+                    `[GameID: ${this.gameData.gameConfigs?.gameId}] memoryExpirationMinutes or maxPlayerChains is not configured in appConfigs.resultChains`
+                );
+                return;
+            }
+
+            const threshold = new Date(Date.now() - expMinutes * 60 * 1000);
+            const { gameId } = this.gameData.gameConfigs;
+
+            const assignments = await this.assignmentRepository
                 .find({
                     status: ASSIGNMENT_STATUS.ACTIVE,
-                    gameId: this.gameData.gameConfigs.gameId,
+                    gameId,
+                    $or: [{ lastActivityAt: { $gte: threshold } }, { lastActivityAt: { $exists: false }, assignedAt: { $gte: threshold } }],
                 })
                 .sort({ lastActivityAt: -1, assignedAt: -1 })
-                .limit(CHAIN_CONSTANTS.MAX_GLOBAL_CACHE_SIZE)
+                .limit(maxChains)
                 .lean()
                 .exec();
 
-            for (const assignment of activeAssignments) {
-                const chain = this.gameData.availableChains?.find((c) => c.name === assignment.chainName);
-
-                if (chain) {
-                    const chainKey = this.generateChainKey(assignment.playerName, assignment.betLevel, assignment.coinValue);
-                    this.gameData.playerChains[chainKey] = {
-                        name: assignment.chainName,
-                        currentIndex: assignment.currentBoardIndex,
-                        totalBoards: assignment.totalBoards,
-                        assignedAt: assignment.assignedAt,
-                        lastActivityAt: assignment.lastActivityAt || assignment.assignedAt, // For expiration tracking
-                        betLevel: assignment.betLevel,
-                        coinValue: assignment.coinValue,
-                        playerId: assignment.playerId,
-                        playerName: assignment.playerName,
-                    };
-                }
-            }
+            this.loadAssignments(assignments);
         } catch (error) {
             this.logService.logError(`Failed to load active chains:`, error);
+        }
+    }
+
+    /**
+     * Load assignments into memory
+     * @param {Array} assignments - Array of assignment objects
+     */
+    loadAssignments(assignments) {
+        const { availableChains, playerChains } = this.gameData;
+
+        for (const assignment of assignments) {
+            const chain = availableChains?.find(({ name }) => name === assignment.chainName);
+
+            if (chain) {
+                const { playerName, betLevel, coinValue, chainName, currentBoardIndex, totalBoards, assignedAt, lastActivityAt, playerId } =
+                    assignment;
+                const key = this.generateChainKey(playerName, betLevel, coinValue);
+
+                playerChains[key] = {
+                    name: chainName,
+                    currentIndex: currentBoardIndex,
+                    totalBoards,
+                    assignedAt,
+                    lastActivityAt: lastActivityAt || assignedAt, // For expiration tracking
+                    betLevel,
+                    coinValue,
+                    playerId,
+                    playerName,
+                };
+            }
         }
     }
 
@@ -265,32 +318,35 @@ export default class UserChainConsumer {
      * @param {Object} playerContext - Player context data
      * @returns {Object|null} Selected chain or null if none available
      */
-    async findSuitableChain(playerContext) {
-        const baseBetAmount = this.calculateBaseBetAmount(playerContext.betLevel, playerContext.coinValue);
-        const applicableBoardCount = this.getApplicableBoardCount(playerContext, baseBetAmount);
-        if (applicableBoardCount === -1) {
+    async findSuitable(playerContext) {
+        const { betLevel, coinValue } = playerContext;
+        const baseBet = this.calculateBaseBetAmount(betLevel, coinValue);
+        const boardCount = this.getApplicableBoardCount(playerContext, baseBet);
+
+        if (boardCount === -1) {
             return null;
         }
 
-        const availableChains = this.gameData.availableChains || [];
-        const matchingChains = this.filterChains(availableChains, applicableBoardCount);
-        return this.selectRandomChain(matchingChains);
+        const { availableChains = [] } = this.gameData;
+        const matching = this.filterChains(availableChains, boardCount);
+        return this.selectRandom(matching);
     }
 
     /**
      * Store chain assignment in both memory and database
-     * @param {string} chainKey - Chain identifier
-     * @param {Object} selectedChain - Selected chain metadata
-     * @param {Object} playerContext - Player context data
+     * @param {string} key - Chain identifier
+     * @param {Object} chain - Selected chain metadata
+     * @param {Object} context - Player context data
      * @param {string} playerName - Player name
      */
-    async storeChainAssignment(chainKey, selectedChain, playerContext, playerName) {
-        const playerChainEntry = this.createPlayerChainEntry(selectedChain, playerContext, playerName);
-        this.gameData.playerChains[chainKey] = playerChainEntry;
+    async storeAssignment(key, chain, context, playerName) {
+        const { playerChains } = this.gameData;
+        const entry = this.createChainEntry(chain, context, playerName);
+        playerChains[key] = entry;
 
         try {
-            const assignmentData = this.createAssignmentData(selectedChain, playerContext, playerName);
-            await this.assignmentRepository.create(assignmentData);
+            const data = this.createAssignmentData(chain, context, playerName);
+            await this.assignmentRepository.create(data);
         } catch (error) {
             this.logService.logError(`Failed to create chain assignment for ${playerName}: ${error.message}`);
         }
@@ -298,31 +354,50 @@ export default class UserChainConsumer {
 
     async assignChain(playerName, playerContext = {}) {
         const { betLevel, coinValue } = playerContext;
-        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
 
-        const existingChain = this.findExistingChain(chainKey);
-        if (existingChain) {
-            return await this.handleExistingChain(existingChain);
+        // Check if result chains are enabled
+        if (!this.isChainEnabled()) {
+            return false;
         }
 
-        const selectedChain = await this.findSuitableChain(playerContext);
+        const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
+
+        // Check if player already has an active chain in memory
+        const existingChain = this.findExistingChain(chainKey);
+        if (existingChain) {
+            return false; // Chain already exists
+        }
+
+        // Check if player has an active assignment in database
+        try {
+            const activeAssignment = await this.assignmentRepository
+                .findOne({
+                    playerName,
+                    betLevel,
+                    coinValue,
+                    status: ASSIGNMENT_STATUS.ACTIVE,
+                    gameId: this.gameData.gameConfigs.gameId,
+                })
+                .lean()
+                .exec();
+
+            if (activeAssignment) {
+                return false; // Player already has an active assignment
+            }
+        } catch (error) {
+            this.logService.logError(`Failed to check database for active chain assignment: ${error.message}`);
+            return false;
+        }
+
+        // Find and assign a suitable chain
+        const selectedChain = await this.findSuitable(playerContext);
         if (!selectedChain) {
             return false;
         }
 
-        this.limitPlayerChain(playerName);
-        await this.storeChainAssignment(chainKey, selectedChain, playerContext, playerName);
+        await this.storeAssignment(chainKey, selectedChain, playerContext, playerName);
 
         return true;
-    }
-
-    /**
-     * Handle existing chain logic
-     * @param {Object} existingChain - Existing chain object
-     * @returns {Promise<boolean>} Always returns false (chain already exists)
-     */
-    async handleExistingChain(existingChain) {
-        return false; // Chain already exists
     }
 
     async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0 }) {
@@ -417,43 +492,67 @@ export default class UserChainConsumer {
     }
 
     getApplicableBoards(playableBoards) {
-        if (playableBoards < CHAIN_CONSTANTS.MINIMUM_PLAYABLE_BOARDS) {
+        const { minPlayableBoards, boardsMultiplier, maxBoards } = this.appConfigs?.resultChains?.assignment || {};
+
+        if (!minPlayableBoards || boardsMultiplier === undefined || !maxBoards) {
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] missing configuration in appConfigs.resultChains.assignment`);
             return -1;
         }
 
-        return Math.floor(playableBoards + CHAIN_CONSTANTS.APPLICABLE_BOARDS_MULTIPLIER * playableBoards);
+        if (playableBoards < minPlayableBoards) {
+            return -1;
+        }
+
+        return Math.floor(playableBoards + boardsMultiplier * playableBoards);
     }
 
     getClosestValidBoardCount(applicableBoards) {
-        return CHAIN_CONSTANTS.VALID_BOARD_COUNTS.reduce((closest, current) => {
+        const { boardRange } = this.appConfigs?.resultChains?.assignment || {};
+
+        if (boardRange?.length === 0) {
+            this.logService.logError(
+                `[GameID: ${this.gameData.gameConfigs?.gameId}] boardRange is not configured or invalid in appConfigs.resultChains.assignment`
+            );
+
+            return -1;
+        }
+
+        return boardRange.reduce((closest, current) => {
             return Math.abs(current - applicableBoards) < Math.abs(closest - applicableBoards) ? current : closest;
         });
     }
 
     getApplicableBoardCount(playerContext, baseBetAmount) {
         const { balance = 0 } = playerContext;
-
-        if (balance === 0) {
-            return -1;
-        }
-
         const betMultiplier = this.gameData.gameConfigs?.cascadingSlotsConfig?.betMultiplier || 1;
+        const validation = this.validateBoardRequirements(balance, baseBetAmount, betMultiplier);
 
+        if (!validation.isValid) {
+            return -1;
+        }
+
+        return this.getClosestValidBoardCount(validation.applicableBoards);
+    }
+
+    /**
+     * Validate all board calculation requirements
+     * @param {number} balance - Player balance
+     * @param {number} baseBetAmount - Base bet amount
+     * @param {number} betMultiplier - Bet multiplier
+     * @returns {Object} Validation result with isValid flag and applicableBoards
+     */
+    validateBoardRequirements(balance, baseBetAmount, betMultiplier) {
         const playableBoards = this.getPlayableBoards(balance, baseBetAmount, betMultiplier);
+
         if (playableBoards === -1) {
-            return -1;
+            return { isValid: false };
         }
-
         const applicableBoards = this.getApplicableBoards(playableBoards);
+
         if (applicableBoards === -1) {
-            return -1;
+            return { isValid: false };
         }
 
-        // Check if applicable boards exceed maximum limit
-        if (applicableBoards > CHAIN_CONSTANTS.MAXIMUM_APPLICABLE_BOARDS) {
-            return -1;
-        }
-
-        return this.getClosestValidBoardCount(applicableBoards);
+        return { isValid: true, applicableBoards };
     }
 }

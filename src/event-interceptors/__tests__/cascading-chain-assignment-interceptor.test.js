@@ -73,12 +73,10 @@ describe("ChainInterceptor", () => {
         const context = { player, bet: { totalAmount: 10, betLevel: 5, coinValue: 0.1 }, balance: { red: 100, minBet: 1, maxBet: 3000 } };
 
         it("should assign chain when player needs assignment", async () => {
-            chainManager.shouldAssignChain.mockReturnValue(true);
             interceptor.userChainConsumer.assignChain.mockReturnValue(true);
 
             const result = await interceptor.afterSuccessEvent(context);
 
-            expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer", 5, 0.1);
             expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
                 playerId: "player123",
                 sessionId: "session456",
@@ -95,20 +93,26 @@ describe("ChainInterceptor", () => {
         });
 
         it("should not assign chain when player already has one", async () => {
-            chainManager.shouldAssignChain.mockReturnValue(false);
+            interceptor.userChainConsumer.assignChain.mockReturnValue(false);
 
             const result = await interceptor.afterSuccessEvent(context);
 
-            expect(chainManager.shouldAssignChain).toHaveBeenCalledWith("testPlayer", 5, 0.1);
-            expect(interceptor.userChainConsumer.assignChain).not.toHaveBeenCalled();
-            expect(logService.log).not.toHaveBeenCalled();
-            expect(logService.logWarning).not.toHaveBeenCalled();
+            expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
+                playerId: "player123",
+                sessionId: "session456",
+                operatorId: "operator789",
+                gameId: 1,
+                currency: "USD",
+                betLevel: 5,
+                coinValue: 0.1,
+                balance: 100,
+            });
+            expect(logService.logWarning).toHaveBeenCalledWith("No chains available for testPlayer");
             expect(result).toBe(context);
         });
 
         it("should log warning when chain assignment fails", async () => {
-            chainManager.shouldAssignChain.mockReturnValue(true);
-            chainManager.assignChain.mockReturnValue(false);
+            interceptor.userChainConsumer.assignChain.mockReturnValue(false);
 
             const result = await interceptor.afterSuccessEvent(context);
 
@@ -128,7 +132,7 @@ describe("ChainInterceptor", () => {
 
         it("should handle errors gracefully", async () => {
             const error = new Error("Test error");
-            chainManager.shouldAssignChain.mockImplementation(() => {
+            interceptor.userChainConsumer.assignChain.mockImplementation(() => {
                 throw error;
             });
 
@@ -141,8 +145,7 @@ describe("ChainInterceptor", () => {
         it("should assign chain even when bet information is missing", async () => {
             const playerWithoutSession = { profile: { name: "testPlayer" } };
             const contextWithoutBet = { player: playerWithoutSession, balance: { red: 100, minBet: 1, maxBet: 3000 } };
-            chainManager.shouldAssignChain.mockReturnValue(true);
-            chainManager.assignChain.mockReturnValue(true);
+            interceptor.userChainConsumer.assignChain.mockReturnValue(true);
 
             const result = await interceptor.afterSuccessEvent(contextWithoutBet);
 
@@ -173,8 +176,7 @@ describe("ChainInterceptor", () => {
                 balance: { red: 200, minBet: 1, maxBet: 3000 },
             };
 
-            chainManager.shouldAssignChain.mockReturnValue(true);
-            chainManager.assignChain.mockReturnValue(true);
+            interceptor.userChainConsumer.assignChain.mockReturnValue(true);
 
             const result = await interceptor.afterSuccessEvent(contextWithBetLevels);
 
