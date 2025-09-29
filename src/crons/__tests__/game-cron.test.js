@@ -59,10 +59,10 @@ describe("gameCron", () => {
 
     const promotionFreeSpinsConsumer = stub(EventConsumers.PromotionFreeSpinsConsumer);
     const resultChainManager = {
-        loadChainData: jest.fn().mockResolvedValue(),
+        loadChains: jest.fn().mockResolvedValue(),
     };
     const userChainConsumer = {
-        loadActiveChains: jest.fn().mockResolvedValue(),
+        loadActive: jest.fn().mockResolvedValue(),
         clean: jest.fn(),
     };
 
@@ -209,7 +209,7 @@ describe("gameCron", () => {
             await gameCron.start();
 
             // Assert
-            expect(resultChainManager.loadChainData).toBeCalled();
+            expect(resultChainManager.loadChains).toBeCalled();
         });
 
         it("should load active chains", async () => {
@@ -217,7 +217,7 @@ describe("gameCron", () => {
             await gameCron.start();
 
             // Assert
-            expect(userChainConsumer.loadActiveChains).toBeCalled();
+            expect(userChainConsumer.loadActive).toBeCalled();
         });
 
         it("should call boardGenerator.initialize", async () => {
