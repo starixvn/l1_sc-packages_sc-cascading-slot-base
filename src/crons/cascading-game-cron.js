@@ -143,9 +143,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
             this.boardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
-
-            // Update chain manager with new configurations
-            await this.chainManager.updateChainConfigs(resultChains);
         }
     }
 
