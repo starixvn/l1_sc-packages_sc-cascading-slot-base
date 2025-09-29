@@ -1,7 +1,7 @@
 import UserChainConsumer from "../user-chain-consumer";
 
-// Mock data structures
-const mockGameData = {
+// Shared test data factories (DRY principle)
+const createMockGameData = (overrides = {}) => ({
     gameConfigs: {
         gameId: "test-game-123",
         cascadingSlotsConfig: {
@@ -12,14 +12,27 @@ const mockGameData = {
         },
     },
     playerChains: {},
-};
+    availableChains: [
+        {
+            name: "test-chain-1",
+            baseBetAmount: 0.1,
+            totalBoardCount: 75,
+        },
+        {
+            name: "test-chain-2",
+            baseBetAmount: 0.1,
+            totalBoardCount: 50,
+        },
+    ],
+    ...overrides,
+});
 
-const mockLogService = {
+const createMockLogService = () => ({
     logWarning: jest.fn(),
     logError: jest.fn(),
-};
+});
 
-const mockAppConfigs = {
+const createMockAppConfigs = (overrides = {}) => ({
     resultChains: {
         maxChains: 300,
         maxPlayerChains: 300,
@@ -30,10 +43,11 @@ const mockAppConfigs = {
             boardsMultiplier: 0.25,
             boardRange: [50, 75, 100, 125, 150, 175, 200],
         },
+        ...overrides,
     },
-};
+});
 
-const mockAssignmentRepository = {
+const createMockAssignmentRepository = () => ({
     create: jest.fn().mockResolvedValue({ _id: "test-assignment-id" }),
     find: jest.fn().mockReturnValue({
         lean: jest.fn().mockReturnValue({
@@ -54,47 +68,48 @@ const mockAssignmentRepository = {
         chainName: "test-chain-1",
         status: "active",
     }),
-};
+});
+
+const createPlayerContext = (overrides = {}) => ({
+    playerId: "player-123",
+    betLevel: 1,
+    coinValue: 0.1,
+    balance: 120,
+    operatorId: "test-operator",
+    gameId: "test-game",
+    currency: "USD",
+    ...overrides,
+});
+
+const createActiveAssignment = (overrides = {}) => ({
+    playerName: "testPlayer",
+    chainName: "test-chain-1",
+    currentBoardIndex: 0,
+    totalBoards: 75,
+    assignedAt: new Date(),
+    betLevel: 1,
+    coinValue: 0.1,
+    playerId: "player-123",
+    ...overrides,
+});
+
+// Global mocks for the test suite
+let mockGameData;
+let mockLogService;
+let mockAppConfigs;
+let mockAssignmentRepository;
 
 describe("UserChainConsumer", () => {
     let userChainConsumer;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGameData.playerChains = {};
 
-        // Reset available chains in gameData to prevent test contamination
-        mockGameData.availableChains = [
-            {
-                name: "test-chain-1",
-                baseBetAmount: 0.1,
-                totalBoardCount: 75,
-            },
-            {
-                name: "test-chain-2",
-                baseBetAmount: 0.1,
-                totalBoardCount: 50,
-            },
-        ];
-
-        // Reset bet multiplier to realistic value
-        mockGameData.gameConfigs.cascadingSlotsConfig.betMultiplier = 20;
-
-        // Ensure chains are enabled by default
-        mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
-
-        // Reset repository mocks to default state
-        mockAssignmentRepository.create.mockResolvedValue({ _id: "test-assignment-id" });
-        mockAssignmentRepository.find.mockReturnValue({
-            lean: jest.fn().mockReturnValue({
-                exec: jest.fn().mockResolvedValue([]),
-            }),
-        });
-        mockAssignmentRepository.findOne.mockReturnValue({
-            lean: jest.fn().mockReturnValue({
-                exec: jest.fn().mockResolvedValue(null), // No active assignment by default
-            }),
-        });
+        // Create fresh mocks for each test using factories
+        mockGameData = createMockGameData();
+        mockLogService = createMockLogService();
+        mockAppConfigs = createMockAppConfigs();
+        mockAssignmentRepository = createMockAssignmentRepository();
 
         userChainConsumer = new UserChainConsumer({
             gameData: mockGameData,
@@ -105,104 +120,215 @@ describe("UserChainConsumer", () => {
     });
 
     describe("constructor", () => {
-        it("should initialize with correct dependencies", () => {
+        it("should initialize with gameData dependency", () => {
+            // Arrange & Act (done in beforeEach)
+
+            // Assert
             expect(userChainConsumer.gameData).toBe(mockGameData);
+        });
+
+        it("should initialize with assignmentRepository dependency", () => {
+            // Arrange & Act (done in beforeEach)
+
+            // Assert
             expect(userChainConsumer.assignmentRepository).toBe(mockAssignmentRepository);
+        });
+
+        it("should initialize with logService dependency", () => {
+            // Arrange & Act (done in beforeEach)
+
+            // Assert
             expect(userChainConsumer.logService).toBe(mockLogService);
         });
     });
 
     describe("loadActive", () => {
-        it("should log error and return early when memoryExpirationMinutes is not configured", async () => {
-            // Create consumer with missing memoryExpirationMinutes config
-            const incompleteAppConfigs = {
-                resultChains: {
-                    maxChains: 300,
-                    maxPlayerChains: 300,
+        describe("when memoryExpirationMinutes is not configured", () => {
+            it("should log error message", async () => {
+                // Arrange
+                const incompleteAppConfigs = createMockAppConfigs({
                     // memoryExpirationMinutes is missing
-                },
-            };
+                    memoryExpirationMinutes: undefined,
+                });
+                const consumerWithIncompleteConfig = new UserChainConsumer({
+                    gameData: mockGameData,
+                    assignmentRepository: mockAssignmentRepository,
+                    logService: mockLogService,
+                    appConfigs: incompleteAppConfigs,
+                });
 
-            const consumerWithIncompleteConfig = new UserChainConsumer({
-                gameData: mockGameData,
-                assignmentRepository: mockAssignmentRepository,
-                logService: mockLogService,
-                appConfigs: incompleteAppConfigs,
+                // Act
+                await consumerWithIncompleteConfig.loadActive();
+
+                // Assert
+                expect(mockLogService.logError).toHaveBeenCalledWith(
+                    expect.stringContaining("memoryExpirationMinutes or maxPlayerChains is not configured in appConfigs.resultChains")
+                );
             });
 
-            await consumerWithIncompleteConfig.loadActive();
+            it("should not call assignment repository", async () => {
+                // Arrange
+                const incompleteAppConfigs = createMockAppConfigs({
+                    memoryExpirationMinutes: undefined,
+                });
+                const consumerWithIncompleteConfig = new UserChainConsumer({
+                    gameData: mockGameData,
+                    assignmentRepository: mockAssignmentRepository,
+                    logService: mockLogService,
+                    appConfigs: incompleteAppConfigs,
+                });
 
-            expect(mockLogService.logError).toHaveBeenCalledWith(
-                expect.stringContaining("memoryExpirationMinutes or maxPlayerChains is not configured in appConfigs.resultChains")
-            );
-            expect(mockAssignmentRepository.find).not.toHaveBeenCalled();
+                // Act
+                await consumerWithIncompleteConfig.loadActive();
+
+                // Assert
+                expect(mockAssignmentRepository.find).not.toHaveBeenCalled();
+            });
         });
 
-        it("should load active player chains from database", async () => {
-            const activeAssignments = [
-                {
-                    playerName: "activePlayer1",
-                    chainName: "test-chain-1",
-                    currentBoardIndex: 1,
-                    totalBoards: 2,
-                    assignedAt: new Date(),
-                    betLevel: 1,
-                    coinValue: 0.1,
-                    playerId: "player-123",
-                },
-                {
-                    playerName: "activePlayer2",
-                    chainName: "test-chain-2",
-                    currentBoardIndex: 0,
-                    totalBoards: 1,
-                    assignedAt: new Date(),
-                    betLevel: 2,
-                    coinValue: 0.2,
-                    playerId: "player-456",
-                },
-            ];
+        describe("when loading active assignments from database", () => {
+            it("should create player chain entries in memory", async () => {
+                // Arrange
+                const activeAssignments = [
+                    createActiveAssignment({
+                        playerName: "activePlayer1",
+                        chainName: "test-chain-1",
+                        currentBoardIndex: 1,
+                        betLevel: 1,
+                        coinValue: 0.1,
+                    }),
+                ];
 
-            mockAssignmentRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(activeAssignments),
-                }),
-            });
-
-            mockAssignmentRepository.find.mockReturnValue({
-                sort: jest.fn().mockReturnValue({
-                    limit: jest.fn().mockReturnValue({
-                        lean: jest.fn().mockReturnValue({
-                            exec: jest.fn().mockResolvedValue(activeAssignments),
+                mockAssignmentRepository.find.mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        limit: jest.fn().mockReturnValue({
+                            lean: jest.fn().mockReturnValue({
+                                exec: jest.fn().mockResolvedValue(activeAssignments),
+                            }),
                         }),
                     }),
-                }),
+                });
+
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(mockGameData.playerChains["activePlayer1-0.10"]).toBeDefined();
             });
 
-            await userChainConsumer.loadActive();
+            it("should set correct chain name from assignment", async () => {
+                // Arrange
+                const activeAssignments = [
+                    createActiveAssignment({
+                        playerName: "activePlayer1",
+                        chainName: "test-chain-1",
+                    }),
+                ];
 
-            expect(mockGameData.playerChains["activePlayer1-0.10"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer1-0.10"].name).toBe("test-chain-1");
-            expect(mockGameData.playerChains["activePlayer1-0.10"].currentIndex).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1-0.10"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["activePlayer1-0.10"].coinValue).toBe(0.1);
+                mockAssignmentRepository.find.mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        limit: jest.fn().mockReturnValue({
+                            lean: jest.fn().mockReturnValue({
+                                exec: jest.fn().mockResolvedValue(activeAssignments),
+                            }),
+                        }),
+                    }),
+                });
 
-            expect(mockGameData.playerChains["activePlayer2-0.40"]).toBeDefined();
-            expect(mockGameData.playerChains["activePlayer2-0.40"].name).toBe("test-chain-2");
-            expect(mockGameData.playerChains["activePlayer2-0.40"].currentIndex).toBe(0);
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(mockGameData.playerChains["activePlayer1-0.10"].name).toBe("test-chain-1");
+            });
+
+            it("should set correct current index from assignment", async () => {
+                // Arrange
+                const activeAssignments = [
+                    createActiveAssignment({
+                        playerName: "activePlayer1",
+                        currentBoardIndex: 5,
+                    }),
+                ];
+
+                mockAssignmentRepository.find.mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        limit: jest.fn().mockReturnValue({
+                            lean: jest.fn().mockReturnValue({
+                                exec: jest.fn().mockResolvedValue(activeAssignments),
+                            }),
+                        }),
+                    }),
+                });
+
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(mockGameData.playerChains["activePlayer1-0.10"].currentIndex).toBe(5);
+            });
+
+            it("should set correct bet level from assignment", async () => {
+                // Arrange
+                const activeAssignments = [
+                    createActiveAssignment({
+                        playerName: "activePlayer1",
+                        betLevel: 3,
+                        coinValue: 0.3, // Adjust coinValue to match betLevel for consistent key
+                    }),
+                ];
+
+                mockAssignmentRepository.find.mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        limit: jest.fn().mockReturnValue({
+                            lean: jest.fn().mockReturnValue({
+                                exec: jest.fn().mockResolvedValue(activeAssignments),
+                            }),
+                        }),
+                    }),
+                });
+
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(mockGameData.playerChains["activePlayer1-0.90"].betLevel).toBe(3);
+            });
+
+            it("should set correct coin value from assignment", async () => {
+                // Arrange
+                const activeAssignments = [
+                    createActiveAssignment({
+                        playerName: "activePlayer1",
+                        coinValue: 0.5,
+                    }),
+                ];
+
+                mockAssignmentRepository.find.mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        limit: jest.fn().mockReturnValue({
+                            lean: jest.fn().mockReturnValue({
+                                exec: jest.fn().mockResolvedValue(activeAssignments),
+                            }),
+                        }),
+                    }),
+                });
+
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(mockGameData.playerChains["activePlayer1-0.50"].coinValue).toBe(0.5);
+            });
         });
 
-        it("should warn when chain is not found in available chains", async () => {
+        it("should skip chains not found in available chains", async () => {
+            // Arrange
             const activeAssignments = [
-                {
+                createActiveAssignment({
                     playerName: "missingChainPlayer",
                     chainName: "non-existent-chain",
-                    currentBoardIndex: 0,
-                    totalBoards: 1,
-                    assignedAt: new Date(),
-                    betLevel: 1,
-                    coinValue: 0.1,
-                    playerId: "player-789",
-                },
+                }),
             ];
 
             mockAssignmentRepository.find.mockReturnValue({
@@ -215,13 +341,15 @@ describe("UserChainConsumer", () => {
                 }),
             });
 
+            // Act
             await userChainConsumer.loadActive();
 
-            expect(mockGameData.playerChains["missingChainPlayer-0.1"]).toBeUndefined();
-            // No warning should be logged since missing chains are normal
+            // Assert
+            expect(mockGameData.playerChains["missingChainPlayer-0.10"]).toBeUndefined();
         });
 
-        it("should handle database errors gracefully", async () => {
+        it("should log error when database operation fails", async () => {
+            // Arrange
             mockAssignmentRepository.find.mockReturnValue({
                 sort: jest.fn().mockReturnValue({
                     limit: jest.fn().mockReturnValue({
@@ -232,62 +360,123 @@ describe("UserChainConsumer", () => {
                 }),
             });
 
+            // Act
             await userChainConsumer.loadActive();
 
+            // Assert
             expect(mockLogService.logError).toHaveBeenCalledWith("Failed to load active chains:", expect.any(Error));
         });
     });
 
     describe("assignChain", () => {
-        it("should assign chain to player successfully", async () => {
-            const playerContext = {
-                playerId: "player-123",
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 120, // Will result in 75 applicable boards (within limit)
-                operatorId: "test-operator",
-                gameId: "test-game",
-                currency: "USD",
-            };
+        describe("when assignment is successful", () => {
+            it("should return true", async () => {
+                // Arrange
+                const playerContext = createPlayerContext({ balance: 120 });
 
-            const result = await userChainConsumer.assignChain("testPlayer", playerContext);
+                // Act
+                const result = await userChainConsumer.assignChain("testPlayer", playerContext);
 
-            expect(result).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer-0.10"].currentIndex).toBe(0);
-            expect(mockGameData.playerChains["testPlayer-0.10"].betLevel).toBe(1);
-            expect(mockGameData.playerChains["testPlayer-0.10"].coinValue).toBe(0.1);
-            expect(mockAssignmentRepository.create).toHaveBeenCalled();
-        });
-
-        it("should return false when chains are disabled", async () => {
-            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
-
-            const result = await userChainConsumer.assignChain("testPlayer", {
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 120,
+                // Assert
+                expect(result).toBe(true);
             });
 
-            expect(result).toBe(false);
-            expect(mockAssignmentRepository.create).not.toHaveBeenCalled();
+            it("should create player chain entry in memory", async () => {
+                // Arrange
+                const playerContext = createPlayerContext({ balance: 120 });
+
+                // Act
+                await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
+            });
+
+            it("should set initial current index to zero", async () => {
+                // Arrange
+                const playerContext = createPlayerContext({ balance: 120 });
+
+                // Act
+                await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(mockGameData.playerChains["testPlayer-0.10"].currentIndex).toBe(0);
+            });
+
+            it("should set correct bet level from context", async () => {
+                // Arrange
+                const playerContext = createPlayerContext({ betLevel: 3, balance: 600 }); // Higher balance for betLevel 3
+
+                // Act
+                await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(mockGameData.playerChains["testPlayer-0.30"].betLevel).toBe(3);
+            });
+
+            it("should set correct coin value from context", async () => {
+                // Arrange
+                const playerContext = createPlayerContext({ coinValue: 0.5, balance: 1000 }); // Higher balance for coinValue 0.5
+
+                // Act
+                await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(mockGameData.playerChains["testPlayer-0.50"].coinValue).toBe(0.5);
+            });
+
+            it("should call assignment repository create", async () => {
+                // Arrange
+                const playerContext = createPlayerContext({ balance: 120 });
+
+                // Act
+                await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(mockAssignmentRepository.create).toHaveBeenCalled();
+            });
+        });
+
+        describe("when chains are disabled", () => {
+            it("should return false", async () => {
+                // Arrange
+                mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+                const playerContext = createPlayerContext({ balance: 120 });
+
+                // Act
+                const result = await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(result).toBe(false);
+            });
+
+            it("should not call assignment repository", async () => {
+                // Arrange
+                mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+                const playerContext = createPlayerContext({ balance: 120 });
+
+                // Act
+                await userChainConsumer.assignChain("testPlayer", playerContext);
+
+                // Assert
+                expect(mockAssignmentRepository.create).not.toHaveBeenCalled();
+            });
         });
 
         it("should return false when player already has an active chain", async () => {
+            // Arrange
             mockGameData.playerChains["existingPlayer-0.10"] = {
                 name: "existing-chain",
                 currentIndex: 0,
                 totalBoards: 100,
             };
+            const playerContext = createPlayerContext({ balance: 120 });
 
-            const result = await userChainConsumer.assignChain("existingPlayer", {
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 120,
-            });
+            // Act
+            const result = await userChainConsumer.assignChain("existingPlayer", playerContext);
 
+            // Assert
             expect(result).toBe(false);
-            // No warning should be logged since this is normal behavior
         });
 
         it("should return false when player has active assignment in database", async () => {
@@ -754,7 +943,12 @@ describe("UserChainConsumer", () => {
             expect(userChainConsumer.getClosestValidBoardCount(50)).toBe(50);
             expect(userChainConsumer.getClosestValidBoardCount(62)).toBe(50); // |50-62|=12, |75-62|=13
             expect(userChainConsumer.getClosestValidBoardCount(63)).toBe(75); // |50-63|=13, |75-63|=12
+            expect(userChainConsumer.getClosestValidBoardCount(75)).toBe(75);
+            expect(userChainConsumer.getClosestValidBoardCount(87)).toBe(75); // |75-87|=12, |100-87|=13
+            expect(userChainConsumer.getClosestValidBoardCount(88)).toBe(100); // |75-88|=13, |100-88|=12
             expect(userChainConsumer.getClosestValidBoardCount(100)).toBe(100);
+            expect(userChainConsumer.getClosestValidBoardCount(112)).toBe(100); // |100-112|=12, |125-112|=13
+            expect(userChainConsumer.getClosestValidBoardCount(113)).toBe(125); // |100-113|=13, |125-113|=12
             expect(userChainConsumer.getClosestValidBoardCount(125)).toBe(125);
             expect(userChainConsumer.getClosestValidBoardCount(250)).toBe(200); // Max value
         });
