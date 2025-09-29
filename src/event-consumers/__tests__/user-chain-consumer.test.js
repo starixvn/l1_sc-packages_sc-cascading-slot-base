@@ -856,8 +856,8 @@ describe("UserChainConsumer", () => {
 
             // Test with larger balance
             const result3 = userChainConsumer.getApplicableBoardCount({ balance: 1000 }, 0.1);
-            // playableBoards = floor(1000 / 0.1 / 20) = 500, applicableBoards = 625, closest valid = 200
-            expect(result3).toBe(200);
+            // playableBoards = floor(1000 / 0.1 / 20) = 500, applicableBoards = 625, exceeds max (200) = -1
+            expect(result3).toBe(-1);
         });
 
         it("should use default betMultiplier when not configured", () => {
@@ -950,13 +950,18 @@ describe("UserChainConsumer", () => {
             expect(userChainConsumer.getClosestValidBoardCount(112)).toBe(100); // |100-112|=12, |125-112|=13
             expect(userChainConsumer.getClosestValidBoardCount(113)).toBe(125); // |100-113|=13, |125-113|=12
             expect(userChainConsumer.getClosestValidBoardCount(125)).toBe(125);
-            expect(userChainConsumer.getClosestValidBoardCount(250)).toBe(200); // Max value
+            expect(userChainConsumer.getClosestValidBoardCount(200)).toBe(200); // Max value
         });
 
         it("should handle edge cases", () => {
             expect(userChainConsumer.getClosestValidBoardCount(0)).toBe(50); // Closest to minimum
-            expect(userChainConsumer.getClosestValidBoardCount(1000)).toBe(200); // Closest to maximum
             expect(userChainConsumer.getClosestValidBoardCount(87.5)).toBe(75); // |75-87.5|=12.5, |100-87.5|=12.5, returns first (75)
+        });
+
+        it("should return -1 when applicableBoards exceeds maximum board range", () => {
+            // Arrange & Act & Assert
+            expect(userChainConsumer.getClosestValidBoardCount(250)).toBe(-1); // 250 > 200 (max)
+            expect(userChainConsumer.getClosestValidBoardCount(1000)).toBe(-1); // 1000 > 200 (max)
         });
     });
 

@@ -517,6 +517,12 @@ export default class UserChainConsumer {
             return -1;
         }
 
+        // Return -1 if applicableBoards exceeds the maximum board range
+        const maxBoardCount = Math.max(...boardRange);
+        if (applicableBoards > maxBoardCount) {
+            return -1;
+        }
+
         return boardRange.reduce((closest, current) => {
             return Math.abs(current - applicableBoards) < Math.abs(closest - applicableBoards) ? current : closest;
         });
