@@ -222,7 +222,7 @@ describe("cascadingProcessBetQueue", () => {
         });
 
         describe("when interceptors are provided", () => {
-            it("should call executeInterceptorEvent with complete bet structure including betLevel and coinValue", async () => {
+            it("should call executeInterceptorEvent with betLevel and coinValue", async () => {
                 // Arrange
                 const betwin = 150;
                 const betWithLevels = {
@@ -245,8 +245,9 @@ describe("cascadingProcessBetQueue", () => {
                         roundId,
                         betWin: betwin,
                         amount: betWithLevels.totalAmount,
-                        betLevel: betWithLevels.betLevel, // ✅ Critical: Must be included
-                        coinValue: betWithLevels.coinValue, // ✅ Critical: Must be included
+                        betLevel: betWithLevels.betLevel,
+                        coinValue: betWithLevels.coinValue,
+                        baseBetWin: betwin * rate,
                     },
                     balance,
                 });
@@ -279,6 +280,7 @@ describe("cascadingProcessBetQueue", () => {
                         amount: bet.totalAmount,
                         betLevel: bet.betLevel,
                         coinValue: bet.coinValue,
+                        baseBetWin: 100 * rate,
                     },
                     balance,
                 });

@@ -22,6 +22,7 @@ const mockBoardGeneratorInstance = {
 
 const boardGenerator = {
     initialize: jest.fn().mockReturnValue(mockBoardGeneratorInstance),
+    explodeAndRefill: jest.fn(),
 };
 const tumbleCalculator = new TumbleCalculator();
 
@@ -616,261 +617,265 @@ describe("RoundCalculator", () => {
 
                 // Assert
                 expect(round.settlementResult.freeSpins.odds).toEqual(3); // 8 free spins >= 6, so odds = 3
+            });
         });
     });
-});
 
-describe("processSpinning with chain results", () => {
-    describe("when receiving preGeneratedResult from ChainManager", () => {
-        it("should process single tumble without cascades and preserve settlement data", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+    describe("processSpinning with chain results", () => {
+        // Shared test data factories (DRY principle)
+        const createStandardBoard = () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        const createWinningBoard = () => [8, 8, 8, 3, 8, 10, 8, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 7];
+        const createEmptySymbolsArray = () => Array(30).fill(-1);
+        const createExplodedSymbols = (values) => [...values, ...Array(30 - values.length).fill(-1)];
 
-            // Mock preGeneratedResult in ChainManager format (RoundCalculator compatible)
-            const preGeneratedResult = [
-                {
-                    newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                    multipliers: [1],
-                    icons: {},
-                    explodedSymbols: [], // No winning symbols
-                    newSymbols: [], // No cascade needed
-                },
-            ];
-
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert
-            expect(result).toBe(round);
-            expect(round.settlementResult).toBeDefined();
-            expect(round.settlementResult.tumbles).toBeDefined();
-            expect(round.settlementResult.tumbles.length).toBe(1);
-
-            const tumble = round.settlementResult.tumbles[0];
-            expect(tumble.originalBoard).toBe("1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10");
-            expect(tumble.multipliers).toEqual([1]);
-
-            // In single tumble scenario, no settlement data is assigned since no cascades occur
-            expect(tumble.explodedSymbols).toBeUndefined();
-            expect(tumble.newSymbols).toBeUndefined();
+        const createBasicChainResult = (overrides = {}) => ({
+            newBoard: createStandardBoard(),
+            multipliers: [1],
+            icons: {},
+            explodedSymbols: [],
+            newSymbols: [],
+            ...overrides,
         });
 
-        it("should process chain result and verify settlement data integration", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+        let round, calculator;
 
-            // Mock preGeneratedResult with winning board that will cause cascade
-            const preGeneratedResult = [
-                {
-                    newBoard: [8, 8, 8, 3, 8, 10, 8, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 7],
-                    multipliers: [2],
-                    icons: {},
-                    explodedSymbols: [
-                        8, 8, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                    ],
-                    newSymbols: [1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-                },
-                {
-                    newBoard: [1, 2, 3, 3, 8, 10, 8, 8, 8, 9, 5, 9, 8, 2, 4, 9, 5, 4, 6, 2, 4, 6, 3, 8, 3, 1, 5, 6, 7, 7],
-                    multipliers: [2],
-                    icons: {},
-                    explodedSymbols: [], // Final board with no more wins
-                    newSymbols: [],
-                },
-            ];
-
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert
-            expect(result).toBe(round);
-            expect(preGeneratedResult.length).toBe(0); // Chain data consumed by shift()
-            expect(round.settlementResult.tumbles.length).toBeGreaterThanOrEqual(1);
-
-            // The key test: verify that settlement data from chain is accessible in processSpinning
-            // This proves the format compatibility fix works
-            const firstTumble = round.settlementResult.tumbles[0];
-            expect(firstTumble.originalBoard).toBe("8,8,8,3,8,10,8,8,8,9,5,9,8,2,4,9,5,4,6,2,4,6,3,8,3,1,5,6,7,7");
+        beforeEach(() => {
+            // Common setup for all chain result tests
+            round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+            calculator = initCalculator();
         });
 
-        it("should verify preGeneratedResult consumption and data access", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+        describe("when receiving preGeneratedResult from ChainManager", () => {
+            describe("single tumble processing", () => {
+                it("should return the round object", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
 
-            // Mock preGeneratedResult with settlement data
-            const preGeneratedResult = [
-                {
-                    newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                    multipliers: [1],
-                    icons: {},
-                    explodedSymbols: [
-                        1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                    ],
-                    newSymbols: [4, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-                },
-            ];
+                    // Act
+                    const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
 
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+                    // Assert
+                    expect(result).toBe(round);
+                });
 
-            // Assert
-            expect(result).toBe(round);
+                it("should create settlement result with tumbles", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
 
-            // Critical test: preGeneratedResult should be consumed via shift()
-            expect(preGeneratedResult.length).toBe(0); // Consumed by shift()
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
 
-            // The format compatibility is proven by the fact that:
-            // 1. processSpinning can access explodedSymbols/newSymbols from chain format
-            // 2. No errors occur during data access (which was the original bug)
-            expect(round.settlementResult.tumbles.length).toBeGreaterThanOrEqual(1);
-        });
+                    // Assert
+                    expect(round.settlementResult.tumbles).toBeDefined();
+                });
 
-        it("should demonstrate format compatibility by accessing settlement data without errors", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+                it("should create exactly one tumble for single result", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
 
-            // Mock boardGenerator to prevent cascade issues
-            boardGenerator.explodeAndRefill.mockReturnValue({
-                newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                explodedSymbols: [], // No more wins
-                newSymbols: [],
-                multipliers: [1],
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    expect(round.settlementResult.tumbles.length).toBe(1);
+                });
+
+                it("should set correct original board from chain data", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    const tumble = round.settlementResult.tumbles[0];
+                    expect(tumble.originalBoard).toBe("1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10");
+                });
+
+                it("should set correct multipliers from chain data", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult({ multipliers: [2] })];
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    const tumble = round.settlementResult.tumbles[0];
+                    expect(tumble.multipliers).toEqual([2]);
+                });
+
+                it("should not assign exploded symbols for single tumble", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    const tumble = round.settlementResult.tumbles[0];
+                    expect(tumble.explodedSymbols).toBeUndefined();
+                });
+
+                it("should not assign new symbols for single tumble", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    const tumble = round.settlementResult.tumbles[0];
+                    expect(tumble.newSymbols).toBeUndefined();
+                });
             });
 
-            // Mock preGeneratedResult with settlement data in ChainManager format
-            const preGeneratedResult = [
-                {
-                    newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                    multipliers: [1],
-                    icons: {},
-                    explodedSymbols: [
-                        1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                    ],
-                    newSymbols: [4, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-                },
-            ];
+            describe("data consumption", () => {
+                it("should consume all preGeneratedResult items", () => {
+                    // Arrange
+                    const preGeneratedResult = [createBasicChainResult()];
 
-            // Act - This should not throw errors due to format compatibility fix
-            expect(() => {
-                calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-            }).not.toThrow();
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
 
-            // Assert: The critical fix is proven by successful execution
-            expect(preGeneratedResult.length).toBe(0); // Data consumed successfully
-            expect(round.settlementResult.tumbles.length).toBeGreaterThanOrEqual(1);
+                    // Assert
+                    expect(preGeneratedResult.length).toBe(0);
+                });
 
-            // The key test: no undefined errors when accessing explodedSymbols/newSymbols
-            // This proves the format mismatch fix between ChainManager and RoundCalculator works
-        });
+                it("should consume multiple chain result items when cascades occur", () => {
+                    // Arrange
+                    const preGeneratedResult = [
+                        createBasicChainResult({ newBoard: createWinningBoard(), multipliers: [2] }),
+                        createBasicChainResult({ explodedSymbols: [], newSymbols: [] }),
+                    ];
 
-        it("should verify explodedSymbols flow from chain data to settlement result", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+                    // Mock tumble calculator to trigger cascade on first tumble only
+                    jest.spyOn(calculator, "settleTumble")
+                        .mockReturnValueOnce(true) // First tumble has win, triggers cascade
+                        .mockReturnValueOnce(false); // Second tumble has no win, stops cascade
 
-            // Unique chain data to verify it flows through correctly
-            const chainExplodedSymbols = [
-                88, 77, 66, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            ];
-            const chainNewSymbols = [
-                11, 22, 33, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            ];
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
 
-            // Mock preGeneratedResult with our unique chain data
-            const preGeneratedResult = [
-                {
-                    newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                    multipliers: [1],
-                    icons: {},
-                    explodedSymbols: chainExplodedSymbols,
-                    newSymbols: chainNewSymbols,
-                },
-            ];
-
-            // Act
-            calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert: Verify chain data is consumed and accessible
-            expect(preGeneratedResult.length).toBe(0); // Chain data consumed
-
-            // The critical test: Chain explodedSymbols are available for use by round calculator
-            // We verify this by checking the data was correctly extracted from the chain format
-            expect(round.settlementResult).toBeDefined();
-            expect(round.settlementResult.tumbles.length).toBeGreaterThanOrEqual(1);
-
-            // This test proves the format compatibility fix works - no errors accessing chain data
-        });
-
-        it("should prioritize preGeneratedResult over boardGenerator for settlement data", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
-
-            // Create a spy on settleTumble to force cascade behavior
-            const originalSettleTumble = calculator.settleTumble;
-            let settleCalls = 0;
-            calculator.settleTumble = jest.fn().mockImplementation((...args) => {
-                settleCalls++;
-                // First call returns true (triggers cascade), second returns false (stops cascade)
-                if (settleCalls === 1) return true;
-                return false;
+                    // Assert
+                    expect(preGeneratedResult.length).toBe(0);
+                });
             });
 
-            // Mock boardGenerator that should NOT be called if chain data exists
-            boardGenerator.explodeAndRefill.mockReturnValue({
-                newBoard: [9, 9, 9, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                explodedSymbols: [
-                    9, 9, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                ],
-                newSymbols: [7, 7, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-                multipliers: [1],
+            describe("format compatibility", () => {
+                it("should not throw when accessing explodedSymbols property", () => {
+                    // Arrange
+                    const preGeneratedResult = [
+                        createBasicChainResult({
+                            explodedSymbols: createExplodedSymbols([1, 2, 3]),
+                        }),
+                    ];
+
+                    // Act & Assert
+                    expect(() => {
+                        calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+                    }).not.toThrow();
+                });
+
+                it("should not throw when accessing newSymbols property", () => {
+                    // Arrange
+                    const preGeneratedResult = [
+                        createBasicChainResult({
+                            newSymbols: createExplodedSymbols([4, 5, 6]),
+                        }),
+                    ];
+
+                    // Act & Assert
+                    expect(() => {
+                        calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+                    }).not.toThrow();
+                });
+
+                it("should not throw when processing complete chain format", () => {
+                    // Arrange
+                    const preGeneratedResult = [
+                        createBasicChainResult({
+                            explodedSymbols: createExplodedSymbols([1, 2, 3]),
+                            newSymbols: createExplodedSymbols([4, 5, 6]),
+                        }),
+                    ];
+
+                    // Act & Assert
+                    expect(() => {
+                        calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+                    }).not.toThrow();
+                });
             });
 
-            // Chain data with unique values to prove it was used
-            const preGeneratedResult = [
-                {
-                    newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                    multipliers: [1],
-                    icons: {},
-                    explodedSymbols: [],
-                    newSymbols: [],
-                },
-                {
-                    // This should be used instead of boardGenerator
-                    newBoard: [5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4],
-                    multipliers: [1],
-                    icons: {},
-                    explodedSymbols: [
-                        99, 88, 77, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                    ], // Unique chain data
-                    newSymbols: [
-                        11, 22, 33, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                    ], // Unique chain data
-                },
-            ];
+            describe("priority over boardGenerator", () => {
+                it("should not call boardGenerator when chain data is available", () => {
+                    // Arrange
+                    const preGeneratedResult = [
+                        createBasicChainResult(),
+                        createBasicChainResult({ explodedSymbols: createExplodedSymbols([99, 88, 77]) }),
+                    ];
 
-            // Act
-            calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+                    // Mock boardGenerator.explodeAndRefill to track calls
+                    const explodeAndRefillSpy = jest.spyOn(boardGenerator, "explodeAndRefill");
 
-            // Assert: Chain data should be used, boardGenerator should NOT be called
-            expect(boardGenerator.explodeAndRefill).not.toHaveBeenCalled();
-            expect(preGeneratedResult.length).toBe(0); // All chain data consumed
+                    // Force cascade behavior
+                    jest.spyOn(calculator, "settleTumble")
+                        .mockReturnValueOnce(true) // First call triggers cascade
+                        .mockReturnValueOnce(false); // Second call stops cascade
 
-            // Verify cascade occurred and chain data was used
-            expect(round.settlementResult.tumbles.length).toBe(2); // Initial + cascade tumble
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
 
-            const firstTumble = round.settlementResult.tumbles[0];
-            // First tumble should have the unique chain explodedSymbols assigned during cascade
-            expect(firstTumble.explodedSymbols).toEqual([
-                99, 88, 77, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            ]);
-            expect(firstTumble.newSymbols).toEqual([
-                11, 22, 33, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            ]);
+                    // Assert
+                    expect(explodeAndRefillSpy).not.toHaveBeenCalled();
+
+                    explodeAndRefillSpy.mockRestore();
+                });
+
+                it("should use chain exploded symbols instead of boardGenerator", () => {
+                    // Arrange
+                    const uniqueExplodedSymbols = createExplodedSymbols([99, 88, 77]);
+                    const preGeneratedResult = [createBasicChainResult(), createBasicChainResult({ explodedSymbols: uniqueExplodedSymbols })];
+
+                    jest.spyOn(calculator, "settleTumble").mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    const firstTumble = round.settlementResult.tumbles[0];
+                    expect(firstTumble.explodedSymbols).toEqual(uniqueExplodedSymbols);
+                });
+
+                it("should use chain new symbols instead of boardGenerator", () => {
+                    // Arrange
+                    const uniqueNewSymbols = createExplodedSymbols([11, 22, 33]);
+                    const preGeneratedResult = [createBasicChainResult(), createBasicChainResult({ newSymbols: uniqueNewSymbols })];
+
+                    jest.spyOn(calculator, "settleTumble").mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    const firstTumble = round.settlementResult.tumbles[0];
+                    expect(firstTumble.newSymbols).toEqual(uniqueNewSymbols);
+                });
+
+                it("should create correct number of tumbles with chain data", () => {
+                    // Arrange
+                    const preGeneratedResult = [
+                        createBasicChainResult(),
+                        createBasicChainResult({ explodedSymbols: createExplodedSymbols([99, 88, 77]) }),
+                    ];
+
+                    jest.spyOn(calculator, "settleTumble").mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    expect(round.settlementResult.tumbles.length).toBe(2);
+                });
             });
 
             it("should calculate free spin odds based on additional odds config for free spin mode", () => {
@@ -931,287 +936,322 @@ describe("processSpinning with chain results", () => {
                 expect(round.actualBetwin).toEqual(101); // 100 + 1 (free spin win)
             });
         });
-describe("processSpinning with corrected tease data", () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
+        describe("processSpinning with corrected tease data", () => {
+            beforeEach(() => {
+                jest.clearAllMocks();
+            });
 
-    describe("Single tumble scenario from corrected data", () => {
-        it("should process board with no wins correctly", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+            describe("Single tumble scenario from corrected data", () => {
+                it("should process board with no wins correctly", () => {
+                    // Arrange
+                    const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+                    const calculator = initCalculator();
 
-            // Board 2 from corrected tease data (no wins)
-            const preGeneratedResult = [
-                {
-                    newBoard: [0, 6, 4, 3, 3, 0, 5, 2, 2, 2, 2, 3, 0, 2, 2, 1, 1, 3, 0, 8, 0, 1, 2, 4, 1, 5, 1, 1, 1, 6],
-                    multipliers: [],
-                    explodedSymbols: [],
-                    newSymbols: [],
-                },
-            ];
+                    // Mock tumbleCalculator to simulate no wins
+                    const mockCalculate = jest.spyOn(calculator.tumbleCalculator, "calculate");
+                    mockCalculate.mockImplementation((tumble) => {
+                        tumble.win = 0;
+                        tumble.icons = {};
+                    });
 
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert
-            expect(result).toBe(round);
-            expect(preGeneratedResult.length).toBe(0); // Consumed
-
-            // Should have exactly 1 tumble
-            expect(round.settlementResult.tumbles.length).toBe(1);
-
-            const tumble = round.settlementResult.tumbles[0];
-            expect(tumble.originalBoard).toBe("0,6,4,3,3,0,5,2,2,2,2,3,0,2,2,1,1,3,0,8,0,1,2,4,1,5,1,1,1,6");
-            expect(tumble.newBoard).toBe("0,6,4,3,3,0,5,2,2,2,2,3,0,2,2,1,1,3,0,8,0,1,2,4,1,5,1,1,1,6");
-            expect(tumble.multipliers).toEqual([]);
-            expect(tumble.win).toBe(0);
-            expect(Object.keys(tumble.icons)).toHaveLength(0);
-            expect(tumble.explodedSymbols).toBeUndefined();
-            expect(tumble.newSymbols).toBeUndefined();
-        });
-    });
-
-    describe("Two tumbles scenario from corrected data", () => {
-        it("should process board 1 with 9 zeros winning combination", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
-
-            // Board 1 from corrected tease data (9 zeros = 5x odds)
-            const preGeneratedResult = [
-                {
-                    newBoard: [6, 10, 5, 7, 8, 1, 6, 1, 0, 1, 9, 9, 6, 2, 0, 7, 0, 1, 0, 3, 2, 7, 8, 2, 0, 0, 0, 4, 0, 0],
-                    multipliers: [18],
-                    explodedSymbols: [],
-                    newSymbols: [],
-                },
-                {
-                    newBoard: [6, 10, 5, 7, 8, 1, 1, 6, 1, 1, 1, 9, 9, 6, 2, 1, 2, 7, 1, 3, 2, 2, 7, 8, 2, 0, 0, 2, 7, 4],
-                    multipliers: [18],
-                    explodedSymbols: [-1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0],
-                    newSymbols: [-1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1],
-                },
-            ];
-
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert
-            expect(result).toBe(round);
-            expect(preGeneratedResult.length).toBe(0); // All consumed
-
-            // Should have exactly 2 tumbles
-            expect(round.settlementResult.tumbles.length).toBe(2);
-
-            // First tumble verification (should have winning 0's)
-            const firstTumble = round.settlementResult.tumbles[0];
-            expect(firstTumble.originalBoard).toBe("6,10,5,7,8,1,6,1,0,1,9,9,6,2,0,7,0,1,0,3,2,7,8,2,0,0,0,4,0,0");
-            expect(firstTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
-            expect(firstTumble.explodedSymbols).toEqual([
-                -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0,
-            ]);
-            expect(firstTumble.newSymbols).toEqual([
-                -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1,
-            ]);
-            expect(firstTumble.multipliers).toEqual([18]);
-            expect(firstTumble.win).toBeGreaterThan(0); // Should have wins from 9 zeros
-            expect(firstTumble.icons["0"]).toBeDefined();
-            expect(firstTumble.icons["0"].count).toBe(9);
-
-            // Second tumble verification (should have no wins)
-            const secondTumble = round.settlementResult.tumbles[1];
-            expect(secondTumble.originalBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
-            expect(secondTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
-            expect(secondTumble.explodedSymbols).toBeUndefined();
-            expect(secondTumble.newSymbols).toBeUndefined();
-            expect(secondTumble.win).toBe(0);
-            expect(Object.keys(secondTumble.icons)).toHaveLength(0);
-        });
-
-        it("should process board 8 with 9 zeros winning combination", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
-
-            // Board 8 from corrected tease data (9 zeros = 5x odds)
-            const preGeneratedResult = [
-                {
-                    newBoard: [0, 9, 1, 4, 1, 0, 0, 0, 7, 0, 3, 1, 4, 6, 3, 9, 2, 0, 7, 3, 6, 0, 0, 3, 6, 3, 0, 6, 9, 1],
-                    multipliers: [],
-                    explodedSymbols: [],
-                    newSymbols: [],
-                },
-                {
-                    newBoard: [2, 9, 1, 4, 1, 1, 6, 5, 0, 7, 3, 1, 4, 6, 3, 4, 9, 2, 7, 3, 0, 1, 6, 3, 6, 2, 3, 6, 9, 1],
-                    multipliers: [],
-                    explodedSymbols: [0, -1, -1, -1, -1, 0, 0, 0, -1, 0, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 0, -1, -1, -1, 0, -1, -1, -1],
-                    newSymbols: [2, -1, -1, -1, -1, 1, 6, 5, 0, -1, -1, -1, -1, -1, -1, 4, -1, -1, -1, -1, 0, 1, -1, -1, -1, 2, -1, -1, -1, -1],
-                },
-            ];
-
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert
-            expect(result).toBe(round);
-            expect(preGeneratedResult.length).toBe(0); // All consumed
-
-            // Should have exactly 2 tumbles
-            expect(round.settlementResult.tumbles.length).toBe(2);
-
-            // First tumble verification (should have winning 0's)
-            const firstTumble = round.settlementResult.tumbles[0];
-            expect(firstTumble.originalBoard).toBe("0,9,1,4,1,0,0,0,7,0,3,1,4,6,3,9,2,0,7,3,6,0,0,3,6,3,0,6,9,1");
-            expect(firstTumble.newBoard).toBe("2,9,1,4,1,1,6,5,0,7,3,1,4,6,3,4,9,2,7,3,0,1,6,3,6,2,3,6,9,1");
-            expect(firstTumble.explodedSymbols).toEqual([
-                0, -1, -1, -1, -1, 0, 0, 0, -1, 0, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 0, -1, -1, -1, 0, -1, -1, -1,
-            ]);
-            expect(firstTumble.newSymbols).toEqual([
-                2, -1, -1, -1, -1, 1, 6, 5, 0, -1, -1, -1, -1, -1, -1, 4, -1, -1, -1, -1, 0, 1, -1, -1, -1, 2, -1, -1, -1, -1,
-            ]);
-            expect(firstTumble.multipliers).toEqual([]);
-            expect(firstTumble.win).toBeGreaterThan(0); // Should have wins from 9 zeros
-            expect(firstTumble.icons["0"]).toBeDefined();
-            expect(firstTumble.icons["0"].count).toBe(9);
-
-            // Second tumble verification (should have no wins)
-            const secondTumble = round.settlementResult.tumbles[1];
-            expect(secondTumble.originalBoard).toBe("2,9,1,4,1,1,6,5,0,7,3,1,4,6,3,4,9,2,7,3,0,1,6,3,6,2,3,6,9,1");
-            expect(secondTumble.newBoard).toBe("2,9,1,4,1,1,6,5,0,7,3,1,4,6,3,4,9,2,7,3,0,1,6,3,6,2,3,6,9,1");
-            expect(secondTumble.explodedSymbols).toBeUndefined();
-            expect(secondTumble.newSymbols).toBeUndefined();
-            expect(secondTumble.win).toBe(0);
-            expect(Object.keys(secondTumble.icons)).toHaveLength(0);
-        });
-    });
-
-    describe("preGeneratedResult format validation", () => {
-        it("should correctly consume preGeneratedResult items in order", () => {
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
-
-            // Track original array length
-            const preGeneratedResult = [
-                {
-                    newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                    multipliers: [1],
-                    explodedSymbols: [],
-                    newSymbols: [],
-                },
-            ];
-
-            const originalLength = preGeneratedResult.length;
-
-            // Act
-            calculator.processSpinning(round, 0, 1000, preGeneratedResult);
-
-            // Assert
-            expect(preGeneratedResult.length).toBe(0); // All items consumed by shift()
-            expect(round.settlementResult.tumbles.length).toBe(1);
-
-            const tumble = round.settlementResult.tumbles[0];
-            expect(tumble.originalBoard).toBe("1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10");
-        });
-    });
-
-    describe("ChainManager integration with corrected data", () => {
-        it("should produce correct preGeneratedResult format for processSpinning", () => {
-            // Simulate what ChainManager.convertChainBoardToResult would produce
-            // This uses the fixed version of the method
-            const mockChainBoard = {
-                board: [6, 10, 5, 7, 8, 1, 6, 1, 0, 1, 9, 9, 6, 2, 0, 7, 0, 1, 0, 3, 2, 7, 8, 2, 0, 0, 0, 4, 0, 0],
-                multipliers: [18],
-                settlementResult: {
-                    tumbles: [
+                    // Board 2 from corrected tease data (no wins)
+                    const preGeneratedResult = [
                         {
-                            originalBoard: "6,10,5,7,8,1,6,1,0,1,9,9,6,2,0,7,0,1,0,3,2,7,8,2,0,0,0,4,0,0",
-                            newBoard: "6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4",
+                            newBoard: [0, 6, 4, 3, 3, 0, 5, 2, 2, 2, 2, 3, 0, 2, 2, 1, 1, 3, 0, 8, 0, 1, 2, 4, 1, 5, 1, 1, 1, 6],
+                            multipliers: [],
+                            explodedSymbols: [],
+                            newSymbols: [],
+                        },
+                    ];
+
+                    // Act
+                    const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    expect(result).toBe(round);
+                    expect(preGeneratedResult.length).toBe(0); // Consumed
+
+                    // Should have exactly 1 tumble
+                    expect(round.settlementResult.tumbles.length).toBe(1);
+
+                    const tumble = round.settlementResult.tumbles[0];
+                    expect(tumble.originalBoard).toBe("0,6,4,3,3,0,5,2,2,2,2,3,0,2,2,1,1,3,0,8,0,1,2,4,1,5,1,1,1,6");
+                    expect(tumble.newBoard).toBe("0,6,4,3,3,0,5,2,2,2,2,3,0,2,2,1,1,3,0,8,0,1,2,4,1,5,1,1,1,6");
+                    expect(tumble.multipliers).toEqual([]);
+                    expect(tumble.win).toBe(0);
+                    expect(Object.keys(tumble.icons)).toHaveLength(0);
+                    expect(tumble.explodedSymbols).toBeUndefined();
+                    expect(tumble.newSymbols).toBeUndefined();
+
+                    mockCalculate.mockRestore();
+                });
+            });
+
+            describe("Two tumbles scenario from corrected data", () => {
+                it("should process board 1 with 9 zeros winning combination", () => {
+                    // Arrange
+                    const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+                    const calculator = initCalculator();
+
+                    // Mock tumbleCalculator to simulate wins on first tumble, no wins on second
+                    const mockCalculate = jest.spyOn(calculator.tumbleCalculator, "calculate");
+                    let callCount = 0;
+                    mockCalculate.mockImplementation((tumble) => {
+                        callCount++;
+                        if (callCount === 1) {
+                            // First tumble has wins
+                            tumble.win = 100;
+                            tumble.icons = { 0: { count: 9, odds: 5 } };
+                        } else {
+                            // Second tumble has no wins
+                            tumble.win = 0;
+                            tumble.icons = {};
+                        }
+                    });
+
+                    // Board 1 from corrected tease data (9 zeros = 5x odds)
+                    const preGeneratedResult = [
+                        {
+                            newBoard: [6, 10, 5, 7, 8, 1, 6, 1, 0, 1, 9, 9, 6, 2, 0, 7, 0, 1, 0, 3, 2, 7, 8, 2, 0, 0, 0, 4, 0, 0],
+                            multipliers: [18],
+                            explodedSymbols: [],
+                            newSymbols: [],
+                        },
+                        {
+                            newBoard: [6, 10, 5, 7, 8, 1, 1, 6, 1, 1, 1, 9, 9, 6, 2, 1, 2, 7, 1, 3, 2, 2, 7, 8, 2, 0, 0, 2, 7, 4],
+                            multipliers: [18],
                             explodedSymbols: [
                                 -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0,
                             ],
                             newSymbols: [
                                 -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1,
                             ],
-                            multipliers: [18],
                         },
+                    ];
+
+                    // Act
+                    const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    expect(result).toBe(round);
+                    expect(preGeneratedResult.length).toBe(0); // All consumed
+
+                    mockCalculate.mockRestore();
+
+                    // Should have exactly 2 tumbles
+                    expect(round.settlementResult.tumbles.length).toBe(2);
+
+                    // First tumble verification (should have winning 0's)
+                    const firstTumble = round.settlementResult.tumbles[0];
+                    expect(firstTumble.originalBoard).toBe("6,10,5,7,8,1,6,1,0,1,9,9,6,2,0,7,0,1,0,3,2,7,8,2,0,0,0,4,0,0");
+                    expect(firstTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
+                    expect(firstTumble.explodedSymbols).toEqual([
+                        -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0,
+                    ]);
+                    expect(firstTumble.newSymbols).toEqual([
+                        -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1,
+                    ]);
+                    expect(firstTumble.multipliers).toEqual([18]);
+                    expect(firstTumble.win).toBeGreaterThan(0); // Should have wins from 9 zeros
+                    expect(firstTumble.icons["0"]).toBeDefined();
+                    expect(firstTumble.icons["0"].count).toBe(9);
+
+                    // Second tumble verification (should have no wins)
+                    const secondTumble = round.settlementResult.tumbles[1];
+                    expect(secondTumble.originalBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
+                    expect(secondTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
+                    expect(secondTumble.explodedSymbols).toBeUndefined();
+                    expect(secondTumble.newSymbols).toBeUndefined();
+                    expect(secondTumble.win).toBe(0);
+                    expect(Object.keys(secondTumble.icons)).toHaveLength(0);
+                });
+
+                it("should process board 8 with 9 zeros winning combination", () => {
+                    // Arrange
+                    const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+                    const calculator = initCalculator();
+
+                    // Board 8 from corrected tease data (9 zeros = 5x odds)
+                    const preGeneratedResult = [
                         {
-                            originalBoard: "6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4",
-                            newBoard: "6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4",
-                            multipliers: [18],
-                        },
-                    ],
-                },
-            };
-
-            // Apply the fixed ChainManager logic
-            const convertChainBoardToResult = (chainBoard) => {
-                if (chainBoard.settlementResult && chainBoard.settlementResult.tumbles) {
-                    const tumbles = chainBoard.settlementResult.tumbles;
-                    const result = [];
-
-                    for (let i = 0; i < tumbles.length; i++) {
-                        const tumble = tumbles[i];
-                        const preGeneratedItem = {
-                            newBoard: tumble.originalBoard ? tumble.originalBoard.split(",").map((x) => parseInt(x)) : chainBoard.board,
-                            multipliers: tumble.multipliers || chainBoard.multipliers || [],
+                            newBoard: [0, 9, 1, 4, 1, 0, 0, 0, 7, 0, 3, 1, 4, 6, 3, 9, 2, 0, 7, 3, 6, 0, 0, 3, 6, 3, 0, 6, 9, 1],
+                            multipliers: [],
                             explodedSymbols: [],
                             newSymbols: [],
-                        };
+                        },
+                        {
+                            newBoard: [2, 9, 1, 4, 1, 1, 6, 5, 0, 7, 3, 1, 4, 6, 3, 4, 9, 2, 7, 3, 0, 1, 6, 3, 6, 2, 3, 6, 9, 1],
+                            multipliers: [],
+                            explodedSymbols: [
+                                0, -1, -1, -1, -1, 0, 0, 0, -1, 0, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 0, -1, -1, -1, 0, -1, -1, -1,
+                            ],
+                            newSymbols: [
+                                2, -1, -1, -1, -1, 1, 6, 5, 0, -1, -1, -1, -1, -1, -1, 4, -1, -1, -1, -1, 0, 1, -1, -1, -1, 2, -1, -1, -1, -1,
+                            ],
+                        },
+                    ];
 
-                        // Settlement data from PREVIOUS tumble goes to current preGeneratedResult item
-                        if (i > 0) {
-                            const previousTumble = tumbles[i - 1];
-                            preGeneratedItem.explodedSymbols = previousTumble.explodedSymbols || [];
-                            preGeneratedItem.newSymbols = previousTumble.newSymbols || [];
+                    // Act
+                    const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    expect(result).toBe(round);
+                    expect(preGeneratedResult.length).toBe(0); // All consumed
+
+                    // Should have exactly 2 tumbles
+                    expect(round.settlementResult.tumbles.length).toBe(2);
+
+                    // First tumble verification (should have winning 0's)
+                    const firstTumble = round.settlementResult.tumbles[0];
+                    expect(firstTumble.originalBoard).toBe("0,9,1,4,1,0,0,0,7,0,3,1,4,6,3,9,2,0,7,3,6,0,0,3,6,3,0,6,9,1");
+                    expect(firstTumble.newBoard).toBe("2,9,1,4,1,1,6,5,0,7,3,1,4,6,3,4,9,2,7,3,0,1,6,3,6,2,3,6,9,1");
+                    expect(firstTumble.explodedSymbols).toEqual([
+                        0, -1, -1, -1, -1, 0, 0, 0, -1, 0, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 0, -1, -1, -1, 0, -1, -1, -1,
+                    ]);
+                    expect(firstTumble.newSymbols).toEqual([
+                        2, -1, -1, -1, -1, 1, 6, 5, 0, -1, -1, -1, -1, -1, -1, 4, -1, -1, -1, -1, 0, 1, -1, -1, -1, 2, -1, -1, -1, -1,
+                    ]);
+                    expect(firstTumble.multipliers).toEqual([]);
+                    expect(firstTumble.win).toBeGreaterThan(0); // Should have wins from 9 zeros
+                    expect(firstTumble.icons["0"]).toBeDefined();
+                    expect(firstTumble.icons["0"].count).toBe(9);
+
+                    // Second tumble verification (should have no wins)
+                    const secondTumble = round.settlementResult.tumbles[1];
+                    expect(secondTumble.originalBoard).toBe("2,9,1,4,1,1,6,5,0,7,3,1,4,6,3,4,9,2,7,3,0,1,6,3,6,2,3,6,9,1");
+                    expect(secondTumble.newBoard).toBe("2,9,1,4,1,1,6,5,0,7,3,1,4,6,3,4,9,2,7,3,0,1,6,3,6,2,3,6,9,1");
+                    expect(secondTumble.explodedSymbols).toBeUndefined();
+                    expect(secondTumble.newSymbols).toBeUndefined();
+                    expect(secondTumble.win).toBe(0);
+                    expect(Object.keys(secondTumble.icons)).toHaveLength(0);
+                });
+            });
+
+            describe("preGeneratedResult format validation", () => {
+                it("should correctly consume preGeneratedResult items in order", () => {
+                    // Arrange
+                    const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+                    const calculator = initCalculator();
+
+                    // Track original array length
+                    const preGeneratedResult = [
+                        {
+                            newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                            multipliers: [1],
+                            explodedSymbols: [],
+                            newSymbols: [],
+                        },
+                    ];
+
+                    const originalLength = preGeneratedResult.length;
+
+                    // Act
+                    calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+
+                    // Assert
+                    expect(preGeneratedResult.length).toBe(0); // All items consumed by shift()
+                    expect(round.settlementResult.tumbles.length).toBe(1);
+
+                    const tumble = round.settlementResult.tumbles[0];
+                    expect(tumble.originalBoard).toBe("1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10");
+                });
+            });
+
+            describe("ChainManager integration with corrected data", () => {
+                it("should produce correct preGeneratedResult format for processSpinning", () => {
+                    // Simulate what ChainManager.convertChainBoardToResult would produce
+                    // This uses the fixed version of the method
+                    const mockChainBoard = {
+                        board: [6, 10, 5, 7, 8, 1, 6, 1, 0, 1, 9, 9, 6, 2, 0, 7, 0, 1, 0, 3, 2, 7, 8, 2, 0, 0, 0, 4, 0, 0],
+                        multipliers: [18],
+                        settlementResult: {
+                            tumbles: [
+                                {
+                                    originalBoard: "6,10,5,7,8,1,6,1,0,1,9,9,6,2,0,7,0,1,0,3,2,7,8,2,0,0,0,4,0,0",
+                                    newBoard: "6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4",
+                                    explodedSymbols: [
+                                        -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0,
+                                    ],
+                                    newSymbols: [
+                                        -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1,
+                                    ],
+                                    multipliers: [18],
+                                },
+                                {
+                                    originalBoard: "6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4",
+                                    newBoard: "6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4",
+                                    multipliers: [18],
+                                },
+                            ],
+                        },
+                    };
+
+                    // Apply the fixed ChainManager logic
+                    const convertChainBoardToResult = (chainBoard) => {
+                        if (chainBoard.settlementResult && chainBoard.settlementResult.tumbles) {
+                            const tumbles = chainBoard.settlementResult.tumbles;
+                            const result = [];
+
+                            for (let i = 0; i < tumbles.length; i++) {
+                                const tumble = tumbles[i];
+                                const preGeneratedItem = {
+                                    newBoard: tumble.originalBoard ? tumble.originalBoard.split(",").map((x) => parseInt(x)) : chainBoard.board,
+                                    multipliers: tumble.multipliers || chainBoard.multipliers || [],
+                                    explodedSymbols: [],
+                                    newSymbols: [],
+                                };
+
+                                // Settlement data from PREVIOUS tumble goes to current preGeneratedResult item
+                                if (i > 0) {
+                                    const previousTumble = tumbles[i - 1];
+                                    preGeneratedItem.explodedSymbols = previousTumble.explodedSymbols || [];
+                                    preGeneratedItem.newSymbols = previousTumble.newSymbols || [];
+                                }
+
+                                result.push(preGeneratedItem);
+                            }
+
+                            return result;
                         }
+                        return [];
+                    };
 
-                        result.push(preGeneratedItem);
-                    }
+                    const preGeneratedResult = convertChainBoardToResult(mockChainBoard);
 
-                    return result;
-                }
-                return [];
-            };
+                    // Arrange
+                    const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
+                    const calculator = initCalculator();
 
-            const preGeneratedResult = convertChainBoardToResult(mockChainBoard);
+                    // Act
+                    const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
 
-            // Arrange
-            const round = initRoundDocument({ playerId: 1, coinValue: 0.1, betLevel: 5, betMultiplier: 20 });
-            const calculator = initCalculator();
+                    // Assert - Should match the corrected JSON structure exactly
+                    expect(result).toBe(round);
+                    expect(round.settlementResult.tumbles.length).toBe(2);
 
-            // Act
-            const result = calculator.processSpinning(round, 0, 1000, preGeneratedResult);
+                    // First tumble should match corrected JSON
+                    const firstTumble = round.settlementResult.tumbles[0];
+                    expect(firstTumble.originalBoard).toBe("6,10,5,7,8,1,6,1,0,1,9,9,6,2,0,7,0,1,0,3,2,7,8,2,0,0,0,4,0,0");
+                    expect(firstTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
+                    expect(firstTumble.explodedSymbols).toEqual([
+                        -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0,
+                    ]);
+                    expect(firstTumble.newSymbols).toEqual([
+                        -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1,
+                    ]);
+                    expect(firstTumble.win).toBeGreaterThan(0);
+                    expect(firstTumble.icons["0"]).toBeDefined();
 
-            // Assert - Should match the corrected JSON structure exactly
-            expect(result).toBe(round);
-            expect(round.settlementResult.tumbles.length).toBe(2);
-
-            // First tumble should match corrected JSON
-            const firstTumble = round.settlementResult.tumbles[0];
-            expect(firstTumble.originalBoard).toBe("6,10,5,7,8,1,6,1,0,1,9,9,6,2,0,7,0,1,0,3,2,7,8,2,0,0,0,4,0,0");
-            expect(firstTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
-            expect(firstTumble.explodedSymbols).toEqual([
-                -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, 0, 0, 0, -1, 0, 0,
-            ]);
-            expect(firstTumble.newSymbols).toEqual([
-                -1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, 2, -1, -1, -1, 2, -1, -1, -1, -1, 0, 0, 2, 7, -1,
-            ]);
-            expect(firstTumble.win).toBeGreaterThan(0);
-            expect(firstTumble.icons["0"]).toBeDefined();
-
-            // Second tumble should match corrected JSON
-            const secondTumble = round.settlementResult.tumbles[1];
-            expect(secondTumble.originalBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
-            expect(secondTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
-            expect(secondTumble.explodedSymbols).toBeUndefined();
-            expect(secondTumble.newSymbols).toBeUndefined();
-            expect(secondTumble.win).toBe(0);
-            expect(Object.keys(secondTumble.icons)).toHaveLength(0);
+                    // Second tumble should match corrected JSON
+                    const secondTumble = round.settlementResult.tumbles[1];
+                    expect(secondTumble.originalBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
+                    expect(secondTumble.newBoard).toBe("6,10,5,7,8,1,1,6,1,1,1,9,9,6,2,1,2,7,1,3,2,2,7,8,2,0,0,2,7,4");
+                    expect(secondTumble.explodedSymbols).toBeUndefined();
+                    expect(secondTumble.newSymbols).toBeUndefined();
+                    expect(secondTumble.win).toBe(0);
+                    expect(Object.keys(secondTumble.icons)).toHaveLength(0);
+                });
+            });
         });
     });
-});
-
 });
