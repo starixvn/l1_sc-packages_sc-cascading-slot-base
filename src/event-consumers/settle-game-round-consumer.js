@@ -23,7 +23,6 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         totalMultiplierConsumer,
         roundCalculator,
         gameManagementApiClientFactory,
-        logService,
         resultChainManager,
         userChainConsumer,
     }) {
@@ -76,13 +75,10 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const baseBetAmount = round.coinValue * round.betLevel * round.betMultiplier;
         const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * baseBetAmount, 2);
 
-        const presetBoard = round.buyFreeSpin
-            ? this.freeSpinsConsumer.getBuyFreeSpinBoard()
-            : this.selectPreGeneratedResult(player, round);
-
+        const preGeneratedResultInfo = this.selectPreGeneratedResult(player, round);
+        const playerName = player.profile.name;
         round = this.roundCalculator.processSpinning(round, currentTotalMultiplier, maxWinPerRound, preGeneratedResultInfo?.data);
 
-        // Track chain progress only when result is from chain data
         if (preGeneratedResultInfo?.isFromChain) {
             try {
                 await this.userChainConsumer.updateChainProgress({
@@ -91,11 +87,10 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                     betLevel: round.betLevel,
                     coinValue: round.coinValue,
                     roundBetAmount: round.totalAmount,
-                    roundWinAmount: round.betwin || 0, // Now this has the ACTUAL win amount!
+                    roundWinAmount: round.betwin || 0,
                 });
             } catch (error) {
                 this.logService.logError(`Failed to update chain progress for ${playerName}`, error);
-                // Continue with game flow even if tracking fails
             }
         }
 
@@ -108,16 +103,17 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
     async selectPreGeneratedResult(player, round) {
         const playerName = player.profile.name;
+        const buyFreeSpinBoard = round.buyFreeSpin ? this.freeSpinsConsumer.getBuyFreeSpinBoard() : null;
         const adminResult = this.getAdminResult(playerName);
         const chainResult = await this.getChainResult(player, round, round.freeSpin);
 
-        const result = this.chooseResult(adminResult, chainResult);
+        const result = this.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
 
-        // Return both result and source information
         return {
             data: result,
             isFromChain: !adminResult && !!chainResult,
             isFromAdmin: !!adminResult,
+            isFromBuyFreeSpin: !!buyFreeSpinBoard,
         };
     }
 
@@ -138,9 +134,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         );
     }
 
-    chooseResult(adminResult, chainResult) {
+    chooseResult(adminResult, chainResult, buyFreeSpinBoard) {
         if (adminResult) {
             return adminResult;
+        }
+
+        if (buyFreeSpinBoard) {
+            return buyFreeSpinBoard;
         }
 
         if (chainResult) {
