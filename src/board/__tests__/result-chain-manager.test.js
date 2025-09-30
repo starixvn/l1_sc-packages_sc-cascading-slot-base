@@ -279,95 +279,331 @@ describe("ChainManager", () => {
     // These tests have been moved to user-chain-consumer.test.js
 
     describe("getNextResult", () => {
-        beforeEach(() => {
-            // Manually set up a player chain for testing
-            mockGameData.playerChains["testPlayer"] = {
-                name: "test-chain",
-                currentIndex: 0,
-                totalBoards: 3,
-                assignedAt: new Date(),
-                isFreeSpin: false,
-                freeSpinChain: [],
-            };
-
-            // Set up the chain boards cache
-            mockGameData.chainBoardsCache = {
-                "test-chain": [...mockDatabaseChains[0].boardsData],
-            };
+        // Test setup utilities following DRY principles
+        const createTestPlayerContext = (overrides = {}) => ({
+            betLevel: 1,
+            coinValue: 0.1,
+            ...overrides,
         });
 
-        it("should return first board result", async () => {
-            // Set up player chain with composite key using baseBetAmount
-            mockGameData.playerChains["testPlayer-0.10"] = {
-                name: "test-chain",
-                currentIndex: 0,
-                totalBoards: 3,
-                assignedAt: new Date(),
-                betLevel: 1,
-                coinValue: 0.1,
-                playerName: "testPlayer",
-            };
-
-            const result = await chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
-
-            expect(result).toBeDefined();
-            expect(Array.isArray(result)).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-0.10"].currentIndex).toBe(0); // getNextResult no longer increments
+        const createTestRoundContext = (overrides = {}) => ({
+            isFreeSpin: false,
+            ...overrides,
         });
 
-        it("should return current board regardless of free spin context", async () => {
-            const result = await chainManager.getNextResult("testPlayer", {}, { isFreeSpin: true });
-
-            expect(result).toBeDefined();
-            expect(mockGameData.playerChains["testPlayer"].currentIndex).toBe(0); // getNextResult no longer increments
+        const createTestPlayerChain = (overrides = {}) => ({
+            name: "test-chain",
+            currentIndex: 0,
+            totalBoards: 3,
+            assignedAt: new Date(),
+            lastActivityAt: new Date(),
+            betLevel: 1,
+            coinValue: 0.1,
+            playerName: "testPlayer",
+            ...overrides,
         });
 
-        it("should return null for player without chain", async () => {
-            // Mock assignmentRepository to return no active assignment
-            mockAssignmentRepository.findOne.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(null),
-                }),
+        const createTestBoard = (overrides = {}) => ({
+            board: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+            multipliers: [1],
+            isFreeSpin: false,
+            remainingFreeSpins: 0,
+            settlementResult: {
+                tumbles: [
+                    {
+                        originalBoard: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30",
+                        multipliers: [1],
+                        icons: {},
+                    },
+                ],
+            },
+            ...overrides,
+        });
+
+        const createManagerWithMocks = (mocks = {}) => {
+            // Reset all mocks
+            jest.clearAllMocks();
+
+            // Apply custom mocks
+            if (mocks.isChainEnabled !== undefined) {
+                jest.spyOn(chainManager, "isChainEnabled").mockReturnValue(mocks.isChainEnabled);
+            }
+
+            if (mocks.getPlayerChain !== undefined) {
+                jest.spyOn(chainManager, "getPlayerChain").mockResolvedValue(mocks.getPlayerChain);
+            }
+
+            if (mocks.getBoardsByChainName !== undefined) {
+                jest.spyOn(chainManager, "getBoardsByChainName").mockResolvedValue(mocks.getBoardsByChainName);
+            }
+
+            if (mocks.convertChainBoardToResult !== undefined) {
+                jest.spyOn(chainManager, "convertChainBoardToResult").mockReturnValue(mocks.convertChainBoardToResult);
+            }
+
+            if (mocks.playerChains !== undefined) {
+                mockGameData.playerChains = mocks.playerChains;
+            }
+
+            if (mocks.chainBoardsCache !== undefined) {
+                mockGameData.chainBoardsCache = mocks.chainBoardsCache;
+            }
+
+            return chainManager;
+        };
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+            mockGameData.playerChains = {};
+            mockGameData.chainBoardsCache = {};
+        });
+
+        describe("when chains are disabled", () => {
+            it("should return null", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const manager = createManagerWithMocks({ isChainEnabled: false });
+
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(result).toBeNull();
             });
 
-            const result = await chainManager.getNextResult("unknownPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
-            expect(result).toBeNull();
+            it("should not call getPlayerChain", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const manager = createManagerWithMocks({ isChainEnabled: false });
+                const getPlayerChainSpy = jest.spyOn(manager, "getPlayerChain");
+
+                // Act
+                await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(getPlayerChainSpy).not.toHaveBeenCalled();
+            });
         });
 
-        it("should return null when chain is complete", async () => {
-            // Simulate chain completion by setting currentIndex to total boards
-            mockGameData.playerChains["testPlayer"].currentIndex = 3;
-            const result = await chainManager.getNextResult("testPlayer");
-            expect(result).toBeNull();
-        });
+        describe("when round is free spin", () => {
+            it("should return null", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext({ isFreeSpin: true });
+                const manager = createManagerWithMocks({ isChainEnabled: true });
 
-        it("should reload chain from database when not in memory", async () => {
-            // Mock active assignment in database
-            const mockAssignment = {
-                chainName: "test-chain",
-                currentBoardIndex: 1,
-                totalBoards: 3,
-                assignedAt: new Date(),
-                betLevel: 1,
-                coinValue: 0.1,
-                playerId: "player123",
-                playerName: "testPlayer",
-            };
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
 
-            mockAssignmentRepository.findOne.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(mockAssignment),
-                }),
+                // Assert
+                expect(result).toBeNull();
             });
 
-            // Mock getBoardsByChainName on the chainManager instance
-            chainManager.getBoardsByChainName = jest.fn().mockResolvedValue([...mockDatabaseChains[0].boardsData]);
+            it("should not call getPlayerChain", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext({ isFreeSpin: true });
+                const manager = createManagerWithMocks({ isChainEnabled: true });
+                const getPlayerChainSpy = jest.spyOn(manager, "getPlayerChain");
 
-            const result = await chainManager.getNextResult("testPlayer", { betLevel: 1, coinValue: 0.1 }, { isFreeSpin: false });
+                // Act
+                await manager.getNextResult(playerName, playerContext, roundContext);
 
-            expect(result).toBeDefined();
-            expect(Array.isArray(result)).toBe(true);
-            expect(mockGameData.playerChains["testPlayer-0.10"]).toBeDefined();
+                // Assert
+                expect(getPlayerChainSpy).not.toHaveBeenCalled();
+            });
+        });
+
+        describe("when player has no chain", () => {
+            it("should return null when getPlayerChain returns null", async () => {
+                // Arrange
+                const playerName = "unknownPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: null,
+                });
+
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should call getPlayerChain with correct parameters", async () => {
+                // Arrange
+                const playerName = "unknownPlayer";
+                const playerContext = createTestPlayerContext({ betLevel: 5, coinValue: 0.2 });
+                const roundContext = createTestRoundContext();
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: null,
+                });
+                const getPlayerChainSpy = jest.spyOn(manager, "getPlayerChain");
+
+                // Act
+                await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(getPlayerChainSpy).toHaveBeenCalledWith("unknownPlayer", 5, 0.2);
+            });
+        });
+
+        describe("when chain is complete", () => {
+            it("should return null when currentIndex equals totalBoards", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const playerChain = createTestPlayerChain({ currentIndex: 3, totalBoards: 3 });
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                });
+
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should return null when currentIndex exceeds totalBoards", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const playerChain = createTestPlayerChain({ currentIndex: 5, totalBoards: 3 });
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                });
+
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+        });
+
+        describe("when boards are not found", () => {
+            it("should return null when getBoardsByChainName returns null", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const playerChain = createTestPlayerChain();
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                    getBoardsByChainName: null,
+                });
+
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should call getBoardsByChainName with correct chain name", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const playerChain = createTestPlayerChain({ name: "specific-chain" });
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                    getBoardsByChainName: null,
+                });
+                const getBoardsSpy = jest.spyOn(manager, "getBoardsByChainName");
+
+                // Act
+                await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(getBoardsSpy).toHaveBeenCalledWith("specific-chain");
+            });
+        });
+
+        describe("successful scenarios", () => {
+            it("should return converted board result", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const playerChain = createTestPlayerChain({ currentIndex: 1 });
+                const boards = [createTestBoard(), createTestBoard(), createTestBoard()];
+                const expectedResult = [{ board: "converted-result" }];
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                    getBoardsByChainName: boards,
+                    convertChainBoardToResult: expectedResult,
+                });
+
+                // Act
+                const result = await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(result).toEqual(expectedResult);
+            });
+
+            it("should call convertChainBoardToResult with current board", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const playerChain = createTestPlayerChain({ currentIndex: 2 });
+                const thirdBoard = createTestBoard({ board: [3, 3, 3] });
+                const boards = [createTestBoard(), createTestBoard(), thirdBoard];
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                    getBoardsByChainName: boards,
+                    convertChainBoardToResult: [{ converted: true }],
+                });
+                const convertSpy = jest.spyOn(manager, "convertChainBoardToResult");
+
+                // Act
+                await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(convertSpy).toHaveBeenCalledWith(thirdBoard);
+            });
+
+            it("should update lastActivityAt on player chain", async () => {
+                // Arrange
+                const playerName = "testPlayer";
+                const playerContext = createTestPlayerContext();
+                const roundContext = createTestRoundContext();
+                const originalDate = new Date("2023-01-01");
+                const playerChain = createTestPlayerChain({ lastActivityAt: originalDate });
+                const boards = [createTestBoard()];
+                const manager = createManagerWithMocks({
+                    isChainEnabled: true,
+                    getPlayerChain: playerChain,
+                    getBoardsByChainName: boards,
+                    convertChainBoardToResult: [{ result: true }],
+                });
+
+                // Act
+                await manager.getNextResult(playerName, playerContext, roundContext);
+
+                // Assert
+                expect(playerChain.lastActivityAt).not.toEqual(originalDate);
+                expect(playerChain.lastActivityAt).toBeInstanceOf(Date);
+            });
         });
     });
 

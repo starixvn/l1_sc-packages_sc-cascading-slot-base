@@ -162,28 +162,22 @@ export default class ChainManager {
     }
 
     async getNextResult(playerName, playerContext = {}, roundContext = {}) {
-        if (!this.isChainEnabled()) {
+        if (!this.isChainEnabled() || roundContext.isFreeSpin) {
             return null;
         }
 
         const { betLevel, coinValue } = playerContext;
 
         const playerChain = await this.getPlayerChain(playerName, betLevel, coinValue);
-        if (!playerChain) {
+        if (!playerChain || playerChain.currentIndex >= playerChain.totalBoards) {
             return null;
         }
 
-        if (playerChain.currentIndex >= playerChain.totalBoards) {
-            return null;
-        }
-
-        // Load boards from shared cache
         const boards = await this.getBoardsByChainName(playerChain.name);
         if (!boards) {
             return null;
         }
 
-        // Update activity timestamp when chain is accessed
         playerChain.lastActivityAt = new Date();
 
         const currentBoard = boards[playerChain.currentIndex];

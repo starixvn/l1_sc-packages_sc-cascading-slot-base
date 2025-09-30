@@ -1190,63 +1190,358 @@ describe("UserChainConsumer", () => {
     });
 
     describe("findSuitable", () => {
-        it("should return null when applicable board count is -1", async () => {
-            const playerContext = {
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 0, // Will result in -1 applicable board count
-            };
-
-            const result = await userChainConsumer.findSuitable(playerContext);
-            expect(result).toBeNull();
+        // Test setup utilities following DRY principles
+        const createTestPlayerContext = (overrides = {}) => ({
+            betLevel: 1,
+            coinValue: 0.1,
+            balance: 120,
+            playerId: "test-player-123",
+            operatorId: "test-operator",
+            gameId: "test-game",
+            currency: "USD",
+            ...overrides,
         });
 
-        it("should return null when no matching chains available", async () => {
-            mockGameData.availableChains = [
-                { name: "chain1", totalBoardCount: 200 }, // Too many boards
-            ];
-
-            const playerContext = {
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 120, // Will result in ~75 applicable boards
-            };
-
-            const result = await userChainConsumer.findSuitable(playerContext);
-            expect(result).toBeNull();
+        const createTestChain = (overrides = {}) => ({
+            name: "test-chain",
+            baseBetAmount: 0.1,
+            totalBoardCount: 75,
+            ...overrides,
         });
 
-        it("should return selected chain when matching chains exist", async () => {
-            const originalMathRandom = Math.random;
-            Math.random = jest.fn().mockReturnValue(0.0); // Select first chain
+        const createConsumerWithMocks = (mocks = {}) => {
+            // Reset all mocks
+            jest.clearAllMocks();
 
-            const playerContext = {
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 120, // Will result in 75 applicable boards
-            };
+            // Apply custom mocks
+            if (mocks.availableChains !== undefined) {
+                mockGameData.availableChains = mocks.availableChains;
+            }
 
-            const result = await userChainConsumer.findSuitable(playerContext);
-            expect(result).toEqual({
-                name: "test-chain-1",
-                baseBetAmount: 0.1,
-                totalBoardCount: 75,
+            if (mocks.getApplicableBoardCount !== undefined) {
+                jest.spyOn(userChainConsumer, "getApplicableBoardCount").mockReturnValue(mocks.getApplicableBoardCount);
+            }
+
+            if (mocks.calculateBaseBetAmount !== undefined) {
+                jest.spyOn(userChainConsumer, "calculateBaseBetAmount").mockReturnValue(mocks.calculateBaseBetAmount);
+            }
+
+            if (mocks.filterChains !== undefined) {
+                jest.spyOn(userChainConsumer, "filterChains").mockReturnValue(mocks.filterChains);
+            }
+
+            if (mocks.selectRandom !== undefined) {
+                jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue(mocks.selectRandom);
+            }
+
+            if (mocks.mathRandom !== undefined) {
+                jest.spyOn(Math, "random").mockReturnValue(mocks.mathRandom);
+            }
+
+            return userChainConsumer;
+        };
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        describe("when applicable board count is -1", () => {
+            it("should return null", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ balance: 0 });
+                const consumer = createConsumerWithMocks({ getApplicableBoardCount: -1 });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBeNull();
             });
 
-            Math.random = originalMathRandom;
+            it("should not call filterChains", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ balance: 0 });
+                const consumer = createConsumerWithMocks({ getApplicableBoardCount: -1 });
+                const filterChainsSpy = jest.spyOn(consumer, "filterChains");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).not.toHaveBeenCalled();
+            });
+
+            it("should not call selectRandom", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ balance: 0 });
+                const consumer = createConsumerWithMocks({ getApplicableBoardCount: -1 });
+                const selectRandomSpy = jest.spyOn(consumer, "selectRandom");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(selectRandomSpy).not.toHaveBeenCalled();
+            });
         });
 
-        it("should handle empty available chains", async () => {
-            mockGameData.availableChains = [];
+        describe("when no matching chains available", () => {
+            it("should return null when all chains exceed board count", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ balance: 120 });
+                const availableChains = [
+                    createTestChain({ name: "chain1", totalBoardCount: 200 }),
+                    createTestChain({ name: "chain2", totalBoardCount: 150 }),
+                ];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                });
 
-            const playerContext = {
-                betLevel: 1,
-                coinValue: 0.1,
-                balance: 120,
-            };
+                // Act
+                const result = await consumer.findSuitable(playerContext);
 
-            const result = await userChainConsumer.findSuitable(playerContext);
-            expect(result).toBeNull();
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should return null when available chains is empty", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const consumer = createConsumerWithMocks({
+                    availableChains: [],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should return null when available chains is undefined", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                mockGameData.availableChains = undefined;
+                const consumer = createConsumerWithMocks({ getApplicableBoardCount: 75 });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+        });
+
+        describe("when matching chains exist", () => {
+            it("should return selected chain", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const expectedChain = createTestChain({ name: "matching-chain", totalBoardCount: 50 });
+                const availableChains = [expectedChain, createTestChain({ name: "chain2", totalBoardCount: 75 })];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                    mathRandom: 0.0, // Select first chain
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toEqual(expectedChain);
+            });
+
+            it("should call calculateBaseBetAmount with correct parameters", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ betLevel: 5, coinValue: 0.2 });
+                const consumer = createConsumerWithMocks({
+                    availableChains: [createTestChain()],
+                    getApplicableBoardCount: 75,
+                });
+                const calculateBaseBetSpy = jest.spyOn(consumer, "calculateBaseBetAmount");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(calculateBaseBetSpy).toHaveBeenCalledWith(5, 0.2);
+            });
+
+            it("should call getApplicableBoardCount with correct parameters", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ betLevel: 3, coinValue: 0.15 });
+                const consumer = createConsumerWithMocks({
+                    availableChains: [createTestChain()],
+                    calculateBaseBetAmount: 0.45,
+                });
+                const getApplicableBoardCountSpy = jest.spyOn(consumer, "getApplicableBoardCount");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(getApplicableBoardCountSpy).toHaveBeenCalledWith(playerContext, 0.45);
+            });
+
+            it("should call filterChains with correct parameters", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const availableChains = [createTestChain(), createTestChain({ name: "chain2" })];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 100,
+                });
+                const filterChainsSpy = jest.spyOn(consumer, "filterChains");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).toHaveBeenCalledWith(availableChains, 100);
+            });
+
+            it("should call selectRandom with filtered chains", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const matchingChains = [createTestChain({ name: "matching1" })];
+                const consumer = createConsumerWithMocks({
+                    availableChains: [createTestChain(), createTestChain({ name: "chain2" })],
+                    getApplicableBoardCount: 75,
+                    filterChains: matchingChains,
+                });
+                const selectRandomSpy = jest.spyOn(consumer, "selectRandom");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(selectRandomSpy).toHaveBeenCalledWith(matchingChains);
+            });
+        });
+
+        describe("random selection behavior", () => {
+            it("should select first chain when Math.random returns 0", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 50 });
+                const secondChain = createTestChain({ name: "second-chain", totalBoardCount: 60 });
+                const availableChains = [firstChain, secondChain];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                    mathRandom: 0.0,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toEqual(firstChain);
+            });
+
+            it("should select last chain when Math.random returns close to 1", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 50 });
+                const lastChain = createTestChain({ name: "last-chain", totalBoardCount: 60 });
+                const availableChains = [firstChain, lastChain];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                    mathRandom: 0.99,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toEqual(lastChain);
+            });
+
+            it("should select middle chain when Math.random returns 0.5", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 50 });
+                const middleChain = createTestChain({ name: "middle-chain", totalBoardCount: 60 });
+                const lastChain = createTestChain({ name: "last-chain", totalBoardCount: 70 });
+                const availableChains = [firstChain, middleChain, lastChain];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                    mathRandom: 0.5,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toEqual(middleChain);
+            });
+        });
+
+        describe("edge cases", () => {
+            it("should handle single matching chain", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const singleChain = createTestChain({ name: "only-chain", totalBoardCount: 50 });
+                const consumer = createConsumerWithMocks({
+                    availableChains: [singleChain],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toEqual(singleChain);
+            });
+
+            it("should handle zero balance player context", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ balance: 0 });
+                const consumer = createConsumerWithMocks({
+                    availableChains: [createTestChain()],
+                    getApplicableBoardCount: -1,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should handle missing betLevel in player context", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ betLevel: undefined });
+                const consumer = createConsumerWithMocks({
+                    availableChains: [createTestChain()],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).not.toBeNull();
+            });
+
+            it("should handle missing coinValue in player context", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext({ coinValue: undefined });
+                const consumer = createConsumerWithMocks({
+                    availableChains: [createTestChain()],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).not.toBeNull();
+            });
         });
     });
 

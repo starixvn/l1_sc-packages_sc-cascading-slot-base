@@ -205,6 +205,7 @@ export default class UserChainConsumer {
             return null;
         }
         const index = Math.floor(Math.random() * chains.length);
+
         return chains[index];
     }
 
@@ -329,6 +330,7 @@ export default class UserChainConsumer {
 
         const { availableChains = [] } = this.gameData;
         const matching = this.filterChains(availableChains, boardCount);
+
         return this.selectRandom(matching);
     }
 
@@ -517,7 +519,6 @@ export default class UserChainConsumer {
             return -1;
         }
 
-        // Return -1 if applicableBoards exceeds the maximum board range
         const maxBoardCount = Math.max(...boardRange);
         if (applicableBoards > maxBoardCount) {
             return -1;
