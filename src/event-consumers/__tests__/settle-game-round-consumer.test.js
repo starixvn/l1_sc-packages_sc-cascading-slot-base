@@ -582,6 +582,430 @@ describe("settle round", () => {
     });
 });
 
+describe("selectPreGeneratedResult", () => {
+    // Test setup utilities following DRY principles
+    const createTestPlayer = (name = "testPlayer") => ({
+        profile: { name },
+        session: { currencyGroupId: "g1", playerId: 123 },
+    });
+
+    const createTestRound = (options = {}) => ({
+        id: 1,
+        coinValue: 0.1,
+        betLevel: 5,
+        betMultiplier: 20,
+        freeSpin: false,
+        buyFreeSpin: false,
+        ...options,
+    });
+
+    const createConsumerWithMocks = (mocks = {}) => {
+        const consumer = initConsumer();
+
+        // Reset all mocks
+        jest.clearAllMocks();
+
+        // Apply custom mocks
+        if (mocks.adminResult !== undefined) {
+            consumer.gameData.settlementResultFromAdmin = mocks.adminResult ? { [mocks.playerName || "testPlayer"]: mocks.adminResult } : {};
+        }
+
+        if (mocks.chainResult !== undefined) {
+            resultChainManager.getNextResult.mockResolvedValue(mocks.chainResult);
+        }
+
+        if (mocks.buyFreeSpinBoard !== undefined) {
+            freeSpinsConsumer.getBuyFreeSpinBoard.mockReturnValue(mocks.buyFreeSpinBoard);
+        }
+
+        return consumer;
+    };
+
+    describe("when admin result exists", () => {
+        it("should return admin result as data", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const adminResult = { board: "admin-board", win: 100 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toEqual(adminResult);
+        });
+
+        it("should set isFromAdmin flag to true", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const adminResult = { board: "admin-board", win: 100 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromAdmin).toBe(true);
+        });
+
+        it("should set isFromChain flag to false", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const adminResult = { board: "admin-board", win: 100 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromChain).toBe(false);
+        });
+
+        it("should set isFromBuyFreeSpin flag to false", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const adminResult = { board: "admin-board", win: 100 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromBuyFreeSpin).toBe(false);
+        });
+    });
+
+    describe("when buy free spin is active", () => {
+        it("should return buy free spin board as data when no admin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: true });
+            const buyFreeSpinBoard = { board: "buy-freespin-board", win: 50 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                buyFreeSpinBoard,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toEqual(buyFreeSpinBoard);
+        });
+
+        it("should set isFromBuyFreeSpin flag to true when no admin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: true });
+            const buyFreeSpinBoard = { board: "buy-freespin-board", win: 50 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                buyFreeSpinBoard,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromBuyFreeSpin).toBe(true);
+        });
+
+        it("should set isFromAdmin flag to false when no admin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: true });
+            const buyFreeSpinBoard = { board: "buy-freespin-board", win: 50 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                buyFreeSpinBoard,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromAdmin).toBe(false);
+        });
+
+        it("should set isFromChain flag to false when no admin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: true });
+            const buyFreeSpinBoard = { board: "buy-freespin-board", win: 50 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                buyFreeSpinBoard,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromChain).toBe(false);
+        });
+
+        it("should not call getBuyFreeSpinBoard when buyFreeSpin is false", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: false });
+            const consumer = createConsumerWithMocks({ adminResult: null });
+
+            // Act
+            await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.getBuyFreeSpinBoard).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("when chain result exists", () => {
+        it("should return chain result as data when no admin or buy free spin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toEqual(chainResult);
+        });
+
+        it("should set isFromChain flag to true when no admin or buy free spin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromChain).toBe(true);
+        });
+
+        it("should set isFromAdmin flag to false when no admin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromAdmin).toBe(false);
+        });
+
+        it("should set isFromBuyFreeSpin flag to false when no buy free spin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromBuyFreeSpin).toBe(false);
+        });
+
+        it("should call getNextResult with correct parameters", async () => {
+            // Arrange
+            const player = createTestPlayer("specificPlayer");
+            const round = createTestRound({
+                betLevel: 10,
+                coinValue: 0.5,
+                freeSpin: true,
+            });
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult: { board: "chain-board" },
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
+                "specificPlayer",
+                {
+                    betLevel: 10,
+                    coinValue: 0.5,
+                },
+                { isFreeSpin: true }
+            );
+        });
+    });
+
+    describe("when no results exist", () => {
+        it("should return null as data", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult: null,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toBeNull();
+        });
+
+        it("should set isFromAdmin flag to false", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult: null,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromAdmin).toBe(false);
+        });
+
+        it("should set isFromChain flag to false", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult: null,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromChain).toBe(false);
+        });
+
+        it("should set isFromBuyFreeSpin flag to false", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult: null,
+                buyFreeSpinBoard: null,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.isFromBuyFreeSpin).toBe(false);
+        });
+    });
+
+    describe("priority order", () => {
+        it("should prioritize admin result over buy free spin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: true });
+            const adminResult = { board: "admin-board", win: 100 };
+            const buyFreeSpinBoard = { board: "buy-freespin-board", win: 50 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+                buyFreeSpinBoard,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toEqual(adminResult);
+        });
+
+        it("should prioritize admin result over chain result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const adminResult = { board: "admin-board", win: 100 };
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+                chainResult,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toEqual(adminResult);
+        });
+
+        it("should prioritize buy free spin result over chain result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound({ buyFreeSpin: true });
+            const buyFreeSpinBoard = { board: "buy-freespin-board", win: 50 };
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                buyFreeSpinBoard,
+                chainResult,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.data).toEqual(buyFreeSpinBoard);
+        });
+    });
+});
+
 afterEach(() => {
     jest.clearAllMocks();
 });
