@@ -126,7 +126,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
 
-            // Perform comprehensive chain cache maintenance every round (every ~60 seconds)
             this.userChainConsumer.clean();
         }
         await this.promotionFreeSpinsConsumer.checkExpiry(this.gameData.gameConfigs.gameId);
@@ -136,11 +135,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await super.checkGameStatus();
 
         if (!this.gameData.disabled) {
-            const {
-                multiplierBonus,
-                mode: difficulty,
-                resultChains = { enabled: false, reload: false },
-            } = this.gameData.gameConfigs.cascadingSlotsConfig;
+            const { multiplierBonus, mode: difficulty } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
             this.boardGenerator.updateBoardConfig(difficulty, multiplierBonus.min, multiplierBonus.max);
         }
