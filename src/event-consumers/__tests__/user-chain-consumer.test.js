@@ -405,7 +405,11 @@ describe("UserChainConsumer", () => {
 
             it("should set correct bet level from context", async () => {
                 // Arrange
-                const playerContext = createPlayerContext({ betLevel: 3, balance: 600 }); // Higher balance for betLevel 3
+                // For betLevel 3, coinValue 0.1: chainKey = "testPlayer-0.30"
+                // Need balance that gives applicable board count matching available chains (50 or 75)
+                // playableBoards = floor(balance / (3 * 0.1) / 20) = floor(balance / 6)
+                // For 75 boards: need balance around 360 (floor(360/6) = 60, applicableBoards = 75, closest = 75)
+                const playerContext = createPlayerContext({ betLevel: 3, balance: 360 });
 
                 // Act
                 await userChainConsumer.assignChain("testPlayer", playerContext);
@@ -416,7 +420,10 @@ describe("UserChainConsumer", () => {
 
             it("should set correct coin value from context", async () => {
                 // Arrange
-                const playerContext = createPlayerContext({ coinValue: 0.5, balance: 1000 }); // Higher balance for coinValue 0.5
+                // For betLevel 1, coinValue 0.5: chainKey = "testPlayer-0.50"
+                // playableBoards = floor(balance / (1 * 0.5) / 20) = floor(balance / 10)
+                // For 75 boards: need balance around 600 (floor(600/10) = 60, applicableBoards = 75, closest = 75)
+                const playerContext = createPlayerContext({ coinValue: 0.5, balance: 600 });
 
                 // Act
                 await userChainConsumer.assignChain("testPlayer", playerContext);
@@ -519,11 +526,13 @@ describe("UserChainConsumer", () => {
             const originalMathRandom = Math.random;
             Math.random = jest.fn().mockReturnValue(0.9); // Should select the last chain (index 1)
 
+            // Adjust balance so getApplicableBoardCount returns 50 (matches test-chain-2)
+            // playableBoards = floor(100 / 0.1 / 20) = 50, applicableBoards = 62, closest = 50
             const result = await userChainConsumer.assignChain("randomTestPlayer", {
                 playerId: "randomTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 120,
+                balance: 100, // Reduced from 120 to get board count of 50
             });
 
             expect(result).toBe(true);
