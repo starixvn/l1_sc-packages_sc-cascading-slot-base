@@ -23,8 +23,6 @@ export default class ChainManager {
         this.gameData.playerChains = this.gameData.playerChains || {};
         this.gameData.availableChains = this.gameData.availableChains || [];
         this.gameData.chainBoardsCache = this.gameData.chainBoardsCache || {};
-
-        // No need to store chainConfigs - access gameConfigs directly when needed
     }
 
     /**
@@ -158,7 +156,7 @@ export default class ChainManager {
             return existingChain;
         }
 
-        return await this.reloadChainFromDatabase(playerName, betLevel, coinValue);
+        return this.reloadChainFromDatabase(playerName, betLevel, coinValue);
     }
 
     async getNextResult(playerName, playerContext = {}, roundContext = {}) {
@@ -181,9 +179,8 @@ export default class ChainManager {
         playerChain.lastActivityAt = new Date();
 
         const currentBoard = boards[playerChain.currentIndex];
-        const boardResult = this.convertChainBoardToResult(currentBoard);
 
-        return boardResult;
+        return this.convertChainBoardToResult(currentBoard);
     }
 
     /**
