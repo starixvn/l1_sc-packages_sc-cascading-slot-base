@@ -188,11 +188,11 @@ export default class UserChainConsumer {
     /**
      * Filter available chains by applicable board count
      * @param {Array} availableChains - All available chains
-     * @param {number} applicableBoardCount - Maximum boards player can handle
+     * @param {number} applicableBoardCount - Closest valid board count for player
      * @returns {Array} Matching chains
      */
     filterChains(availableChains, applicableBoardCount) {
-        return availableChains.filter((chain) => chain.totalBoardCount <= applicableBoardCount);
+        return availableChains.filter((chain) => chain.totalBoardCount === applicableBoardCount);
     }
 
     /**

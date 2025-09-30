@@ -1286,16 +1286,17 @@ describe("UserChainConsumer", () => {
         });
 
         describe("when no matching chains available", () => {
-            it("should return null when all chains exceed board count", async () => {
+            it("should return null when no chains match exact board count", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext({ balance: 120 });
                 const availableChains = [
-                    createTestChain({ name: "chain1", totalBoardCount: 200 }),
-                    createTestChain({ name: "chain2", totalBoardCount: 150 }),
+                    createTestChain({ name: "chain1", totalBoardCount: 50 }),
+                    createTestChain({ name: "chain2", totalBoardCount: 100 }),
+                    createTestChain({ name: "chain3", totalBoardCount: 125 }),
                 ];
                 const consumer = createConsumerWithMocks({
                     availableChains,
-                    getApplicableBoardCount: 75,
+                    getApplicableBoardCount: 75, // No chain has exactly 75 boards
                 });
 
                 // Act
@@ -1338,12 +1339,16 @@ describe("UserChainConsumer", () => {
             it("should return selected chain", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
-                const expectedChain = createTestChain({ name: "matching-chain", totalBoardCount: 50 });
-                const availableChains = [expectedChain, createTestChain({ name: "chain2", totalBoardCount: 75 })];
+                const expectedChain = createTestChain({ name: "matching-chain", totalBoardCount: 75 });
+                const availableChains = [
+                    createTestChain({ name: "chain1", totalBoardCount: 50 }),
+                    expectedChain,
+                    createTestChain({ name: "chain3", totalBoardCount: 100 }),
+                ];
                 const consumer = createConsumerWithMocks({
                     availableChains,
-                    getApplicableBoardCount: 75,
-                    mathRandom: 0.0, // Select first chain
+                    getApplicableBoardCount: 75, // Matches expectedChain exactly
+                    mathRandom: 0.0, // Select first matching chain
                 });
 
                 // Act
@@ -1425,12 +1430,12 @@ describe("UserChainConsumer", () => {
             it("should select first chain when Math.random returns 0", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
-                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 50 });
-                const secondChain = createTestChain({ name: "second-chain", totalBoardCount: 60 });
+                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
+                const secondChain = createTestChain({ name: "second-chain", totalBoardCount: 75 });
                 const availableChains = [firstChain, secondChain];
                 const consumer = createConsumerWithMocks({
                     availableChains,
-                    getApplicableBoardCount: 75,
+                    getApplicableBoardCount: 75, // Both chains match exactly
                     mathRandom: 0.0,
                 });
 
@@ -1444,12 +1449,12 @@ describe("UserChainConsumer", () => {
             it("should select last chain when Math.random returns close to 1", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
-                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 50 });
-                const lastChain = createTestChain({ name: "last-chain", totalBoardCount: 60 });
+                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
+                const lastChain = createTestChain({ name: "last-chain", totalBoardCount: 75 });
                 const availableChains = [firstChain, lastChain];
                 const consumer = createConsumerWithMocks({
                     availableChains,
-                    getApplicableBoardCount: 75,
+                    getApplicableBoardCount: 75, // Both chains match exactly
                     mathRandom: 0.99,
                 });
 
@@ -1463,13 +1468,13 @@ describe("UserChainConsumer", () => {
             it("should select middle chain when Math.random returns 0.5", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
-                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 50 });
-                const middleChain = createTestChain({ name: "middle-chain", totalBoardCount: 60 });
-                const lastChain = createTestChain({ name: "last-chain", totalBoardCount: 70 });
+                const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
+                const middleChain = createTestChain({ name: "middle-chain", totalBoardCount: 75 });
+                const lastChain = createTestChain({ name: "last-chain", totalBoardCount: 75 });
                 const availableChains = [firstChain, middleChain, lastChain];
                 const consumer = createConsumerWithMocks({
                     availableChains,
-                    getApplicableBoardCount: 75,
+                    getApplicableBoardCount: 75, // All chains match exactly
                     mathRandom: 0.5,
                 });
 
@@ -1485,10 +1490,10 @@ describe("UserChainConsumer", () => {
             it("should handle single matching chain", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
-                const singleChain = createTestChain({ name: "only-chain", totalBoardCount: 50 });
+                const singleChain = createTestChain({ name: "only-chain", totalBoardCount: 75 });
                 const consumer = createConsumerWithMocks({
                     availableChains: [singleChain],
-                    getApplicableBoardCount: 75,
+                    getApplicableBoardCount: 75, // Matches exactly
                 });
 
                 // Act
@@ -1541,6 +1546,127 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result).not.toBeNull();
+            });
+        });
+    });
+
+    describe("filterChains", () => {
+        const createChain = (overrides = {}) => ({
+            name: "test-chain",
+            baseBetAmount: 0.1,
+            totalBoardCount: 75,
+            ...overrides,
+        });
+
+        it("should return chains with exact matching totalBoardCount", () => {
+            // Arrange
+            const availableChains = [
+                createChain({ name: "chain-50", totalBoardCount: 50 }),
+                createChain({ name: "chain-75", totalBoardCount: 75 }),
+                createChain({ name: "chain-100", totalBoardCount: 100 }),
+                createChain({ name: "chain-125", totalBoardCount: 125 }),
+            ];
+            const applicableBoardCount = 100;
+
+            // Act
+            const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+            // Assert
+            expect(result).toEqual([createChain({ name: "chain-100", totalBoardCount: 100 })]);
+        });
+
+        it("should return multiple chains with same totalBoardCount", () => {
+            // Arrange
+            const availableChains = [
+                createChain({ name: "chain-100-a", totalBoardCount: 100 }),
+                createChain({ name: "chain-75", totalBoardCount: 75 }),
+                createChain({ name: "chain-100-b", totalBoardCount: 100 }),
+                createChain({ name: "chain-125", totalBoardCount: 125 }),
+            ];
+            const applicableBoardCount = 100;
+
+            // Act
+            const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+            // Assert
+            expect(result).toHaveLength(2);
+            expect(result).toEqual([
+                createChain({ name: "chain-100-a", totalBoardCount: 100 }),
+                createChain({ name: "chain-100-b", totalBoardCount: 100 }),
+            ]);
+        });
+
+        it("should return empty array when no chains match exactly", () => {
+            // Arrange
+            const availableChains = [
+                createChain({ name: "chain-50", totalBoardCount: 50 }),
+                createChain({ name: "chain-75", totalBoardCount: 75 }),
+                createChain({ name: "chain-125", totalBoardCount: 125 }),
+            ];
+            const applicableBoardCount = 100; // No chain with exactly 100 boards
+
+            // Act
+            const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+            // Assert
+            expect(result).toEqual([]);
+        });
+
+        it("should return empty array when availableChains is empty", () => {
+            // Arrange
+            const availableChains = [];
+            const applicableBoardCount = 100;
+
+            // Act
+            const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+            // Assert
+            expect(result).toEqual([]);
+        });
+
+        it("should handle edge case with applicableBoardCount of 0", () => {
+            // Arrange
+            const availableChains = [createChain({ name: "chain-0", totalBoardCount: 0 }), createChain({ name: "chain-50", totalBoardCount: 50 })];
+            const applicableBoardCount = 0;
+
+            // Act
+            const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+            // Assert
+            expect(result).toEqual([createChain({ name: "chain-0", totalBoardCount: 0 })]);
+        });
+
+        describe("examples from user requirements", () => {
+            it("should return chain with 100 boards when applicableBoardCount is 111", () => {
+                // Arrange - Based on getClosestValidBoardCount(111) = 100
+                const availableChains = [
+                    createChain({ name: "chain-50", totalBoardCount: 50 }),
+                    createChain({ name: "chain-100", totalBoardCount: 100 }),
+                    createChain({ name: "chain-125", totalBoardCount: 125 }),
+                ];
+                const applicableBoardCount = 100; // This would be the result of getClosestValidBoardCount(111)
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+                // Assert
+                expect(result).toEqual([createChain({ name: "chain-100", totalBoardCount: 100 })]);
+            });
+
+            it("should return chain with 50 boards when applicableBoardCount is 55", () => {
+                // Arrange - Based on getClosestValidBoardCount(55) = 50
+                const availableChains = [
+                    createChain({ name: "chain-50", totalBoardCount: 50 }),
+                    createChain({ name: "chain-100", totalBoardCount: 100 }),
+                    createChain({ name: "chain-125", totalBoardCount: 125 }),
+                ];
+                const applicableBoardCount = 50; // This would be the result of getClosestValidBoardCount(55)
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+                // Assert
+                expect(result).toEqual([createChain({ name: "chain-50", totalBoardCount: 50 })]);
             });
         });
     });
