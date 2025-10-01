@@ -36,7 +36,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             userSessionsRepository: asValue(UserSession),
         });
     }
-    
+
     registerBoardUtilities() {
         this.container.register({
             boardSettings: asValue(defaultDefinition.boardSettings),
@@ -65,7 +65,7 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         super.registerRouters();
 
         this.container.register({
-            httpRouter: asClass(HttpRouter),
+            httpRouter: asClass(HttpRouter).proxy(),
         });
     }
 

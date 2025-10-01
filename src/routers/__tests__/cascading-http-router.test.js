@@ -43,7 +43,7 @@ const res = {
 };
 
 function initRouter(appConfigs) {
-    return new CascadingHttpRouter(appConfigs, gameData, tumbleCalculator, boardGenerator, logService, historyQuery, metricQuery);
+    return new CascadingHttpRouter({ appConfigs, gameData, tumbleCalculator, boardGenerator, logService, historyQuery, metricQuery });
 }
 
 const validParams = {
