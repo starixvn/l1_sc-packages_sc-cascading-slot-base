@@ -1,5 +1,8 @@
 import UserChainConsumer from "../user-chain-consumer";
 
+// Mock crypto module
+const crypto = require("crypto");
+
 // Shared test data factories (DRY principle)
 const createMockGameData = (overrides = {}) => ({
     gameConfigs: {
@@ -523,27 +526,37 @@ describe("UserChainConsumer", () => {
         });
 
         it("should use random selection when multiple chains are available", async () => {
-            const originalMathRandom = Math.random;
-            Math.random = jest.fn().mockReturnValue(0.9); // Should select the last chain (index 1)
+            const originalRandomInt = crypto.randomInt;
 
-            // Adjust balance so getApplicableBoardCount returns 50 (matches test-chain-2)
-            // playableBoards = floor(100 / 0.1 / 20) = 50, applicableBoards = 62, closest = 50
+            // Temporarily modify available chains to have multiple chains with same totalBoardCount
+            const originalChains = mockGameData.availableChains;
+            mockGameData.availableChains = [
+                { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 },
+                { name: "test-chain-2", baseBetAmount: 0.1, totalBoardCount: 75 }, // Same board count
+            ];
+
+            crypto.randomInt = jest.fn().mockReturnValue(1); // Should select the second chain (index 1)
+
+            // Adjust balance so getApplicableBoardCount returns 75 (matches both chains)
+            // playableBoards = floor(120 / 0.1 / 20) = 60, applicableBoards = 75, closest = 75
             const result = await userChainConsumer.assignChain("randomTestPlayer", {
                 playerId: "randomTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 100, // Reduced from 120 to get board count of 50
+                balance: 120, // This gives us 75 applicable boards
             });
 
             expect(result).toBe(true);
             expect(mockGameData.playerChains["randomTestPlayer-0.10"].name).toBe("test-chain-2");
 
-            Math.random = originalMathRandom;
+            // Restore original chains and crypto.randomInt
+            mockGameData.availableChains = originalChains;
+            crypto.randomInt = originalRandomInt;
         });
 
         it("should assign chain regardless of betLevel and coinValue (no filtering)", async () => {
-            const originalMathRandom = Math.random;
-            Math.random = jest.fn().mockReturnValue(0.0); // Should select first chain (index 0)
+            const originalRandomInt = crypto.randomInt;
+            crypto.randomInt = jest.fn().mockReturnValue(0); // Should select first chain (index 0)
 
             const result = await userChainConsumer.assignChain("noFilterTestPlayer", {
                 playerId: "noFilterTestPlayer",
@@ -559,7 +572,7 @@ describe("UserChainConsumer", () => {
             // Should not query assignments for filtering - assignChain no longer does this
             expect(mockGameData.playerChains["noFilterTestPlayer-0.10"].name).toBe("test-chain-1");
 
-            Math.random = originalMathRandom;
+            crypto.randomInt = originalRandomInt;
         });
 
         it("should return false when player balance is insufficient", async () => {
@@ -587,11 +600,13 @@ describe("UserChainConsumer", () => {
         it("should handle assignment repository errors gracefully", async () => {
             mockAssignmentRepository.create.mockRejectedValueOnce(new Error("Database error"));
 
+            // Use balance that matches test-chain-1 (75 boards)
+            // playableBoards = floor(120 / 0.1 / 20) = 60, applicableBoards = 75, closest = 75
             const result = await userChainConsumer.assignChain("errorTestPlayer", {
                 playerId: "errorTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 120,
+                balance: 120, // This should match test-chain-1 with 75 boards
             });
 
             expect(result).toBe(true); // Assignment to memory should still succeed
@@ -1243,8 +1258,8 @@ describe("UserChainConsumer", () => {
                 jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue(mocks.selectRandom);
             }
 
-            if (mocks.mathRandom !== undefined) {
-                jest.spyOn(Math, "random").mockReturnValue(mocks.mathRandom);
+            if (mocks.cryptoRandomInt !== undefined) {
+                jest.spyOn(crypto, "randomInt").mockReturnValue(mocks.cryptoRandomInt);
             }
 
             return userChainConsumer;
@@ -1357,7 +1372,7 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // Matches expectedChain exactly
-                    mathRandom: 0.0, // Select first matching chain
+                    cryptoRandomInt: 0, // Select first matching chain (index 0)
                 });
 
                 // Act
@@ -1436,7 +1451,7 @@ describe("UserChainConsumer", () => {
         });
 
         describe("random selection behavior", () => {
-            it("should select first chain when Math.random returns 0", async () => {
+            it("should select first chain when crypto.randomInt returns 0", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
                 const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
@@ -1445,7 +1460,7 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // Both chains match exactly
-                    mathRandom: 0.0,
+                    cryptoRandomInt: 0, // Select first chain (index 0)
                 });
 
                 // Act
@@ -1455,7 +1470,7 @@ describe("UserChainConsumer", () => {
                 expect(result).toEqual(firstChain);
             });
 
-            it("should select last chain when Math.random returns close to 1", async () => {
+            it("should select last chain when crypto.randomInt returns last index", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
                 const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
@@ -1464,7 +1479,7 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // Both chains match exactly
-                    mathRandom: 0.99,
+                    cryptoRandomInt: 1, // Select last chain (index 1)
                 });
 
                 // Act
@@ -1474,7 +1489,7 @@ describe("UserChainConsumer", () => {
                 expect(result).toEqual(lastChain);
             });
 
-            it("should select middle chain when Math.random returns 0.5", async () => {
+            it("should select middle chain when crypto.randomInt returns middle index", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
                 const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
@@ -1484,7 +1499,7 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // All chains match exactly
-                    mathRandom: 0.5,
+                    cryptoRandomInt: 1, // Select middle chain (index 1)
                 });
 
                 // Act

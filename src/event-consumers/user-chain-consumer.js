@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 const ASSIGNMENT_STATUS = {
     ACTIVE: "active",
     COMPLETED: "completed",
@@ -196,7 +198,7 @@ export default class UserChainConsumer {
     }
 
     /**
-     * Select random chain from available options
+     * Select random chain from available options using cryptographically secure randomness
      * @param {Array} matchingChains - Filtered chains
      * @returns {Object|null} Selected chain or null
      */
@@ -204,7 +206,7 @@ export default class UserChainConsumer {
         if (chains.length === 0) {
             return null;
         }
-        const index = Math.floor(Math.random() * chains.length);
+        const index = crypto.randomInt(0, chains.length);
 
         return chains[index];
     }
