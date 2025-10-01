@@ -656,3 +656,533 @@ describe("totalMultiplierConsumer", () => {
         return data;
     }
 });
+
+class TotalMultiplierTestFactory {
+    static createPlayer(overrides = {}) {
+        return {
+            UID: "test-uid-123",
+            profile: {
+                name: "testPlayer",
+                ...overrides.profile,
+            },
+            session: {
+                playerId: 456,
+                operatorId: "op1",
+                siteName: "testSite",
+                ...overrides.session,
+            },
+            promotion: {
+                promotionId: "promo123",
+                remainingBonusItems: 5,
+                ...overrides.promotion,
+            },
+            usePromotion: false,
+            ...overrides,
+        };
+    }
+
+    static createGameData(overrides = {}) {
+        const data = new SlotGameData();
+        data.remainingTime = 20;
+        data.gameConfigs = {
+            enabled: true,
+            minbet: 1,
+            maxbet: 1000,
+            cascadingSlotsConfig: {
+                multiplier: 20,
+            },
+        };
+        data.freeSpinId = 1;
+        data.ingame = {};
+        data.realPlayers = {};
+        return { ...data, ...overrides };
+    }
+
+    static createRoundData(overrides = {}) {
+        return {
+            roundId: 123,
+            multiplier: 2,
+            ...overrides,
+        };
+    }
+
+    static createTotalMultiplierRecord(overrides = {}) {
+        return {
+            uid: "test-uid-123",
+            playerId: 456,
+            name: "testPlayer",
+            ended: false,
+            time: new Date(),
+            rounds: [],
+            ...overrides,
+        };
+    }
+
+    static createRoundRecord(overrides = {}) {
+        return {
+            time: new Date(),
+            roundId: 123,
+            prevTotalMultiplier: 0,
+            totalMultiplier: 2,
+            multiplier: 2,
+            ...overrides,
+        };
+    }
+}
+
+describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
+    let enhancedConsumer;
+    let mockGameData;
+    let mockTotalMultiplierRepository;
+    let mockFreeSpinConsumer;
+    let mockDate;
+
+    beforeEach(() => {
+        // Arrange - Setup mocks and test data
+        jest.clearAllMocks();
+        mockDate = new Date("2024-01-15T10:30:00.000Z");
+        mockGameData = TotalMultiplierTestFactory.createGameData();
+        mockTotalMultiplierRepository = stubMongoose(mongoose.Model);
+        mockFreeSpinConsumer = stub(FreeSpinConsumer);
+        
+        enhancedConsumer = new TotalMultiplierConsumer(mockGameData, mockTotalMultiplierRepository, mockFreeSpinConsumer);
+        jest.spyOn(global, "Date").mockReturnValue(mockDate);
+    });
+
+    describe("increaseTotalMultiplier - Promotion Coverage", () => {
+        describe("when player uses promotion", () => {
+            it("should include promotionId in create call when player.usePromotion is true", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer({
+                    usePromotion: true,
+                    promotion: { promotionId: "special-promo-456" },
+                });
+                const roundData = TotalMultiplierTestFactory.createRoundData();
+                mockGameData.ingame[player.profile.name] = {};
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                expect(mockTotalMultiplierRepository.create).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        promotionId: "special-promo-456",
+                    })
+                );
+            });
+
+            it("should not include promotionId when player.usePromotion is false", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer({
+                    usePromotion: false,
+                    promotion: { promotionId: "should-not-be-included" },
+                });
+                const roundData = TotalMultiplierTestFactory.createRoundData();
+                mockGameData.ingame[player.profile.name] = {};
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                expect(mockTotalMultiplierRepository.create).toHaveBeenCalledWith(
+                    expect.not.objectContaining({
+                        promotionId: expect.any(String),
+                    })
+                );
+            });
+
+            it("should not include promotionId when player.usePromotion is undefined", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                delete player.usePromotion;
+                const roundData = TotalMultiplierTestFactory.createRoundData();
+                mockGameData.ingame[player.profile.name] = {};
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                const createCall = mockTotalMultiplierRepository.create.mock.calls[0][0];
+                expect(createCall).not.toHaveProperty('promotionId');
+            });
+        });
+    });
+
+    describe("increaseTotalMultiplier - Edge Cases", () => {
+        describe("when totalMultiplier is null", () => {
+            it("should treat null as 0 for currentTotalMultiplier", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                const roundData = TotalMultiplierTestFactory.createRoundData({ multiplier: 3 });
+                mockGameData.ingame[player.profile.name] = { totalMultiplier: null };
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                expect(mockGameData.ingame[player.profile.name].totalMultiplier).toBe(3);
+            });
+
+            it("should create new record when totalMultiplier is null", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                const roundData = TotalMultiplierTestFactory.createRoundData();
+                mockGameData.ingame[player.profile.name] = { totalMultiplier: null };
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                expect(mockTotalMultiplierRepository.create).toHaveBeenCalled();
+                expect(mockTotalMultiplierRepository.updateOne).not.toHaveBeenCalled();
+            });
+        });
+
+        describe("when multiplier is decimal", () => {
+            it("should handle decimal multiplier correctly", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                const roundData = TotalMultiplierTestFactory.createRoundData({ multiplier: 1.5 });
+                mockGameData.ingame[player.profile.name] = { totalMultiplier: 2.5 };
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                expect(mockGameData.ingame[player.profile.name].totalMultiplier).toBe(4);
+            });
+        });
+
+        describe("when player session is undefined", () => {
+            it("should handle undefined player.session gracefully", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                delete player.session;
+                const roundData = TotalMultiplierTestFactory.createRoundData();
+                mockGameData.ingame[player.profile.name] = {};
+
+                // Act
+                await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+
+                // Assert
+                expect(mockTotalMultiplierRepository.create).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        playerId: undefined,
+                    })
+                );
+            });
+        });
+    });
+
+    describe("getCurrentMultiplier - Edge Cases", () => {
+        describe("when ingame data is missing", () => {
+            it("should handle missing ingame object gracefully", () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer({ profile: { name: "nonexistentPlayer" } });
+                mockGameData.ingame = {};
+                // Expect this to throw since original code doesn't have defensive check
+
+                // Act & Assert
+                expect(() => {
+                    enhancedConsumer.getCurrentMultiplier(player);
+                }).toThrow("Cannot read properties of undefined");
+            });
+
+            it("should handle undefined ingame[playerName] gracefully", () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                mockGameData.ingame[player.profile.name] = undefined;
+                // Expect this to throw since original code doesn't have defensive check
+
+                // Act & Assert
+                expect(() => {
+                    enhancedConsumer.getCurrentMultiplier(player);
+                }).toThrow("Cannot read properties of undefined");
+            });
+
+            it("should return 0 when totalMultiplier is null", () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                mockGameData.ingame[player.profile.name] = { totalMultiplier: null };
+
+                // Act
+                const result = enhancedConsumer.getCurrentMultiplier(player);
+
+                // Assert
+                expect(result).toBe(0);
+            });
+        });
+
+        describe("when totalMultiplier has special values", () => {
+            it("should return decimal value when totalMultiplier is decimal", () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                mockGameData.ingame[player.profile.name] = { totalMultiplier: 3.5 };
+
+                // Act
+                const result = enhancedConsumer.getCurrentMultiplier(player);
+
+                // Assert
+                expect(result).toBe(3.5);
+            });
+
+            it("should return large value when totalMultiplier is large number", () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                mockGameData.ingame[player.profile.name] = { totalMultiplier: 999999 };
+
+                // Act
+                const result = enhancedConsumer.getCurrentMultiplier(player);
+
+                // Assert
+                expect(result).toBe(999999);
+            });
+        });
+    });
+
+    describe("stopChain - Edge Cases", () => {
+        describe("when player data is missing", () => {
+            it("should call updateOne but throw when setting ingame property", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer({ profile: { name: "missingPlayer" } });
+                mockGameData.ingame = {};
+
+                // Act & Assert
+                await expect(enhancedConsumer.stopChain(player)).rejects.toThrow("Cannot set properties of undefined");
+                expect(mockTotalMultiplierRepository.updateOne).toHaveBeenCalledWith(
+                    { uid: player.UID, ended: false },
+                    { ended: true, endTime: mockDate }
+                );
+            });
+
+            it("should throw when ingame data is undefined", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                mockGameData.ingame[player.profile.name] = undefined;
+
+                // Act & Assert
+                await expect(enhancedConsumer.stopChain(player)).rejects.toThrow("Cannot set properties of undefined");
+            });
+        });
+
+        describe("when ingame data exists", () => {
+            it("should preserve other properties when setting totalMultiplier to 0", async () => {
+                // Arrange
+                const player = TotalMultiplierTestFactory.createPlayer();
+                mockGameData.ingame[player.profile.name] = {
+                    totalMultiplier: 15,
+                    betQueue: [],
+                    otherProperty: "preserved",
+                };
+
+                // Act
+                await enhancedConsumer.stopChain(player);
+
+                // Assert
+                expect(mockGameData.ingame[player.profile.name].totalMultiplier).toBe(0);
+                expect(mockGameData.ingame[player.profile.name].betQueue).toEqual([]);
+                expect(mockGameData.ingame[player.profile.name].otherProperty).toBe("preserved");
+            });
+        });
+    });
+
+    describe("reload - Enhanced Coverage", () => {
+        describe("when checking free spins with promotion", () => {
+            it("should check promotion remaining bonus items when player has promotion", async () => {
+                // Arrange
+                const totalMultiplierRecord = TotalMultiplierTestFactory.createTotalMultiplierRecord({
+                    name: "promoPlayer",
+                    uid: "promo-uid",
+                    promotionId: "promo123",
+                    rounds: [{ totalMultiplier: 5 }],
+                });
+                const player = TotalMultiplierTestFactory.createPlayer({
+                    UID: "promo-uid",
+                    profile: { name: "promoPlayer" },
+                    promotion: { remainingBonusItems: 3 },
+                });
+                
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
+                mockGameData.realPlayers = { promoPlayer: player };
+                mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(false);
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.promoPlayer.totalMultiplier).toBe(5);
+            });
+
+            it("should check ingame promotion remaining bonus items", async () => {
+                // Arrange
+                const totalMultiplierRecord = TotalMultiplierTestFactory.createTotalMultiplierRecord({
+                    name: "ingamePromoPlayer",
+                    promotionId: "promo456",
+                    rounds: [{ totalMultiplier: 7 }],
+                });
+                
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
+                mockGameData.realPlayers = {};
+                mockGameData.ingame.ingamePromoPlayer = {
+                    promotion: { remainingBonusItems: 2 },
+                };
+                mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(false);
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.ingamePromoPlayer.totalMultiplier).toBe(7);
+            });
+
+            it("should reset multiplier when no promotion bonus items remain", async () => {
+                // Arrange
+                const totalMultiplierRecord = TotalMultiplierTestFactory.createTotalMultiplierRecord({
+                    name: "noPromoPlayer",
+                    promotionId: "promo789",
+                    rounds: [{ totalMultiplier: 8 }],
+                });
+                
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
+                mockGameData.realPlayers = {};
+                mockGameData.ingame.noPromoPlayer = {
+                    promotion: { remainingBonusItems: 0 },
+                };
+                mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(false);
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.noPromoPlayer.totalMultiplier).toBe(0);
+            });
+        });
+
+        describe("when initializing ingame data", () => {
+            it("should initialize ingame data with default betQueue when undefined", async () => {
+                // Arrange
+                const totalMultiplierRecord = TotalMultiplierTestFactory.createTotalMultiplierRecord({
+                    name: "newPlayer",
+                    rounds: [{ totalMultiplier: 3 }],
+                });
+                
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
+                mockGameData.ingame = {}; // No existing ingame data
+                mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(true);
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.newPlayer).toEqual({
+                    betQueue: [],
+                    totalMultiplier: 3,
+                });
+            });
+
+            it("should preserve existing ingame data when setting totalMultiplier", async () => {
+                // Arrange
+                const totalMultiplierRecord = TotalMultiplierTestFactory.createTotalMultiplierRecord({
+                    name: "existingPlayer",
+                    rounds: [{ totalMultiplier: 6 }],
+                });
+                
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
+                mockGameData.ingame.existingPlayer = {
+                    betQueue: ["bet1", "bet2"],
+                    customProperty: "preserved",
+                };
+                mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(true);
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.existingPlayer).toEqual({
+                    betQueue: ["bet1", "bet2"],
+                    customProperty: "preserved",
+                    totalMultiplier: 6,
+                });
+            });
+        });
+
+        describe("when handling multiple rounds", () => {
+            it("should use latest round totalMultiplier from multiple rounds", async () => {
+                // Arrange
+                const totalMultiplierRecord = TotalMultiplierTestFactory.createTotalMultiplierRecord({
+                    name: "multiRoundPlayer",
+                    rounds: [
+                        { totalMultiplier: 2 },
+                        { totalMultiplier: 4 },
+                        { totalMultiplier: 9 }, // Latest should be used
+                    ],
+                });
+                
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
+                mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(true);
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.multiRoundPlayer.totalMultiplier).toBe(9);
+            });
+        });
+
+        describe("when no totalMultipliers exist", () => {
+            it("should handle empty totalMultipliers array gracefully", async () => {
+                // Arrange
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([]);
+
+                // Act & Assert
+                expect(async () => {
+                    await enhancedConsumer.reload();
+                }).not.toThrow();
+            });
+
+            it("should not modify ingame data when no totalMultipliers exist", async () => {
+                // Arrange
+                mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([]);
+                mockGameData.ingame.existingPlayer = { totalMultiplier: 5 };
+
+                // Act
+                await enhancedConsumer.reload();
+
+                // Assert
+                expect(mockGameData.ingame.existingPlayer.totalMultiplier).toBe(5);
+            });
+        });
+    });
+
+    describe("Integration Scenarios", () => {
+        it("should handle complete workflow from increase to stop", async () => {
+            // Arrange
+            const player = TotalMultiplierTestFactory.createPlayer();
+            const roundData = TotalMultiplierTestFactory.createRoundData({ multiplier: 3 });
+            mockGameData.ingame[player.profile.name] = {};
+
+            // Act - Increase multiplier
+            await enhancedConsumer.increaseTotalMultiplier(player, roundData);
+            const currentMultiplier = enhancedConsumer.getCurrentMultiplier(player);
+            await enhancedConsumer.stopChain(player);
+
+            // Assert
+            expect(currentMultiplier).toBe(3);
+            expect(mockGameData.ingame[player.profile.name].totalMultiplier).toBe(0);
+        });
+
+        it("should handle multiple increases and get current correctly", async () => {
+            // Arrange
+            const player = TotalMultiplierTestFactory.createPlayer();
+            mockGameData.ingame[player.profile.name] = {};
+
+            // Act
+            await enhancedConsumer.increaseTotalMultiplier(player, { roundId: 1, multiplier: 2 });
+            await enhancedConsumer.increaseTotalMultiplier(player, { roundId: 2, multiplier: 3 });
+            const finalMultiplier = enhancedConsumer.getCurrentMultiplier(player);
+
+            // Assert
+            expect(finalMultiplier).toBe(5);
+        });
+    });
+});

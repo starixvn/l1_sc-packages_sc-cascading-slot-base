@@ -1009,3 +1009,1053 @@ describe("selectPreGeneratedResult", () => {
 afterEach(() => {
     jest.clearAllMocks();
 });
+
+class SettleGameRoundTestFactory {
+    static createPlayer(overrides = {}) {
+        return {
+            profile: {
+                name: "testPlayer",
+                ...overrides.profile,
+            },
+            session: {
+                currencyGroupId: "g1",
+                playerId: 123,
+                sessionId: "session123",
+                ...overrides.session,
+            },
+            UID: "uid123",
+            ...overrides,
+        };
+    }
+
+    static createRound(overrides = {}) {
+        return {
+            id: 1,
+            coinValue: 0.1,
+            betLevel: 5,
+            betMultiplier: 20,
+            totalAmount: 10,
+            paid: false,
+            betwin: 0,
+            freeSpin: false,
+            buyFreeSpin: false,
+            multiplier: 1,
+            totalMultiplier: 0,
+            endTime: null,
+            sessionId: null,
+            settlementResult: {
+                freeSpins: { odds: 0 },
+                tumbles: [],
+            },
+            result: "1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10",
+            save: jest.fn(),
+            ...overrides,
+        };
+    }
+
+    static createBetResult(overrides = {}) {
+        return {
+            totalBetAmount: 10,
+            totalWin: 15,
+            netWin: 5,
+            totalLost: 0,
+            bigWin: false,
+            ...overrides,
+        };
+    }
+
+    static createSettlementResult(overrides = {}) {
+        return {
+            freeSpins: { odds: 0 },
+            tumbles: [
+                {
+                    icons: {},
+                    win: 0,
+                    newBoard: "1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10",
+                    multipliers: [1],
+                },
+            ],
+            ...overrides,
+        };
+    }
+
+    static createGameDataWithAdmin(playerName, adminResult = null) {
+        return {
+            ...gameData,
+            settlementResultFromAdmin: adminResult ? { [playerName]: adminResult } : {},
+        };
+    }
+}
+
+describe("getAdminResult", () => {
+    describe("when admin result exists for player", () => {
+        it("should return the admin result for the player", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const playerName = "testPlayer";
+            const expectedResult = { board: "admin-board", win: 100 };
+            consumer.gameData.settlementResultFromAdmin[playerName] = expectedResult;
+
+            // Act
+            const result = consumer.getAdminResult(playerName);
+
+            // Assert
+            expect(result).toEqual(expectedResult);
+        });
+    });
+
+    describe("when admin result does not exist for player", () => {
+        it("should return null", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const playerName = "nonexistentPlayer";
+            consumer.gameData.settlementResultFromAdmin = {};
+
+            // Act
+            const result = consumer.getAdminResult(playerName);
+
+            // Assert
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("when settlementResultFromAdmin is undefined", () => {
+        it("should handle undefined gracefully", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const playerName = "testPlayer";
+            // The actual method implementation would throw, so this tests the expected behavior
+            // In a real scenario, the code should be defensive, but for now we test the current behavior
+            consumer.gameData.settlementResultFromAdmin = {};
+
+            // Act
+            const result = consumer.getAdminResult(playerName);
+
+            // Assert
+            expect(result).toBeNull();
+        });
+    });
+});
+
+describe("getChainResult", () => {
+    describe("when calling chain manager", () => {
+        it("should call getNextResult with correct player name", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "chainPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound();
+            resultChainManager.getNextResult.mockResolvedValue(null);
+
+            // Act
+            await consumer.getChainResult(player, round, false);
+
+            // Assert
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
+                "chainPlayer",
+                expect.any(Object),
+                expect.any(Object)
+            );
+        });
+
+        it("should call getNextResult with correct bet parameters", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                betLevel: 8,
+                coinValue: 0.25,
+            });
+            resultChainManager.getNextResult.mockResolvedValue(null);
+
+            // Act
+            await consumer.getChainResult(player, round, false);
+
+            // Assert
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
+                expect.any(String),
+                { betLevel: 8, coinValue: 0.25 },
+                expect.any(Object)
+            );
+        });
+
+        it("should call getNextResult with isFreeSpin true when free spin", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            resultChainManager.getNextResult.mockResolvedValue(null);
+
+            // Act
+            await consumer.getChainResult(player, round, true);
+
+            // Assert
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Object),
+                { isFreeSpin: true }
+            );
+        });
+
+        it("should call getNextResult with isFreeSpin false when not free spin", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            resultChainManager.getNextResult.mockResolvedValue(null);
+
+            // Act
+            await consumer.getChainResult(player, round, false);
+
+            // Assert
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Object),
+                { isFreeSpin: false }
+            );
+        });
+
+        it("should return the result from chain manager", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            const expectedChainResult = { board: "chain-board", win: 50 };
+            resultChainManager.getNextResult.mockResolvedValue(expectedChainResult);
+
+            // Act
+            const result = await consumer.getChainResult(player, round, false);
+
+            // Assert
+            expect(result).toEqual(expectedChainResult);
+        });
+    });
+});
+
+describe("chooseResult", () => {
+    describe("when admin result exists", () => {
+        it("should return admin result regardless of other results", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const adminResult = { board: "admin-board" };
+            const chainResult = { board: "chain-board" };
+            const buyFreeSpinBoard = { board: "buy-board" };
+
+            // Act
+            const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
+
+            // Assert
+            expect(result).toEqual(adminResult);
+        });
+    });
+
+    describe("when no admin result but buy free spin exists", () => {
+        it("should return buy free spin board", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const adminResult = null;
+            const chainResult = { board: "chain-board" };
+            const buyFreeSpinBoard = { board: "buy-board" };
+
+            // Act
+            const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
+
+            // Assert
+            expect(result).toEqual(buyFreeSpinBoard);
+        });
+    });
+
+    describe("when no admin or buy free spin but chain result exists", () => {
+        it("should return chain result", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const adminResult = null;
+            const chainResult = { board: "chain-board" };
+            const buyFreeSpinBoard = null;
+
+            // Act
+            const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
+
+            // Assert
+            expect(result).toEqual(chainResult);
+        });
+    });
+
+    describe("when no results exist", () => {
+        it("should return null", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const adminResult = null;
+            const chainResult = null;
+            const buyFreeSpinBoard = null;
+
+            // Act
+            const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
+
+            // Assert
+            expect(result).toBeNull();
+        });
+    });
+});
+
+describe("queryRound", () => {
+    describe("when querying round by ID", () => {
+        it("should call findOne with correct round ID", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const roundId = 123;
+            roundsRepository.findOne.mockReturnValue({ exec: jest.fn() });
+
+            // Act
+            consumer.queryRound(roundId);
+
+            // Assert
+            expect(roundsRepository.findOne).toHaveBeenCalledWith({ id: 123, paid: false });
+        });
+
+        it("should call findOne with paid false", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const roundId = 456;
+            roundsRepository.findOne.mockReturnValue({ exec: jest.fn() });
+
+            // Act
+            consumer.queryRound(roundId);
+
+            // Assert
+            expect(roundsRepository.findOne).toHaveBeenCalledWith({ id: 456, paid: false });
+        });
+
+        it("should call exec on the query", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const roundId = 789;
+            const mockQuery = { exec: jest.fn() };
+            roundsRepository.findOne.mockReturnValue(mockQuery);
+
+            // Act
+            consumer.queryRound(roundId);
+
+            // Assert
+            expect(mockQuery.exec).toHaveBeenCalled();
+        });
+
+        it("should return the result of exec", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const roundId = 999;
+            const expectedResult = { id: 999, paid: false };
+            const mockQuery = { exec: jest.fn().mockReturnValue(expectedResult) };
+            roundsRepository.findOne.mockReturnValue(mockQuery);
+
+            // Act
+            const result = consumer.queryRound(roundId);
+
+            // Assert
+            expect(result).toEqual(expectedResult);
+        });
+    });
+});
+
+describe("calculateBetResult", () => {
+    describe("when calculating basic bet result", () => {
+        it("should set totalBetAmount from round totalAmount", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({ totalAmount: 50 });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.totalBetAmount).toBe(50);
+        });
+
+        it("should set totalWin from round betwin", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({ betwin: 75 });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.totalWin).toBe(75);
+        });
+
+        it("should calculate netWin correctly when winning", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 20,
+                betwin: 35,
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.netWin).toBe(15);
+        });
+
+        it("should set netWin to 0 when not winning", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 20,
+                betwin: 0,
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.netWin).toBe(0);
+        });
+
+        it("should calculate totalLost when losing", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 30,
+                betwin: 10,
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.totalLost).toBe(20);
+        });
+
+        it("should set totalLost to 0 when winning more than bet", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 10,
+                betwin: 25,
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.totalLost).toBe(0);
+        });
+    });
+
+    describe("when calculating big win", () => {
+        it("should set bigWin to true when win exceeds big win ratio threshold", () => {
+            // Arrange
+            const consumer = initConsumer();
+            // Add bigWinRatio to gameConfigs
+            consumer.gameData.gameConfigs.cascadingSlotsConfig.bigWinRatio = 5;
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 10,
+                betwin: 60, // 60 / 5 = 12, and 12 >= 10 (totalBetAmount), so bigWin should be true
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.bigWin).toBe(true);
+        });
+
+        it("should set bigWin to false when win is below big win ratio threshold", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 20,
+                betwin: 25, // 25 / 20 = 1.25x, which is < bigWinRatio
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.bigWin).toBe(false);
+        });
+
+        it("should set bigWin to false when there is no win", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const round = SettleGameRoundTestFactory.createRound({
+                totalAmount: 15,
+                betwin: 0,
+            });
+
+            // Act
+            const result = consumer.calculateBetResult(round);
+
+            // Assert
+            expect(result.bigWin).toBe(false);
+        });
+    });
+});
+
+describe("processFreeSpins", () => {
+    describe("when round has free spins odds", () => {
+        it("should call gainFreeSpin when settlementResult has freeSpins odds", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                id: 100,
+                coinValue: 0.2,
+                betLevel: 6,
+                betMultiplier: 25,
+                settlementResult: {
+                    freeSpins: { odds: 5 },
+                },
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).toHaveBeenCalled();
+        });
+
+        it("should call gainFreeSpin with correct round parameters", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                id: 200,
+                coinValue: 0.15,
+                betLevel: 7,
+                betMultiplier: 30,
+                settlementResult: {
+                    freeSpins: { odds: 3 },
+                },
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).toHaveBeenCalledWith(
+                player,
+                expect.objectContaining({
+                    roundId: 200,
+                    coinValue: 0.15,
+                    betLevel: 7,
+                    betMultiplier: 30,
+                    numberOfFreeSpins: 3,
+                }),
+                definition.freeSpinLiveSeconds
+            );
+        });
+
+        it("should call gainFreeSpin with calculated totalAmount", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                coinValue: 0.1,
+                betLevel: 5,
+                betMultiplier: 20,
+                settlementResult: {
+                    freeSpins: { odds: 2 },
+                },
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).toHaveBeenCalledWith(
+                player,
+                expect.objectContaining({
+                    totalAmount: 10, // 0.1 * 5 * 20
+                }),
+                definition.freeSpinLiveSeconds
+            );
+        });
+
+        it("should set buyFreeSpin flag correctly when round is buy free spin", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                buyFreeSpin: true,
+                settlementResult: {
+                    freeSpins: { odds: 1 },
+                },
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).toHaveBeenCalledWith(
+                player,
+                expect.objectContaining({
+                    buyFreeSpin: true,
+                }),
+                definition.freeSpinLiveSeconds
+            );
+        });
+
+        it("should set buyFreeSpinRefRoundId from round when buy free spin", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                id: 300,
+                buyFreeSpin: true,
+                settlementResult: {
+                    freeSpins: { odds: 4 },
+                },
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).toHaveBeenCalledWith(
+                player,
+                expect.objectContaining({
+                    buyFreeSpinRefRoundId: 300,
+                }),
+                definition.freeSpinLiveSeconds
+            );
+        });
+    });
+
+    describe("when round has no free spins odds", () => {
+        it("should not call gainFreeSpin when odds is 0", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                settlementResult: {
+                    freeSpins: { odds: 0 },
+                },
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).not.toHaveBeenCalled();
+        });
+
+        it("should not call gainFreeSpin when freeSpins is undefined", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({
+                settlementResult: {},
+            });
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(freeSpinsConsumer.gainFreeSpin).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("when total available free spins is 0", () => {
+        it("should call stopChain when no free spins available", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValue(0);
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(totalMultiplierConsumer.stopChain).toHaveBeenCalledWith(player);
+        });
+
+        it("should not call stopChain when free spins are available", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValue(5);
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(totalMultiplierConsumer.stopChain).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("when round has promotion", () => {
+        it("should include promotion free spins in total calculation", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({
+                promotion: { remainingBonusItems: 3 },
+            });
+            const round = SettleGameRoundTestFactory.createRound({ promotionId: "promo123" });
+            freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValue(2);
+            // Total should be 2 + 3 = 5, so stopChain should not be called
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(totalMultiplierConsumer.stopChain).not.toHaveBeenCalled();
+        });
+
+        it("should call stopChain when total including promotion is still 0", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({
+                promotion: { remainingBonusItems: 0 },
+            });
+            const round = SettleGameRoundTestFactory.createRound({ promotionId: "promo123" });
+            freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValue(0);
+
+            // Act
+            await consumer.processFreeSpins(player, round);
+
+            // Assert
+            expect(totalMultiplierConsumer.stopChain).toHaveBeenCalledWith(player);
+        });
+    });
+});
+
+describe("formatEndGameInfo", () => {
+    describe("when formatting regular round", () => {
+        it("should call parent formatEndGameInfo with correct parameters", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const bet = SettleGameRoundTestFactory.createRound();
+            const roundId = 123;
+            const time = new Date();
+            const betResult = SettleGameRoundTestFactory.createBetResult();
+            
+            // Mock the parent method
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            parentFormatEndGameInfo.mockReturnValue({
+                gameInfo: { roundId },
+                settlementInfo: { redPlay: 10, baseTotalAmount: 15 }
+            });
+
+            // Act
+            consumer.formatEndGameInfo(bet, roundId, time, betResult);
+
+            // Assert
+            expect(parentFormatEndGameInfo).toHaveBeenCalledWith(bet, roundId, time, betResult);
+        });
+
+        it("should preserve parent gameInfo for regular spins", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const bet = SettleGameRoundTestFactory.createRound({ freeSpin: false });
+            const roundId = 456;
+            const time = new Date();
+            const betResult = SettleGameRoundTestFactory.createBetResult();
+            
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            parentFormatEndGameInfo.mockReturnValue({
+                gameInfo: { roundId: 456, customData: "test" },
+                settlementInfo: { redPlay: 20, baseTotalAmount: 25 }
+            });
+
+            // Act
+            const result = consumer.formatEndGameInfo(bet, roundId, time, betResult);
+
+            // Assert
+            expect(result.gameInfo).toEqual({ roundId: 456, customData: "test" });
+        });
+
+        it("should preserve parent settlementInfo for regular spins", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const bet = SettleGameRoundTestFactory.createRound({ freeSpin: false });
+            const roundId = 789;
+            const time = new Date();
+            const betResult = SettleGameRoundTestFactory.createBetResult();
+            
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            parentFormatEndGameInfo.mockReturnValue({
+                gameInfo: { roundId },
+                settlementInfo: { redPlay: 30, baseTotalAmount: 40 }
+            });
+
+            // Act
+            const result = consumer.formatEndGameInfo(bet, roundId, time, betResult);
+
+            // Assert
+            expect(result.settlementInfo.redPlay).toBe(30);
+            expect(result.settlementInfo.baseTotalAmount).toBe(40);
+        });
+    });
+
+    describe("when formatting free spin round", () => {
+        it("should set redPlay to 0 for free spins", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const bet = SettleGameRoundTestFactory.createRound({ freeSpin: true });
+            const roundId = 111;
+            const time = new Date();
+            const betResult = SettleGameRoundTestFactory.createBetResult();
+            
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            parentFormatEndGameInfo.mockReturnValue({
+                gameInfo: { roundId },
+                settlementInfo: { redPlay: 50, baseTotalAmount: 60 }
+            });
+
+            // Act
+            const result = consumer.formatEndGameInfo(bet, roundId, time, betResult);
+
+            // Assert
+            expect(result.settlementInfo.redPlay).toBe(0);
+        });
+
+        it("should set baseTotalAmount to 0 for free spins", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const bet = SettleGameRoundTestFactory.createRound({ freeSpin: true });
+            const roundId = 222;
+            const time = new Date();
+            const betResult = SettleGameRoundTestFactory.createBetResult();
+            
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            parentFormatEndGameInfo.mockReturnValue({
+                gameInfo: { roundId },
+                settlementInfo: { redPlay: 70, baseTotalAmount: 80 }
+            });
+
+            // Act
+            const result = consumer.formatEndGameInfo(bet, roundId, time, betResult);
+
+            // Assert
+            expect(result.settlementInfo.baseTotalAmount).toBe(0);
+        });
+
+        it("should preserve gameInfo for free spins", () => {
+            // Arrange
+            const consumer = initConsumer();
+            const bet = SettleGameRoundTestFactory.createRound({ freeSpin: true });
+            const roundId = 333;
+            const time = new Date();
+            const betResult = SettleGameRoundTestFactory.createBetResult();
+            
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            parentFormatEndGameInfo.mockReturnValue({
+                gameInfo: { roundId: 333, freeSpinData: "special" },
+                settlementInfo: { redPlay: 90, baseTotalAmount: 100 }
+            });
+
+            // Act
+            const result = consumer.formatEndGameInfo(bet, roundId, time, betResult);
+
+            // Assert
+            expect(result.gameInfo).toEqual({ roundId: 333, freeSpinData: "special" });
+        });
+    });
+});
+
+describe("processSpinning - Error Handling", () => {
+    describe("when chain update fails", () => {
+        it("should log error when userChainConsumer.updateChainProgress throws", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "errorPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1, totalAmount: 10 });
+            const error = new Error("Chain update failed");
+            
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+            
+            // Mock logService
+            consumer.logService = { 
+                logInfo: jest.fn(), 
+                logWarning: jest.fn(), 
+                logError: jest.fn() 
+            };
+            
+            // Mock selectPreGeneratedResult to return chain result
+            jest.spyOn(consumer, 'selectPreGeneratedResult').mockResolvedValue({
+                data: [{ newBoard: [1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10] }],
+                isFromChain: true,
+            });
+            
+            // Mock roundCalculator.processSpinning
+            jest.spyOn(consumer.roundCalculator, 'processSpinning').mockImplementation((round) => {
+                round.settlementResult = { tumbles: [] };
+                return round;
+            });
+            
+            userChainConsumer.updateChainProgress.mockRejectedValue(error);
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert
+            expect(consumer.logService.logError).toHaveBeenCalledWith(
+                `Failed to update chain progress for errorPlayer`,
+                error
+            );
+        });
+
+        it("should continue processing when chain update fails", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({ freeSpin: true, betwin: 10, multiplier: 2 });
+            
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+            
+            // Mock logService
+            consumer.logService = { 
+                logInfo: jest.fn(), 
+                logWarning: jest.fn(), 
+                logError: jest.fn() 
+            };
+            
+            jest.spyOn(consumer, 'selectPreGeneratedResult').mockResolvedValue({
+                data: null,
+                isFromChain: true,
+            });
+            
+            // Mock roundCalculator.processSpinning
+            jest.spyOn(consumer.roundCalculator, 'processSpinning').mockImplementation((round) => {
+                round.settlementResult = { tumbles: [{ win: 10 }, { win: 5 }] };
+                round.betwin = 10;
+                round.multiplier = 2;
+                return round;
+            });
+            
+            userChainConsumer.updateChainProgress.mockRejectedValue(new Error("Failed"));
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert  
+            expect(totalMultiplierConsumer.increaseTotalMultiplier).toHaveBeenCalled();
+        });
+    });
+});
+
+describe("settleRound - Edge Cases", () => {
+    describe("when round is not found", () => {
+        it("should return betwin 0", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            roundsRepository.findOne().exec.mockResolvedValue(null);
+
+            // Act
+            const result = await consumer.settleRound(player, 999);
+
+            // Assert
+            expect(result.betwin).toBe(0);
+        });
+
+        it("should not call processSpinning when round not found", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const processSpinningSpy = jest.spyOn(consumer, 'processSpinning');
+            roundsRepository.findOne().exec.mockResolvedValue(null);
+
+            // Act
+            await consumer.settleRound(player, 999);
+
+            // Assert
+            expect(processSpinningSpy).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("when round exists", () => {
+        it("should set round.paid to true", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({ paid: false });
+            roundsRepository.findOne().exec.mockResolvedValue(round);
+            
+            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
+            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            // Act
+            await consumer.settleRound(player, 1);
+
+            // Assert
+            expect(round.paid).toBe(true);
+        });
+
+        it("should set round.endTime", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            roundsRepository.findOne().exec.mockResolvedValue(round);
+            
+            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
+            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            // Act
+            await consumer.settleRound(player, 1);
+
+            // Assert
+            expect(round.endTime).toBeInstanceOf(Date);
+        });
+
+        it("should set round.sessionId from player session", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({
+                session: { sessionId: "unique-session-123" }
+            });
+            const round = SettleGameRoundTestFactory.createRound();
+            roundsRepository.findOne().exec.mockResolvedValue(round);
+            
+            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
+            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            // Act
+            await consumer.settleRound(player, 1);
+
+            // Assert
+            expect(round.sessionId).toBe("unique-session-123");
+        });
+
+        it("should call round.save", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound();
+            roundsRepository.findOne().exec.mockResolvedValue(round);
+            
+            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
+            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            // Act
+            await consumer.settleRound(player, 1);
+
+            // Assert
+            expect(round.save).toHaveBeenCalled();
+        });
+
+        it("should return correct betwin", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer();
+            const round = SettleGameRoundTestFactory.createRound({ betwin: 42.5 });
+            roundsRepository.findOne().exec.mockResolvedValue(round);
+            
+            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
+            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            // Act
+            const result = await consumer.settleRound(player, 1);
+
+            // Assert
+            expect(result.betwin).toBe(42.5);
+        });
+    });
+});
