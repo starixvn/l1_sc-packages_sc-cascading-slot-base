@@ -24,11 +24,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
                 balance: balance?.red || balance || 0,
             };
 
-            const success = await this.userChainConsumer.assignChain(playerName, playerContext);
-
-            if (!success) {
-                this.logService.logWarning(`No chains available for ${playerName}`);
-            }
+            await this.userChainConsumer.assignChain(playerName, playerContext);
         } catch (error) {
             this.logService.logError(error);
         }

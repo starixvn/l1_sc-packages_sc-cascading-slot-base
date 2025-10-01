@@ -956,12 +956,6 @@ describe("ChainManager", () => {
                     }
                 });
 
-                // Log the statistics for verification
-                console.log(`Statistics from mock test data analysis:`);
-                console.log(`- Boards with >2 tumbles: ${boardsWithMultipleTumbles}`);
-                console.log(`- Final tumbles with empty explodedSymbols: ${finalTumblesWithEmptyExploded}/${boardsWithMultipleTumbles}`);
-                console.log(`- Non-final tumbles with explodedSymbols: ${nonFinalTumblesWithExploded}/${totalNonFinalTumbles}`);
-
                 // Verify the pattern: ALL final tumbles should have empty explodedSymbols
                 expect(finalTumblesWithEmptyExploded).toBe(boardsWithMultipleTumbles);
 

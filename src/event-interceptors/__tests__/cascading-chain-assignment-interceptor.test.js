@@ -107,26 +107,6 @@ describe("ChainInterceptor", () => {
                 coinValue: 0.1,
                 balance: 100,
             });
-            expect(logService.logWarning).toHaveBeenCalledWith("No chains available for testPlayer");
-            expect(result).toBe(context);
-        });
-
-        it("should log warning when chain assignment fails", async () => {
-            interceptor.userChainConsumer.assignChain.mockReturnValue(false);
-
-            const result = await interceptor.afterSuccessEvent(context);
-
-            expect(interceptor.userChainConsumer.assignChain).toHaveBeenCalledWith("testPlayer", {
-                playerId: "player123",
-                sessionId: "session456",
-                operatorId: "operator789",
-                gameId: 1,
-                currency: "USD",
-                betLevel: 5,
-                coinValue: 0.1,
-                balance: 100,
-            });
-            expect(logService.logWarning).toHaveBeenCalledWith("No chains available for testPlayer");
             expect(result).toBe(context);
         });
 

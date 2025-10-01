@@ -49,18 +49,6 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         });
     }
 
-    /**
-     * Register all result chain related dependencies in a modular way
-     * This includes chain manager, user chain consumer, and chain interceptor
-     */
-    registerResultChains() {
-        this.container.register({
-            resultChainManager: asClass(ChainManager).singleton().proxy(),
-            userChainConsumer: asClass(UserChainConsumer).singleton().proxy(),
-            chainInterceptor: asClass(ChainInterceptor).singleton().proxy(),
-        });
-    }
-
     registerRouters() {
         super.registerRouters();
 
@@ -80,7 +68,6 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
             inGameConsumer: asClass(InGameConsumer).singleton().proxy(),
             userSignInConsumer: asClass(UserSignInConsumer).singleton().proxy(),
             promotionFreeSpinsConsumer: asClass(PromotionFreeSpinsConsumer).singleton().proxy(),
-            // userChainConsumer is now registered in registerResultChains()
         });
     }
 
@@ -106,7 +93,6 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
         super.registerInterceptors();
 
         this.container.register({
-            // chainInterceptor is now registered in registerResultChains()
             promotionBetInterceptor: asClass(CascadingSlotPromotionInterceptor).singleton().proxy(),
         });
     }
@@ -128,6 +114,18 @@ export default class CascadingSlotContainerRegistry extends SlotContainerRegistr
 
                 return interceptors;
             }).singleton(),
+        });
+    }
+
+    /**
+     * Register all result chain related dependencies in a modular way
+     * This includes chain manager, user chain consumer, and chain interceptor
+     */
+    registerResultChains() {
+        this.container.register({
+            resultChainManager: asClass(ChainManager).singleton().proxy(),
+            userChainConsumer: asClass(UserChainConsumer).singleton().proxy(),
+            chainInterceptor: asClass(ChainInterceptor).singleton().proxy(),
         });
     }
 }
