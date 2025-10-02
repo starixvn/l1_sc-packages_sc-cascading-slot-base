@@ -9777,10 +9777,10 @@ sc-common@3.0.0:
     mongoose-long "0.8.0"
     numeral "2.0.6"
 
-sc-game-base@6.1.0:
-  version "6.1.0"
-  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-6.1.0.tgz"
-  integrity sha512-zcCWXvmLkUQ1FCH18JUuyBzkgt6d3jksuhYhKjoan/Qrzc2RIvP2zKCuHfNHhvVUAS/GT80rhZb5BT07xNOhJw==
+sc-game-base@6.1.2-beta.4:
+  version "6.1.2-beta.4"
+  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.1.2-beta.4.tgz#561cc46bbe765cc64e573eea514dd9d1773e209c"
+  integrity sha512-e6aKeV1bmKBYEohywuZPpN1E/z5dmw5CdWSeMN4E9M2WrFhGJgOiR7xCHjvekFUmne4uJ0bED3k9lioQQrFajA==
   dependencies:
     "@sc/game-promotion-api-client" "1.0.2"
     "@sc/user-tracking-client" "1.0.0"
@@ -9837,14 +9837,14 @@ sc-slot-board-generator@2.0.0:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@3.1.0:
-  version "3.1.0"
-  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.1.0.tgz"
-  integrity sha512-aueZib9z0LWn4Z7LP2uAnMEg8KfB196YvtOPXZXLy/g2eEBinjmGe2DHHGmILHOQ5oLJlmkJ7pAUBOxvZC7m+A==
+sc-slot-game-base@3.1.4-beta.0:
+  version "3.1.4-beta.0"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.1.4-beta.0.tgz#6454f6694d7f30d136cea7095d5a34046b100982"
+  integrity sha512-4jUy3v4JrPAUPLfB0hJlCXMED6FP3m5/BoUjyqxARdftWx90lPlmJZ3mi+ssR/pD127nerpka15NCodR0ZMl5A==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "6.1.0"
+    sc-game-base "6.1.2-beta.4"
     sc-game-management-client "0.1.5"
 
 seedrandom@^3.0.5:
@@ -11054,7 +11054,7 @@ wordwrap@^1.0.0:
   resolved "https://npm.lumigame.com/wordwrap/-/wordwrap-1.0.0.tgz"
   integrity sha1-J1hIEIkUVqQXHI0CJkQa3pDLyus=
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
   version "7.0.0"
   resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -11067,6 +11067,15 @@ wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-6.2.0.tgz"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
+
+wrap-ansi@^7.0.0:
+  version "7.0.0"
+  resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"

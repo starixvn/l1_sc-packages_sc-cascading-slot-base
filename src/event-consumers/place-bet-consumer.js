@@ -15,7 +15,6 @@ export default class PlaceBetConsumer extends EventConsumers.PlaceBetConsumer {
 
     consume(player, payload) {
         Object.assign(payload, {
-            roundId: payload.roundId ?? this.gameData.roundId,
             betLevel: payload.betLevel,
             coinValue: payload.coinValue,
             freeSpin: payload.freeSpin ?? false,
