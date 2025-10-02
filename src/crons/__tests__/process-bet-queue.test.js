@@ -1,12 +1,12 @@
-import CascadingProcessBetQueue from "../cascading-process-bet-queue";
-import { SlotGameData, EventConsumers } from "sc-slot-game-base";
-import { FreeSpinConsumer, SettleGameRoundConsumer, TotalMultiplierConsumer } from "../../event-consumers";
-import { stub, stubMongoose } from "jest-micro-auto-stub";
-import { logger } from "sc-common";
-import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
-import mongoose from "mongoose";
 import Chance from "chance";
+import { UserInfo, UserSession } from "jest-auto-fixture/src/models";
+import { stub, stubMongoose } from "jest-micro-auto-stub";
+import mongoose from "mongoose";
+import { logger } from "sc-common";
 import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
+import { EventConsumers, SlotGameData } from "sc-slot-game-base";
+import { FreeSpinConsumer, SettleGameRoundConsumer, TotalMultiplierConsumer } from "../../event-consumers";
+import CascadingProcessBetQueue from "../cascading-process-bet-queue";
 
 describe("cascadingProcessBetQueue", () => {
     jest.mock("sc-common");
@@ -105,6 +105,7 @@ describe("cascadingProcessBetQueue", () => {
                     totalAmount: payload.betLevel * payload.coinValue * gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
                     contributionAmount: 0,
                     contributionRate: 0,
+                    roundId: gameData.roundId,
                 });
             });
         });
