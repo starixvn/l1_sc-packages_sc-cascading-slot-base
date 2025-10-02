@@ -151,6 +151,232 @@ describe("totalMultiplierConsumer", () => {
         });
     });
 
+    describe("isPlayerHavingPromotionFreeSpins", () => {
+        const TEST_PLAYER_IDS = [
+            "10000026~26_0_C_0_13454870",
+            "10000026~26_0_C_455_5172263",
+            "10000026~26_0_C_946_212612",
+            "10000026~26_0_C_455_12410331",
+            "10000026~26_0_C_455_8864169",
+            "10000026~26_0_C_455_12376715",
+            "10000026~26_0_C_455_13112526",
+            "10000026~26_0_C_0_1890380",
+            "10000026~26_0_C_0_909241",
+            "10000026~26_0_C_455_12171110",
+            "10000026~26_0_C_0_6391909",
+            "10000026~26_0_C_0_13446269",
+            "10000026~26_0_C_946_215468",
+        ];
+
+        const createTotalMultiplier = (overrides = {}) => ({
+            promotionId: null,
+            playerId: chance.guid(),
+            name: player.profile.name,
+            ...overrides,
+        });
+
+        const createPlayer = (overrides = {}) => ({
+            UID: player.UID,
+            profile: player.profile,
+            session: player.session,
+            promotion: null,
+            ...overrides,
+        });
+
+        describe("when totalMultiplier has no promotionId", () => {
+            it("should return false", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({ promotionId: null });
+                const testPlayer = createPlayer();
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(false);
+            });
+        });
+
+        describe("when totalMultiplier has promotionId but player has no promotion", () => {
+            it("should return true when playerId is in hardcoded list", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: TEST_PLAYER_IDS[0],
+                });
+                const testPlayer = createPlayer({ promotion: null });
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(true);
+            });
+
+            it("should return false when playerId is not in hardcoded list", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: chance.guid(), // Not in hardcoded list
+                });
+                const testPlayer = createPlayer({ promotion: null });
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(false);
+            });
+        });
+
+        describe("when totalMultiplier has promotionId and player has remainingBonusItems > 0", () => {
+            it("should return true", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    name: player.profile.name,
+                });
+                const testPlayer = createPlayer({
+                    promotion: { remainingBonusItems: chance.natural({ min: 1 }) },
+                });
+                gameData.ingame[totalMultiplier.name] = {
+                    promotion: { remainingBonusItems: 0 },
+                };
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(true);
+            });
+        });
+
+        describe("when totalMultiplier has promotionId and ingame has remainingBonusItems > 0", () => {
+            it("should return true", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    name: player.profile.name,
+                });
+                const testPlayer = createPlayer({
+                    promotion: { remainingBonusItems: 0 }, // Player has promotion but no remaining items
+                });
+                gameData.ingame[totalMultiplier.name] = {
+                    promotion: { remainingBonusItems: chance.natural({ min: 1 }) },
+                };
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(true);
+            });
+        });
+
+        describe("when totalMultiplier has promotionId and playerId is in hardcoded list", () => {
+            it("should return true", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: TEST_PLAYER_IDS[0],
+                });
+                const testPlayer = createPlayer({ promotion: null });
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(true);
+            });
+        });
+
+        describe("when totalMultiplier has promotionId but all conditions are false", () => {
+            it("should return false when player and ingame have remainingBonusItems = 0", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: chance.guid(), // Not in hardcoded list
+                });
+                const testPlayer = createPlayer({
+                    promotion: { remainingBonusItems: 0 },
+                });
+                gameData.ingame[totalMultiplier.name] = {
+                    promotion: { remainingBonusItems: 0 },
+                };
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(false);
+            });
+        });
+
+        describe("when player is null", () => {
+            it("should return true when playerId is in hardcoded list", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: TEST_PLAYER_IDS[0],
+                });
+                const testPlayer = null;
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(true);
+            });
+
+            it("should return false when playerId is not in hardcoded list", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: chance.guid(), // Not in hardcoded list
+                });
+                const testPlayer = null;
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(false);
+            });
+        });
+
+        describe("when player is undefined", () => {
+            it("should return true when playerId is in hardcoded list", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: TEST_PLAYER_IDS[0],
+                });
+                const testPlayer = undefined;
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(true);
+            });
+
+            it("should return false when playerId is not in hardcoded list", () => {
+                // Arrange
+                const totalMultiplier = createTotalMultiplier({
+                    promotionId: chance.guid(),
+                    playerId: chance.guid(), // Not in hardcoded list
+                });
+                const testPlayer = undefined;
+
+                // Act
+                const result = consumer.isPlayerHavingPromotionFreeSpins(testPlayer, totalMultiplier);
+
+                // Assert
+                expect(result).toBe(false);
+            });
+        });
+    });
+
     describe("reload", () => {
         it("should call totalMultiplier.find", async () => {
             // Arrange

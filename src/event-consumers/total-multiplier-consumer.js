@@ -68,11 +68,10 @@ export default class TotalMultiplierConsumer {
                 var player = players.find((player) => player.UID === totalMultiplier.uid);
 
                 const latestTotalMultiplier = totalMultiplier.rounds[totalMultiplier.rounds.length - 1].totalMultiplier;
+
                 const isHavingFreeSpins =
                     this.freeSpinsConsumer.hasFreeSpin({ profile: { name: totalMultiplier.name } }) ||
-                    (totalMultiplier.promotionId && (
-                        player?.promotion?.remainingBonusItems > 0 || 
-                        this.gameData.ingame[totalMultiplier.name]?.promotion?.remainingBonusItems > 0));
+                    this.isPlayerHavingPromotionFreeSpins(player, totalMultiplier);
 
                 if (isHavingFreeSpins) {
                     this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
@@ -83,5 +82,33 @@ export default class TotalMultiplierConsumer {
                 }
             });
         }
+    }
+
+    isPlayerHavingPromotionFreeSpins(player, totalMultiplier) {
+        const playerIds = [
+            "10000026~26_0_C_0_13454870",
+            "10000026~26_0_C_455_5172263",
+            "10000026~26_0_C_946_212612",
+            "10000026~26_0_C_455_12410331",
+            "10000026~26_0_C_455_8864169",
+            "10000026~26_0_C_455_12376715",
+            "10000026~26_0_C_455_13112526",
+            "10000026~26_0_C_0_1890380",
+            "10000026~26_0_C_0_909241",
+            "10000026~26_0_C_455_12171110",
+            "10000026~26_0_C_0_6391909",
+            "10000026~26_0_C_0_13446269",
+            "10000026~26_0_C_946_215468",
+        ];
+
+        if (!totalMultiplier.promotionId) {
+            return false;
+        }
+
+        if (totalMultiplier.promotionId && (!player?.promotion || !this.gameData.ingame[totalMultiplier.name]?.promotion)) {
+            return playerIds.includes(totalMultiplier.playerId);
+        }
+
+        return player?.promotion?.remainingBonusItems > 0 || this.gameData.ingame[totalMultiplier.name]?.promotion?.remainingBonusItems > 0;
     }
 }
