@@ -100,7 +100,13 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
             newBet.siteName = player.session.siteName;
         }
 
-        await this.roundsRepository.create(newBet);
+        try {
+            await this.roundsRepository.create(newBet);
+        } catch (error) {
+            this.logService.logError(
+                `Error creating round: ${error}, player: ${player.profile.name}, roundId: ${roundId}, freeSpin: ${bet.freeSpin}, buyFreeSpin: ${bet.buyFreeSpin}, totalAmount: ${bet.totalAmount}`
+            );
+        }
     }
 
     async handleSuccessBet(player, balance, roundId, bet, applicableInterceptors) {
