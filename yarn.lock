@@ -2592,10 +2592,10 @@
   dependencies:
     "@opentelemetry/instrumentation" "^0.52.0 || ^0.53.0 || ^0.54.0 || ^0.55.0 || ^0.56.0 || ^0.57.0"
 
-"@sc/game-promotion-api-client@1.0.3-beta.1":
-  version "1.0.3-beta.1"
-  resolved "http://npm.lumigame.com/@sc/game-promotion-api-client/-/game-promotion-api-client-1.0.3-beta.1.tgz"
-  integrity sha512-VeKjromy6wSdi7tlkwWwBpI5TDFsfL/3w9kYZjAKqQxC6aJOqiiEhlgsNeMrAZsf3YTaT758nefk/vddMjVKIQ==
+"@sc/game-promotion-api-client@1.0.3-beta.2":
+  version "1.0.3-beta.2"
+  resolved "http://npm.lumigame.com/@sc/game-promotion-api-client/-/game-promotion-api-client-1.0.3-beta.2.tgz"
+  integrity sha512-jMIqgKksuEe4Z7r3NKr3+RGdxCcJDvnegqfUoTPD8nQyjD6DLHecRjWVcGKH5yjTJj9/G8suWGluCYnHJtdw8Q==
   dependencies:
     axios "^1.6.0"
 
@@ -9730,12 +9730,12 @@ sc-common@3.0.0:
     mongoose-long "0.8.0"
     numeral "2.0.6"
 
-sc-game-base@6.2.1-beta.0:
-  version "6.2.1-beta.0"
-  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-6.2.1-beta.0.tgz"
-  integrity sha512-V/ndvOA3zbsf+BTz1L3lZEhIyo/FwH3rY59EgsbyR7l67SRS8wi5Lm6xXPb0ipQ0UUdzaxnJREfLY7oDsvLcOw==
+sc-game-base@6.2.1-beta.1:
+  version "6.2.1-beta.1"
+  resolved "http://npm.lumigame.com/sc-game-base/-/sc-game-base-6.2.1-beta.1.tgz"
+  integrity sha512-uJDVZwOE70/wnSBJdTTSBeLcGlJ1U0J7vds1ShC/GEWVUV569I4EJEtfah7gl/mzg/TQUi8H1wk1+qiqzhGbnw==
   dependencies:
-    "@sc/game-promotion-api-client" "1.0.3-beta.1"
+    "@sc/game-promotion-api-client" "1.0.3-beta.2"
     "@sc/user-tracking-client" "1.0.0"
     awilix "8.0.0"
     axios "1.0.0"
@@ -9790,14 +9790,14 @@ sc-slot-board-generator@2.0.0:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@3.1.2-beta.0:
-  version "3.1.2-beta.0"
-  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.1.2-beta.0.tgz"
-  integrity sha512-oAx0TMOLXIW9jKaTvyqjgvGGTJw7onNrjOvGD4F2OvScnWFDE9nj/K3OYWMvM9ucSeFnpZFk5ufh1rVhj5lqvA==
+sc-slot-game-base@3.1.2-beta.1:
+  version "3.1.2-beta.1"
+  resolved "http://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.1.2-beta.1.tgz"
+  integrity sha512-PQCQrio3r1PJyl/UgwCr5szA4cSJPFwVBdxmVxbtgJaBRZUst0+CLyYCN1Xbu6QABWi+Rgh7Av3KX/diNcACoA==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "6.2.1-beta.0"
+    sc-game-base "6.2.1-beta.1"
     sc-game-management-client "0.1.5"
 
 seedrandom@^3.0.5:
