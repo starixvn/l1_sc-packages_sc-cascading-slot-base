@@ -4,11 +4,13 @@ export default class TotalMultiplierConsumer {
      * @param {SlotGameData} gameData
      * @param {mongoose.Model} totalMultiplierRepository
      * @param {FreeSpinsConsumer} freeSpinsConsumer
+     * @param {Object} gamePromotionApiClient
      */
-    constructor(gameData, totalMultiplierRepository, freeSpinsConsumer) {
+    constructor(gameData, totalMultiplierRepository, freeSpinsConsumer, gamePromotionApiClient) {
         this.gameData = gameData;
         this.totalMultiplierRepository = totalMultiplierRepository;
         this.freeSpinsConsumer = freeSpinsConsumer;
+        this.gamePromotionApiClient = gamePromotionApiClient;
     }
 
     async increaseTotalMultiplier(player, { roundId, multiplier }) {
@@ -58,11 +60,31 @@ export default class TotalMultiplierConsumer {
         this.gameData.ingame[player.profile.name].totalMultiplier = 0;
     }
 
-    async reload() {
+    async reload(isRestart = false) {
         const totalMultipliers = await this.totalMultiplierRepository.find({ ended: false }).lean().exec();
 
         if (totalMultipliers.length > 0) {
             const players = Object.values(this.gameData.realPlayers);
+
+            if (isRestart) {
+                const playersWithPromotion = totalMultipliers.filter((totalMultiplier) => totalMultiplier.promotionId).map((totalMultiplier) => {
+                    return {
+                        playerId: totalMultiplier.playerId,
+                        promotion: totalMultiplier.promotionId,
+                    };
+                });
+
+                const promotionPromotions = await this.gamePromotionApiClient.queryPlayersIncompletePromotions({
+                    playerPromotionPairs: playersWithPromotion
+                });
+
+                Object.values(this.gameData.ingame).forEach((ingame) => {
+                    const promotion = promotionPromotions.find((p) => p.playerId === ingame.playerId)?.promotion;
+                    if (promotion) {
+                        ingame.promotion = promotion;
+                    }
+                });
+            }
 
             totalMultipliers.forEach(async (totalMultiplier) => {
                 var player = players.find((player) => player.UID === totalMultiplier.uid);
