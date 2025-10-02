@@ -86,6 +86,7 @@ describe("cascadingProcessBetQueue", () => {
                     totalAmount: freeSpinInfo.betLevel * freeSpinInfo.coinValue * freeSpinInfo.betMultiplier,
                     contributionAmount: 0,
                     contributionRate: 0,
+                    roundId: gameData.roundId,
                 });
             });
         });
