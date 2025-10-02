@@ -1,6 +1,6 @@
 {
     "name": "sc-cascading-slot-base",
-    "version": "2.2.1",
+    "version": "2.2.2-beta.2",
     "description": "The codebase of cascading slot games.",
     "main": "src/index.js",
     "scripts": {
@@ -36,7 +36,7 @@
     "dependencies": {
         "mathjs": "14.5.3",
         "sc-slot-board-generator": "2.0.0",
-        "sc-slot-game-base": "3.1.1"
+        "sc-slot-game-base": "3.1.4-beta.1"
     },
     "overrides": {
         "mongoose": "6.13.8",
