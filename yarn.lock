@@ -9837,10 +9837,10 @@ sc-slot-board-generator@2.0.0:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@3.1.4-beta.0:
-  version "3.1.4-beta.0"
-  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.1.4-beta.0.tgz#6454f6694d7f30d136cea7095d5a34046b100982"
-  integrity sha512-4jUy3v4JrPAUPLfB0hJlCXMED6FP3m5/BoUjyqxARdftWx90lPlmJZ3mi+ssR/pD127nerpka15NCodR0ZMl5A==
+sc-slot-game-base@3.1.4-beta.1:
+  version "3.1.4-beta.1"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.1.4-beta.1.tgz#0634c7d37dc7400b0e3913e4aa6f5dc8f09ac4f7"
+  integrity sha512-+Pwb8o6e+FGnNknEavK5xnbmuItbqFiIKlL+lJCirMZXrmKdNBHU2X1wTKbQL7wqNAil8XeZSav8iFv24yQKDQ==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"

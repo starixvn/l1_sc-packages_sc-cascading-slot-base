@@ -31,7 +31,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
     }
 
     async generateBetInfo(payload, freeSpinInfo, player) {
-        const betInfo = { ...payload };
+        const betInfo = { roundId: this.gameData.roundId, ...payload };
         const { cascadingSlotsConfig } = this.gameData.gameConfigs;
         const contributionRate = cascadingSlotsConfig.jackpot ? cascadingSlotsConfig.jackpot.playerContributionRatio : 0;
 
