@@ -10,7 +10,7 @@ export default class TotalMultiplierConsumer {
         this.gameData = gameData;
         this.totalMultiplierRepository = totalMultiplierRepository;
         this.freeSpinsConsumer = freeSpinsConsumer;
-        this.gamePromotionApiClient = gamePromotionApiClient;
+        this.gamePromotionApiClient = gamePromotionApiClient.instance();
     }
 
     async increaseTotalMultiplier(player, { roundId, multiplier }) {
@@ -96,7 +96,7 @@ export default class TotalMultiplierConsumer {
             .map((totalMultiplier) => {
                 return {
                     playerId: totalMultiplier.playerId,
-                    promotion: totalMultiplier.promotionId,
+                    promotionId: totalMultiplier.promotionId,
                 };
             });
 

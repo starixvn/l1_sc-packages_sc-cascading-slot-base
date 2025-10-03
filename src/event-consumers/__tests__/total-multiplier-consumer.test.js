@@ -192,7 +192,7 @@ describe("totalMultiplierConsumer", () => {
                     promotion: { remainingBonusItems: chance.natural({ min: 1 }) },
                 });
                 gameData.ingame[totalMultiplier.name] = {
-                    promotion: { remainingBonusItems: 0 },
+                    promotion: { remainingBonusItems: chance.natural({ min: 1 }) },
                 };
 
                 // Act
@@ -378,7 +378,7 @@ describe("totalMultiplierConsumer", () => {
                         playerPromotionPairs: [
                             {
                                 playerId,
-                                promotion: promotionId,
+                                promotionId: promotionId,
                             },
                         ],
                     });
@@ -537,7 +537,7 @@ describe("totalMultiplierConsumer", () => {
                     playerPromotionPairs: [
                         {
                             playerId,
-                            promotion: promotionId,
+                            promotionId: promotionId,
                         },
                     ],
                 });
