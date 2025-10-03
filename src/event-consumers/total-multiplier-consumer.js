@@ -67,15 +67,17 @@ export default class TotalMultiplierConsumer {
             const players = Object.values(this.gameData.realPlayers);
 
             if (isRestart) {
-                const playersWithPromotion = totalMultipliers.filter((totalMultiplier) => totalMultiplier.promotionId).map((totalMultiplier) => {
-                    return {
-                        playerId: totalMultiplier.playerId,
-                        promotion: totalMultiplier.promotionId,
-                    };
-                });
+                const playersWithPromotion = totalMultipliers
+                    .filter((totalMultiplier) => totalMultiplier.promotionId)
+                    .map((totalMultiplier) => {
+                        return {
+                            playerId: totalMultiplier.playerId,
+                            promotion: totalMultiplier.promotionId,
+                        };
+                    });
 
                 const promotionPromotions = await this.gamePromotionApiClient.queryPlayersIncompletePromotions({
-                    playerPromotionPairs: playersWithPromotion
+                    playerPromotionPairs: playersWithPromotion,
                 });
 
                 Object.values(this.gameData.ingame).forEach((ingame) => {
@@ -107,34 +109,8 @@ export default class TotalMultiplierConsumer {
     }
 
     isPlayerHavingPromotionFreeSpins(player, totalMultiplier) {
-        const playerIds = [
-            "10000026~26_0_C_0_13454870",
-            "10000026~26_0_C_455_5172263",
-            "10000026~26_0_C_946_212612",
-            "10000026~26_0_C_455_12410331",
-            "10000026~26_0_C_455_8864169",
-            "10000026~26_0_C_455_12376715",
-            "10000026~26_0_C_455_13112526",
-            "10000026~26_0_C_0_1890380",
-            "10000026~26_0_C_0_909241",
-            "10000026~26_0_C_455_12171110",
-            "10000026~26_0_C_0_6391909",
-            "10000026~26_0_C_946_215468",
-            "10000026~26_0_C_946_215408",
-            "10000026~26_0_C_0_3979015",
-            "43180878",
-            "67551702",
-            "10000026~26_0_C_455_13036480",
-            "113063926",
-            "10000026~26_0_C_0_8123569",
-        ];
-
         if (!totalMultiplier.promotionId) {
             return false;
-        }
-
-        if (totalMultiplier.promotionId && (!player?.promotion || !this.gameData.ingame[totalMultiplier.name]?.promotion)) {
-            return playerIds.includes(totalMultiplier.playerId);
         }
 
         return player?.promotion?.remainingBonusItems > 0 || this.gameData.ingame[totalMultiplier.name]?.promotion?.remainingBonusItems > 0;
