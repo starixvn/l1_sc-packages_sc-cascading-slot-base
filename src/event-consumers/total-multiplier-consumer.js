@@ -117,7 +117,7 @@ export default class TotalMultiplierConsumer {
 
             if (totalMultiplier) {
                 this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
-                this.gameData.ingame[totalMultiplier.name].promotion = playerPromotionData.promotion;
+                this.gameData.ingame[totalMultiplier.name].promotion = playerPromotionData;
             }
         });
     }

@@ -363,11 +363,27 @@ describe("totalMultiplierConsumer", () => {
                     const mockPromotions = [
                         {
                             playerId,
-                            promotion: {
-                                promotionId,
-                                remainingBonusItems: 5,
-                                freeSpinAvailable: 3,
-                            },
+                            operatorId: "ONEworksVGCash",
+                            siteName: "esther",
+                            promotionId,
+                            currencyGroup: "61b953ad815d6c000196a14c",
+                            remainingBonusItems: 5,
+                            initialBonusItem: 20,
+                            betLevel: 0,
+                            startDate: "2025-10-03T02:29:00.000Z",
+                            endDate: "2025-10-03T17:00:00.000Z",
+                            lastUsedDate: "2025-10-03T06:34:39.057Z",
+                            isGiftCode: true,
+                            totalTurnover: 0,
+                            totalWinAmount: 142,
+                            minRequiredTurnover: 0,
+                            turnoverMultiplier: 2,
+                            bonusClaimed: false,
+                            claimedAt: null,
+                            isCompleted: false,
+                            coinValue: 1,
+                            baseTotalWinAmount: 5.58778069563597,
+                            baseTotalTurnover: 0,
                         },
                     ];
                     consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
@@ -391,11 +407,27 @@ describe("totalMultiplierConsumer", () => {
                     const mockPromotions = [
                         {
                             playerId,
-                            promotion: {
-                                promotionId,
-                                remainingBonusItems: 5,
-                                freeSpinAvailable: 3,
-                            },
+                            operatorId: "ONEworksVGCash",
+                            siteName: "esther",
+                            promotionId,
+                            currencyGroup: "61b953ad815d6c000196a14c",
+                            remainingBonusItems: 5,
+                            initialBonusItem: 20,
+                            betLevel: 0,
+                            startDate: "2025-10-03T02:29:00.000Z",
+                            endDate: "2025-10-03T17:00:00.000Z",
+                            lastUsedDate: "2025-10-03T06:34:39.057Z",
+                            isGiftCode: true,
+                            totalTurnover: 0,
+                            totalWinAmount: 142,
+                            minRequiredTurnover: 0,
+                            turnoverMultiplier: 2,
+                            bonusClaimed: false,
+                            claimedAt: null,
+                            isCompleted: false,
+                            coinValue: 1,
+                            baseTotalWinAmount: 5.58778069563597,
+                            baseTotalTurnover: 0,
                         },
                     ];
                     consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
@@ -404,7 +436,7 @@ describe("totalMultiplierConsumer", () => {
                     await consumer.reload(true);
 
                     // Assert
-                    expect(gameData.ingame[player.profile.name].promotion).toEqual(mockPromotions[0].promotion);
+                    expect(gameData.ingame[player.profile.name].promotion).toEqual(mockPromotions[0]);
                 });
 
                 it("should preserve total multiplier for players with promotionId", async () => {
@@ -412,11 +444,27 @@ describe("totalMultiplierConsumer", () => {
                     const mockPromotions = [
                         {
                             playerId,
-                            promotion: {
-                                promotionId,
-                                remainingBonusItems: 5,
-                                freeSpinAvailable: 3,
-                            },
+                            operatorId: "ONEworksVGCash",
+                            siteName: "esther",
+                            promotionId,
+                            currencyGroup: "61b953ad815d6c000196a14c",
+                            remainingBonusItems: 5,
+                            initialBonusItem: 20,
+                            betLevel: 0,
+                            startDate: "2025-10-03T02:29:00.000Z",
+                            endDate: "2025-10-03T17:00:00.000Z",
+                            lastUsedDate: "2025-10-03T06:34:39.057Z",
+                            isGiftCode: true,
+                            totalTurnover: 0,
+                            totalWinAmount: 142,
+                            minRequiredTurnover: 0,
+                            turnoverMultiplier: 2,
+                            bonusClaimed: false,
+                            claimedAt: null,
+                            isCompleted: false,
+                            coinValue: 1,
+                            baseTotalWinAmount: 5.58778069563597,
+                            baseTotalTurnover: 0,
                         },
                     ];
                     consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
@@ -518,11 +566,27 @@ describe("totalMultiplierConsumer", () => {
                 const activePlayerPromotions = [
                     {
                         playerId,
-                        promotion: {
-                            promotionId,
-                            remainingBonusItems: 5,
-                            freeSpinAvailable: 3,
-                        },
+                        operatorId: "ONEworksVGCash",
+                        siteName: "esther",
+                        promotionId,
+                        currencyGroup: "61b953ad815d6c000196a14c",
+                        remainingBonusItems: 5,
+                        initialBonusItem: 20,
+                        betLevel: 0,
+                        startDate: "2025-10-03T02:29:00.000Z",
+                        endDate: "2025-10-03T17:00:00.000Z",
+                        lastUsedDate: "2025-10-03T06:34:39.057Z",
+                        isGiftCode: true,
+                        totalTurnover: 0,
+                        totalWinAmount: 142,
+                        minRequiredTurnover: 0,
+                        turnoverMultiplier: 2,
+                        bonusClaimed: false,
+                        claimedAt: null,
+                        isCompleted: false,
+                        coinValue: 1,
+                        baseTotalWinAmount: 5.58778069563597,
+                        baseTotalTurnover: 0,
                     },
                 ];
                 consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(activePlayerPromotions);
@@ -539,7 +603,7 @@ describe("totalMultiplierConsumer", () => {
                         },
                     ],
                 });
-                expect(gameData.ingame[player.profile.name].promotion).toEqual(activePlayerPromotions[0].promotion);
+                expect(gameData.ingame[player.profile.name].promotion).toEqual(activePlayerPromotions[0]);
             });
 
             it("should not query promotions when no players have promotionId", async () => {
