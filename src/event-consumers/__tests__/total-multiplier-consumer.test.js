@@ -18,6 +18,12 @@ describe("totalMultiplierConsumer", () => {
 
     const freeSpinConsumer = stub(FreeSpinConsumer);
 
+    const gamePromotionApiClient = {
+        instance: jest.fn().mockReturnValue({
+            queryPlayersIncompletePromotions: jest.fn(),
+        }),
+    };
+
     const player = stubPlayer();
 
     const mockDate = new Date();
@@ -26,7 +32,7 @@ describe("totalMultiplierConsumer", () => {
         jest.clearAllMocks();
 
         gameData.ingame[player.profile.name] = {};
-        consumer = new TotalMultiplierConsumer(gameData, totalMultiplierRepository, freeSpinConsumer);
+        consumer = new TotalMultiplierConsumer(gameData, totalMultiplierRepository, freeSpinConsumer, gamePromotionApiClient);
         jest.spyOn(global, "Date").mockReturnValue(mockDate);
     });
 
@@ -329,12 +335,8 @@ describe("totalMultiplierConsumer", () => {
         });
 
         describe("when isRestart is true", () => {
-            const gamePromotionApiClient = {
-                queryPlayersIncompletePromotions: jest.fn(),
-            };
-
             beforeEach(() => {
-                consumer.gamePromotionApiClient = gamePromotionApiClient;
+                // gamePromotionApiClient is already mocked in the constructor
             });
 
             describe("when total multipliers have promotionId", () => {
@@ -368,13 +370,13 @@ describe("totalMultiplierConsumer", () => {
                             },
                         },
                     ];
-                    gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
+                    consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
 
                     // Act
                     await consumer.reload(true);
 
                     // Assert
-                    expect(gamePromotionApiClient.queryPlayersIncompletePromotions).toHaveBeenCalledWith({
+                    expect(consumer.gamePromotionApiClient.queryPlayersIncompletePromotions).toHaveBeenCalledWith({
                         playerPromotionPairs: [
                             {
                                 playerId,
@@ -396,7 +398,7 @@ describe("totalMultiplierConsumer", () => {
                             },
                         },
                     ];
-                    gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
+                    consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
 
                     // Act
                     await consumer.reload(true);
@@ -417,7 +419,7 @@ describe("totalMultiplierConsumer", () => {
                             },
                         },
                     ];
-                    gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
+                    consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
 
                     // Act
                     await consumer.reload(true);
@@ -461,7 +463,7 @@ describe("totalMultiplierConsumer", () => {
                     await consumer.reload(true);
 
                     // Assert
-                    expect(gamePromotionApiClient.queryPlayersIncompletePromotions).not.toHaveBeenCalled();
+                    expect(consumer.gamePromotionApiClient.queryPlayersIncompletePromotions).not.toHaveBeenCalled();
                 });
             });
 
@@ -498,12 +500,8 @@ describe("totalMultiplierConsumer", () => {
         });
 
         describe("reloadPromotionsForRestart", () => {
-            const gamePromotionApiClient = {
-                queryPlayersIncompletePromotions: jest.fn(),
-            };
-
             beforeEach(() => {
-                consumer.gamePromotionApiClient = gamePromotionApiClient;
+                // gamePromotionApiClient is already mocked in the constructor
             });
 
             it("should query and map promotions for players with promotionId", async () => {
@@ -527,13 +525,13 @@ describe("totalMultiplierConsumer", () => {
                         },
                     },
                 ];
-                gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(activePlayerPromotions);
+                consumer.gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(activePlayerPromotions);
 
                 // Act
                 await consumer.reloadPromotionsForRestart(totalMultipliers);
 
                 // Assert
-                expect(gamePromotionApiClient.queryPlayersIncompletePromotions).toHaveBeenCalledWith({
+                expect(consumer.gamePromotionApiClient.queryPlayersIncompletePromotions).toHaveBeenCalledWith({
                     playerPromotionPairs: [
                         {
                             playerId,
@@ -558,7 +556,7 @@ describe("totalMultiplierConsumer", () => {
                 await consumer.reloadPromotionsForRestart(totalMultipliers);
 
                 // Assert
-                expect(gamePromotionApiClient.queryPlayersIncompletePromotions).not.toHaveBeenCalled();
+                expect(consumer.gamePromotionApiClient.queryPlayersIncompletePromotions).not.toHaveBeenCalled();
             });
         });
     });
