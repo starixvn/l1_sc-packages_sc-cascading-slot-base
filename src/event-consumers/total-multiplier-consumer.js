@@ -64,29 +64,11 @@ export default class TotalMultiplierConsumer {
         const totalMultipliers = await this.totalMultiplierRepository.find({ ended: false }).lean().exec();
 
         if (totalMultipliers.length > 0) {
-            const players = Object.values(this.gameData.realPlayers);
-
             if (isRestart) {
-                const playersWithPromotion = totalMultipliers
-                    .filter((totalMultiplier) => totalMultiplier.promotionId)
-                    .map((totalMultiplier) => {
-                        return {
-                            playerId: totalMultiplier.playerId,
-                            promotion: totalMultiplier.promotionId,
-                        };
-                    });
-
-                const promotionPromotions = await this.gamePromotionApiClient.queryPlayersIncompletePromotions({
-                    playerPromotionPairs: playersWithPromotion,
-                });
-
-                Object.values(this.gameData.ingame).forEach((ingame) => {
-                    const promotion = promotionPromotions.find((p) => p.playerId === ingame.playerId)?.promotion;
-                    if (promotion) {
-                        ingame.promotion = promotion;
-                    }
-                });
+                await this.reloadPromotionsForRestart(totalMultipliers);
             }
+
+            const players = Object.values(this.gameData.realPlayers);
 
             totalMultipliers.forEach(async (totalMultiplier) => {
                 var player = players.find((player) => player.UID === totalMultiplier.uid);
@@ -106,6 +88,38 @@ export default class TotalMultiplierConsumer {
                 }
             });
         }
+    }
+
+    async reloadPromotionsForRestart(totalMultipliers) {
+        const promotionQueryPairs = totalMultipliers
+            .filter((totalMultiplier) => totalMultiplier.promotionId)
+            .map((totalMultiplier) => {
+                return {
+                    playerId: totalMultiplier.playerId,
+                    promotion: totalMultiplier.promotionId,
+                };
+            });
+
+        if (promotionQueryPairs.length === 0) {
+            return;
+        }
+
+        const activePlayerPromotions = await this.gamePromotionApiClient.queryPlayersIncompletePromotions({
+            playerPromotionPairs: promotionQueryPairs,
+        });
+
+        if (!activePlayerPromotions || activePlayerPromotions.length === 0) {
+            return;
+        }
+
+        activePlayerPromotions.forEach((playerPromotionData) => {
+            const totalMultiplier = totalMultipliers.find((tm) => tm.playerId === playerPromotionData.playerId);
+
+            if (totalMultiplier) {
+                this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
+                this.gameData.ingame[totalMultiplier.name].promotion = playerPromotionData.promotion;
+            }
+        });
     }
 
     isPlayerHavingPromotionFreeSpins(player, totalMultiplier) {

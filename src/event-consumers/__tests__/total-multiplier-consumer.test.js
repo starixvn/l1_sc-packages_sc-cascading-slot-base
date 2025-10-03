@@ -327,6 +327,240 @@ describe("totalMultiplierConsumer", () => {
                 );
             });
         });
+
+        describe("when isRestart is true", () => {
+            const gamePromotionApiClient = {
+                queryPlayersIncompletePromotions: jest.fn(),
+            };
+
+            beforeEach(() => {
+                consumer.gamePromotionApiClient = gamePromotionApiClient;
+            });
+
+            describe("when total multipliers have promotionId", () => {
+                const promotionId = chance.guid();
+                const playerId = chance.guid();
+                const totalMultiplierValue = chance.natural();
+                const records = [
+                    {
+                        name: player.profile.name,
+                        uid: player.UID,
+                        playerId,
+                        promotionId,
+                        rounds: [{ totalMultiplier: totalMultiplierValue }],
+                    },
+                ];
+
+                beforeEach(() => {
+                    totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
+                    freeSpinConsumer.hasFreeSpin = jest.fn().mockReturnValue(false);
+                });
+
+                it("should query promotions for players with promotionId", async () => {
+                    // Arrange
+                    const mockPromotions = [
+                        {
+                            playerId,
+                            promotion: {
+                                promotionId,
+                                remainingBonusItems: 5,
+                                freeSpinAvailable: 3,
+                            },
+                        },
+                    ];
+                    gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
+
+                    // Act
+                    await consumer.reload(true);
+
+                    // Assert
+                    expect(gamePromotionApiClient.queryPlayersIncompletePromotions).toHaveBeenCalledWith({
+                        playerPromotionPairs: [
+                            {
+                                playerId,
+                                promotion: promotionId,
+                            },
+                        ],
+                    });
+                });
+
+                it("should map promotions to ingame objects", async () => {
+                    // Arrange
+                    const mockPromotions = [
+                        {
+                            playerId,
+                            promotion: {
+                                promotionId,
+                                remainingBonusItems: 5,
+                                freeSpinAvailable: 3,
+                            },
+                        },
+                    ];
+                    gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
+
+                    // Act
+                    await consumer.reload(true);
+
+                    // Assert
+                    expect(gameData.ingame[player.profile.name].promotion).toEqual(mockPromotions[0].promotion);
+                });
+
+                it("should preserve total multiplier for players with promotionId", async () => {
+                    // Arrange
+                    const mockPromotions = [
+                        {
+                            playerId,
+                            promotion: {
+                                promotionId,
+                                remainingBonusItems: 5,
+                                freeSpinAvailable: 3,
+                            },
+                        },
+                    ];
+                    gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(mockPromotions);
+
+                    // Act
+                    await consumer.reload(true);
+
+                    // Assert
+                    expect(gameData.ingame[player.profile.name].totalMultiplier).toBe(totalMultiplierValue);
+                    expect(totalMultiplierRepository.updateOne).not.toHaveBeenCalled();
+                });
+            });
+
+            describe("when total multipliers do NOT have promotionId", () => {
+                const totalMultiplierValue = chance.natural();
+                const records = [
+                    {
+                        name: player.profile.name,
+                        uid: player.UID,
+                        playerId: chance.guid(),
+                        promotionId: null,
+                        rounds: [{ totalMultiplier: totalMultiplierValue }],
+                    },
+                ];
+
+                beforeEach(() => {
+                    totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
+                    freeSpinConsumer.hasFreeSpin = jest.fn().mockReturnValue(false);
+                });
+
+                it("should end total multiplier when no promotionId", async () => {
+                    // Act
+                    await consumer.reload(true);
+
+                    // Assert
+                    expect(totalMultiplierRepository.updateOne).toHaveBeenCalledWith(
+                        { uid: records[0].uid, ended: false },
+                        { ended: true, endTime: new Date() }
+                    );
+                });
+
+                it("should not query promotions when no promotionId", async () => {
+                    // Act
+                    await consumer.reload(true);
+
+                    // Assert
+                    expect(gamePromotionApiClient.queryPlayersIncompletePromotions).not.toHaveBeenCalled();
+                });
+            });
+
+            describe("when player is not found in realPlayers", () => {
+                const promotionId = chance.guid();
+                const playerId = chance.guid();
+                const totalMultiplierValue = chance.natural();
+                const records = [
+                    {
+                        name: "unknown-player",
+                        uid: chance.guid(),
+                        playerId,
+                        promotionId,
+                        rounds: [{ totalMultiplier: totalMultiplierValue }],
+                    },
+                ];
+
+                beforeEach(() => {
+                    totalMultiplierRepository.find().lean().exec.mockReturnValueOnce(records);
+                    freeSpinConsumer.hasFreeSpin = jest.fn().mockReturnValue(false);
+                });
+
+                it("should end total multiplier when player not found", async () => {
+                    // Act
+                    await consumer.reload(true);
+
+                    // Assert
+                    expect(totalMultiplierRepository.updateOne).toHaveBeenCalledWith(
+                        { uid: records[0].uid, ended: false },
+                        { ended: true, endTime: new Date() }
+                    );
+                });
+            });
+        });
+
+        describe("reloadPromotionsForRestart", () => {
+            const gamePromotionApiClient = {
+                queryPlayersIncompletePromotions: jest.fn(),
+            };
+
+            beforeEach(() => {
+                consumer.gamePromotionApiClient = gamePromotionApiClient;
+            });
+
+            it("should query and map promotions for players with promotionId", async () => {
+                // Arrange
+                const promotionId = chance.guid();
+                const playerId = chance.guid();
+                const totalMultipliers = [
+                    {
+                        name: player.profile.name,
+                        playerId,
+                        promotionId,
+                    },
+                ];
+                const activePlayerPromotions = [
+                    {
+                        playerId,
+                        promotion: {
+                            promotionId,
+                            remainingBonusItems: 5,
+                            freeSpinAvailable: 3,
+                        },
+                    },
+                ];
+                gamePromotionApiClient.queryPlayersIncompletePromotions.mockResolvedValueOnce(activePlayerPromotions);
+
+                // Act
+                await consumer.reloadPromotionsForRestart(totalMultipliers);
+
+                // Assert
+                expect(gamePromotionApiClient.queryPlayersIncompletePromotions).toHaveBeenCalledWith({
+                    playerPromotionPairs: [
+                        {
+                            playerId,
+                            promotion: promotionId,
+                        },
+                    ],
+                });
+                expect(gameData.ingame[player.profile.name].promotion).toEqual(activePlayerPromotions[0].promotion);
+            });
+
+            it("should not query promotions when no players have promotionId", async () => {
+                // Arrange
+                const totalMultipliers = [
+                    {
+                        name: player.profile.name,
+                        playerId: chance.guid(),
+                        promotionId: null,
+                    },
+                ];
+
+                // Act
+                await consumer.reloadPromotionsForRestart(totalMultipliers);
+
+                // Assert
+                expect(gamePromotionApiClient.queryPlayersIncompletePromotions).not.toHaveBeenCalled();
+            });
+        });
     });
 
     function stubPlayer() {
