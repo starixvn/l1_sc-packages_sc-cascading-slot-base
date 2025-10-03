@@ -113,7 +113,7 @@ export default class TotalMultiplierConsumer {
         }
 
         activePlayerPromotions.forEach((playerPromotionData) => {
-            const totalMultiplier = totalMultipliers.find((tm) => tm.playerId === playerPromotionData.playerId);
+            const totalMultiplier = totalMultipliers.find((multiplier) => multiplier.playerId === playerPromotionData.playerId);
 
             if (totalMultiplier) {
                 this.gameData.ingame[totalMultiplier.name] = this.gameData.ingame[totalMultiplier.name] ?? { betQueue: [] };
