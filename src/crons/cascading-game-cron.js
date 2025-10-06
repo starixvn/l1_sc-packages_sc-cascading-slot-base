@@ -82,8 +82,8 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.promotionFreeSpinsConsumer.loadPromotionsRunning();
         await this.freeSpinsConsumer.reload();
         await this.totalMultiplierConsumer.reload(true);
-        await this.chainManager.loadChainData();
-        await this.userChainConsumer.loadActiveChains();
+        await this.chainManager.loadChains();
+        await this.userChainConsumer.loadActive();
 
         // Initialize the board generator
         this.boardGenerator.initialize();

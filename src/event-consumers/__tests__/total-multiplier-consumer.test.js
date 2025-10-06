@@ -744,8 +744,14 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
         mockGameData = TotalMultiplierTestFactory.createGameData();
         mockTotalMultiplierRepository = stubMongoose(mongoose.Model);
         mockFreeSpinConsumer = stub(FreeSpinConsumer);
-        
-        enhancedConsumer = new TotalMultiplierConsumer(mockGameData, mockTotalMultiplierRepository, mockFreeSpinConsumer);
+
+        const mockGamePromotionApiClient = {
+            instance: jest.fn().mockReturnValue({
+                queryPlayersIncompletePromotions: jest.fn(),
+            }),
+        };
+
+        enhancedConsumer = new TotalMultiplierConsumer(mockGameData, mockTotalMultiplierRepository, mockFreeSpinConsumer, mockGamePromotionApiClient);
         jest.spyOn(global, "Date").mockReturnValue(mockDate);
     });
 
@@ -803,7 +809,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
 
                 // Assert
                 const createCall = mockTotalMultiplierRepository.create.mock.calls[0][0];
-                expect(createCall).not.toHaveProperty('promotionId');
+                expect(createCall).not.toHaveProperty("promotionId");
             });
         });
     });
@@ -1001,7 +1007,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
                     profile: { name: "promoPlayer" },
                     promotion: { remainingBonusItems: 3 },
                 });
-                
+
                 mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
                 mockGameData.realPlayers = { promoPlayer: player };
                 mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(false);
@@ -1020,7 +1026,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
                     promotionId: "promo456",
                     rounds: [{ totalMultiplier: 7 }],
                 });
-                
+
                 mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
                 mockGameData.realPlayers = {};
                 mockGameData.ingame.ingamePromoPlayer = {
@@ -1042,7 +1048,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
                     promotionId: "promo789",
                     rounds: [{ totalMultiplier: 8 }],
                 });
-                
+
                 mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
                 mockGameData.realPlayers = {};
                 mockGameData.ingame.noPromoPlayer = {
@@ -1065,7 +1071,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
                     name: "newPlayer",
                     rounds: [{ totalMultiplier: 3 }],
                 });
-                
+
                 mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
                 mockGameData.ingame = {}; // No existing ingame data
                 mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(true);
@@ -1086,7 +1092,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
                     name: "existingPlayer",
                     rounds: [{ totalMultiplier: 6 }],
                 });
-                
+
                 mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
                 mockGameData.ingame.existingPlayer = {
                     betQueue: ["bet1", "bet2"],
@@ -1117,7 +1123,7 @@ describe("TotalMultiplierConsumer - Enhanced Coverage", () => {
                         { totalMultiplier: 9 }, // Latest should be used
                     ],
                 });
-                
+
                 mockTotalMultiplierRepository.find().lean().exec.mockResolvedValue([totalMultiplierRecord]);
                 mockFreeSpinConsumer.hasFreeSpin.mockReturnValue(true);
 
