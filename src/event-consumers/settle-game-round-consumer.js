@@ -195,15 +195,13 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     calculateBetResult(round) {
-        const betResult = {
+        return {
             totalBetAmount: round.totalAmount,
             totalWin: round.betwin,
             netWin: round.betwin > 0 ? round.betwin - round.totalAmount : 0,
             totalLost: round.totalAmount > round.betwin ? round.totalAmount - round.betwin : 0,
             ...this.determineWinType(round.betwin, round.totalAmount),
         };
-
-        return betResult;
     }
 
     determineWinType(totalWin, totalBetAmount) {
