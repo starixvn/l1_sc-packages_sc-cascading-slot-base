@@ -112,6 +112,141 @@ function initRoundDocument({ id = 1, playerId, coinValue, betLevel, betMultiplie
     };
 }
 
+describe("determineWinType", () => {
+    it("should return bigWin when win ratio meets bigWin threshold", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 100, totalBetAmount: 10 };
+
+        consumer.determineWinType(betResult);
+
+        expect(betResult.bigWin).toBe(true);
+        expect(betResult.megaWin).toBeUndefined();
+        expect(betResult.superWin).toBeUndefined();
+    });
+
+    it("should return megaWin when win ratio meets megaWin threshold", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 250, totalBetAmount: 10 };
+
+        consumer.determineWinType(betResult);
+
+        expect(betResult.bigWin).toBeUndefined();
+        expect(betResult.megaWin).toBe(true);
+        expect(betResult.superWin).toBeUndefined();
+    });
+
+    it("should return superWin when win ratio meets superWin threshold", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 500, totalBetAmount: 10 };
+
+        consumer.determineWinType(betResult);
+
+        expect(betResult.bigWin).toBeUndefined();
+        expect(betResult.megaWin).toBeUndefined();
+        expect(betResult.superWin).toBe(true);
+    });
+
+    it("should return superWin when win ratio exceeds superWin threshold", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 750, totalBetAmount: 10 };
+
+        consumer.determineWinType(betResult);
+
+        expect(betResult.bigWin).toBeUndefined();
+        expect(betResult.megaWin).toBeUndefined();
+        expect(betResult.superWin).toBe(true);
+    });
+
+    it("should return no win when win ratio is below all thresholds", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 50, totalBetAmount: 10 };
+
+        consumer.determineWinType(betResult);
+
+        expect(betResult.bigWin).toBeUndefined();
+        expect(betResult.megaWin).toBeUndefined();
+        expect(betResult.superWin).toBeUndefined();
+    });
+
+    it("should handle undefined megaWinRatio and superWinRatio", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 100, totalBetAmount: 10 };
+
+        // Mock gameData with undefined ratios
+        consumer.gameData = {
+            gameConfigs: {
+                cascadingSlotsConfig: {
+                    bigWinRatio: 10,
+                    megaWinRatio: undefined,
+                    superWinRatio: undefined,
+                },
+            },
+        };
+
+        consumer.determineWinType(betResult);
+
+        // Should only set bigWin since megaWin and superWin ratios are undefined
+        expect(betResult.bigWin).toBe(true);
+        expect(betResult.megaWin).toBeUndefined();
+        expect(betResult.superWin).toBeUndefined();
+    });
+
+    it("should handle all ratios undefined", () => {
+        const consumer = initConsumer();
+        const betResult = { totalWin: 100, totalBetAmount: 10 };
+
+        // Mock gameData with all ratios undefined
+        consumer.gameData = {
+            gameConfigs: {
+                cascadingSlotsConfig: {
+                    bigWinRatio: undefined,
+                    megaWinRatio: undefined,
+                    superWinRatio: undefined,
+                },
+            },
+        };
+
+        consumer.determineWinType(betResult);
+
+        // Should not set any win types
+        expect(betResult.bigWin).toBeUndefined();
+        expect(betResult.megaWin).toBeUndefined();
+        expect(betResult.superWin).toBeUndefined();
+    });
+});
+
+describe("collectRoundResult", () => {
+    it("should include megaWin and superWin in the response", () => {
+        const consumer = initConsumer();
+        const player = { session: { sessionId: "test" } };
+        const round = {
+            id: 1,
+            result: "test",
+            betwin: 100,
+            settlementResult: {
+                freeSpins: { odds: 0 },
+                tumbles: [],
+            },
+            multiplier: 1,
+            totalMultiplier: 1,
+            freeSpin: false,
+            reachMaxWin: false,
+            actualBetwin: 100,
+        };
+        const betResult = {
+            megaWin: true,
+        };
+
+        freeSpinsConsumer.getTotalAvaiableFreeSpins.mockReturnValue(0);
+
+        const result = consumer.collectRoundResult(player, round, betResult);
+
+        expect(result.finish.bigWin).toBeUndefined();
+        expect(result.finish.megaWin).toBe(true);
+        expect(result.finish.superWin).toBeUndefined();
+    });
+});
+
 describe("settle round", () => {
     describe("settle normal spin", () => {
         describe("when having winning icons", () => {

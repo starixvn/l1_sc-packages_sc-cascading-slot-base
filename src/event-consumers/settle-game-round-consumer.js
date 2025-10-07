@@ -196,15 +196,26 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
     calculateBetResult(round) {
         const betResult = {};
-        const { bigWinRatio } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
         betResult.totalBetAmount = round.totalAmount;
         betResult.totalWin = round.betwin;
         betResult.netWin = round.betwin > 0 ? round.betwin - round.totalAmount : 0;
         betResult.totalLost = betResult.totalBetAmount > betResult.totalWin ? betResult.totalBetAmount - betResult.totalWin : 0;
-        betResult.bigWin = betResult.totalWin / bigWinRatio >= betResult.totalBetAmount;
+        this.determineWinType(betResult);
 
         return betResult;
+    }
+    determineWinType(betResult) {
+        const winRatio = betResult.totalWin / betResult.totalBetAmount;
+        const { bigWinRatio, megaWinRatio, superWinRatio } = this.gameData.gameConfigs.cascadingSlotsConfig;
+
+        if (winRatio >= superWinRatio) {
+            betResult.superWin = true;
+        } else if (winRatio >= megaWinRatio) {
+            betResult.megaWin = true;
+        } else if (winRatio >= bigWinRatio) {
+            betResult.bigWin = true;
+        }
     }
 
     collectRoundResult(player, round, betResult) {
@@ -214,6 +225,8 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                 result: round.result,
                 win: round.betwin,
                 bigWin: betResult.bigWin,
+                megaWin: betResult.megaWin,
+                superWin: betResult.superWin,
                 freeSpins: round.settlementResult.freeSpins.odds,
                 totalFreeSpins: this.freeSpinsConsumer.getTotalAvaiableFreeSpins(player),
                 tumbles: round.settlementResult.tumbles.map((tumble) => ({
