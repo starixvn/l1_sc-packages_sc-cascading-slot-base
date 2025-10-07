@@ -195,27 +195,30 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
     }
 
     calculateBetResult(round) {
-        const betResult = {};
-
-        betResult.totalBetAmount = round.totalAmount;
-        betResult.totalWin = round.betwin;
-        betResult.netWin = round.betwin > 0 ? round.betwin - round.totalAmount : 0;
-        betResult.totalLost = betResult.totalBetAmount > betResult.totalWin ? betResult.totalBetAmount - betResult.totalWin : 0;
-        this.determineWinType(betResult);
+        const betResult = {
+            totalBetAmount: round.totalAmount,
+            totalWin: round.betwin,
+            netWin: round.betwin > 0 ? round.betwin - round.totalAmount : 0,
+            totalLost: round.totalAmount > round.betwin ? round.totalAmount - round.betwin : 0,
+            ...this.determineWinType(round.betwin, round.totalAmount),
+        };
 
         return betResult;
     }
-    determineWinType(betResult) {
-        const winRatio = betResult.totalWin / betResult.totalBetAmount;
-        const { bigWinRatio, megaWinRatio, superWinRatio } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
-        if (winRatio >= superWinRatio) {
-            betResult.superWin = true;
-        } else if (winRatio >= megaWinRatio) {
-            betResult.megaWin = true;
-        } else if (winRatio >= bigWinRatio) {
-            betResult.bigWin = true;
-        }
+    determineWinType(totalWin, totalBetAmount) {
+        const { bigWinRatio, megaWinRatio, superWinRatio } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const winRatio = totalWin / totalBetAmount;
+
+        const winTypes = {
+            superWin: superWinRatio,
+            megaWin: megaWinRatio,
+            bigWin: bigWinRatio,
+        };
+
+        const achievedWin = Object.keys(winTypes).find((winType) => winRatio >= winTypes[winType]);
+
+        return achievedWin ? { [achievedWin]: true } : {};
     }
 
     collectRoundResult(player, round, betResult) {

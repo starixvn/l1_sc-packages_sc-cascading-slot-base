@@ -115,62 +115,41 @@ function initRoundDocument({ id = 1, playerId, coinValue, betLevel, betMultiplie
 describe("determineWinType", () => {
     it("should return bigWin when win ratio meets bigWin threshold", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 100, totalBetAmount: 10 };
+        const result = consumer.determineWinType(100, 10);
 
-        consumer.determineWinType(betResult);
-
-        expect(betResult.bigWin).toBe(true);
-        expect(betResult.megaWin).toBeUndefined();
-        expect(betResult.superWin).toBeUndefined();
+        expect(result).toEqual({ bigWin: true });
     });
 
     it("should return megaWin when win ratio meets megaWin threshold", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 250, totalBetAmount: 10 };
+        const result = consumer.determineWinType(250, 10);
 
-        consumer.determineWinType(betResult);
-
-        expect(betResult.bigWin).toBeUndefined();
-        expect(betResult.megaWin).toBe(true);
-        expect(betResult.superWin).toBeUndefined();
+        expect(result).toEqual({ megaWin: true });
     });
 
     it("should return superWin when win ratio meets superWin threshold", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 500, totalBetAmount: 10 };
+        const result = consumer.determineWinType(500, 10);
 
-        consumer.determineWinType(betResult);
-
-        expect(betResult.bigWin).toBeUndefined();
-        expect(betResult.megaWin).toBeUndefined();
-        expect(betResult.superWin).toBe(true);
+        expect(result).toEqual({ superWin: true });
     });
 
     it("should return superWin when win ratio exceeds superWin threshold", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 750, totalBetAmount: 10 };
+        const result = consumer.determineWinType(750, 10);
 
-        consumer.determineWinType(betResult);
-
-        expect(betResult.bigWin).toBeUndefined();
-        expect(betResult.megaWin).toBeUndefined();
-        expect(betResult.superWin).toBe(true);
+        expect(result).toEqual({ superWin: true });
     });
 
     it("should return no win when win ratio is below all thresholds", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 50, totalBetAmount: 10 };
+        const result = consumer.determineWinType(50, 10);
 
-        consumer.determineWinType(betResult);
-
-        expect(betResult.bigWin).toBeUndefined();
-        expect(betResult.megaWin).toBeUndefined();
-        expect(betResult.superWin).toBeUndefined();
+        expect(result).toEqual({});
     });
 
     it("should handle undefined megaWinRatio and superWinRatio", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 100, totalBetAmount: 10 };
 
         // Mock gameData with undefined ratios
         consumer.gameData = {
@@ -183,17 +162,14 @@ describe("determineWinType", () => {
             },
         };
 
-        consumer.determineWinType(betResult);
+        const result = consumer.determineWinType(100, 10);
 
-        // Should only set bigWin since megaWin and superWin ratios are undefined
-        expect(betResult.bigWin).toBe(true);
-        expect(betResult.megaWin).toBeUndefined();
-        expect(betResult.superWin).toBeUndefined();
+        // Should only return bigWin since megaWin and superWin ratios are undefined
+        expect(result).toEqual({ bigWin: true });
     });
 
     it("should handle all ratios undefined", () => {
         const consumer = initConsumer();
-        const betResult = { totalWin: 100, totalBetAmount: 10 };
 
         // Mock gameData with all ratios undefined
         consumer.gameData = {
@@ -206,12 +182,10 @@ describe("determineWinType", () => {
             },
         };
 
-        consumer.determineWinType(betResult);
+        const result = consumer.determineWinType(100, 10);
 
-        // Should not set any win types
-        expect(betResult.bigWin).toBeUndefined();
-        expect(betResult.megaWin).toBeUndefined();
-        expect(betResult.superWin).toBeUndefined();
+        // Should return empty object
+        expect(result).toEqual({});
     });
 });
 
