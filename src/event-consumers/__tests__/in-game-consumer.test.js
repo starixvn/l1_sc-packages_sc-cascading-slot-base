@@ -227,6 +227,9 @@ describe("InGameConsumer", () => {
                         coinValues: undefined,
                         maxWinPerRound: undefined,
                         defaultCoinValue: undefined,
+                        bigWinRatio: undefined,
+                        megaWinRatio: undefined,
+                        superWinRatio: undefined,
                     },
                     freeSpins: {
                         betLevel: undefined,
@@ -254,6 +257,9 @@ describe("InGameConsumer", () => {
                         coinValues: [1, 2, 5, 10, 50, 100],
                         maxWinPerRound: 5000,
                         defaultCoinValue: 1,
+                        bigWinRatio: undefined,
+                        megaWinRatio: undefined,
+                        superWinRatio: undefined,
                     },
                     freeSpins: {
                         betLevel: 2,
@@ -280,6 +286,9 @@ describe("InGameConsumer", () => {
                         coinValues: [1, 2, 5, 10, 50, 100],
                         maxWinPerRound: 5000,
                         defaultCoinValue: 1,
+                        bigWinRatio: undefined,
+                        megaWinRatio: undefined,
+                        superWinRatio: undefined,
                     },
                     freeSpins: {
                         betLevel: 2,

@@ -37,7 +37,16 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
         const maxWinPerRound = settings?.maxWinPerRound;
         const defaultCoinValue = settings?.defaultCoinValue;
 
-        const { betLevels, betMultiplier, oddsByCounts, freeSpins: freeSpinsConfig, features } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const {
+            betLevels,
+            betMultiplier,
+            oddsByCounts,
+            freeSpins: freeSpinsConfig,
+            features,
+            bigWinRatio,
+            megaWinRatio,
+            superWinRatio,
+        } = this.gameData.gameConfigs.cascadingSlotsConfig;
 
         const gameConfigs = {
             coinValues,
@@ -46,6 +55,9 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             betMultiplier,
             odds: { symbols: oddsByCounts, freeSpins: freeSpinsConfig },
             defaultCoinValue,
+            bigWinRatio,
+            megaWinRatio,
+            superWinRatio,
         };
 
         const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);
@@ -58,7 +70,6 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
             buyFreeSpins: soonestExpiredFreeSpin?.buyFreeSpinRefRoundId != null,
         };
-
 
         const user = await this.getUserInfo(realPlayer);
         const { exchangeRates } = this.gameData;
