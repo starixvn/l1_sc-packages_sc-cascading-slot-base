@@ -55,9 +55,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
             betMultiplier,
             odds: { symbols: oddsByCounts, freeSpins: freeSpinsConfig },
             defaultCoinValue,
-            bigWinRatio,
-            megaWinRatio,
-            superWinRatio,
+            bigWinRange: [bigWinRatio, megaWinRatio, superWinRatio],
         };
 
         const totalOfFreeSpins = this.freeSpinsConsumer.getTotalAvaiableFreeSpins(realPlayer);
