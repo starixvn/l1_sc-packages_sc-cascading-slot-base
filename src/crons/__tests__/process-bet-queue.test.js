@@ -248,6 +248,7 @@ describe("cascadingProcessBetQueue", () => {
                         betLevel: betWithLevels.betLevel,
                         coinValue: betWithLevels.coinValue,
                         baseBetWin: betwin * rate,
+                        baseAmount: betWithLevels.totalAmount * rate,
                     },
                     balance,
                 });
@@ -281,6 +282,7 @@ describe("cascadingProcessBetQueue", () => {
                         betLevel: bet.betLevel,
                         coinValue: bet.coinValue,
                         baseBetWin: 100 * rate,
+                        baseAmount: bet.totalAmount * rate,
                     },
                     balance,
                 });
@@ -373,7 +375,7 @@ describe("cascadingProcessBetQueue", () => {
 
         static createMockConsumer(gameDataOverrides = {}) {
             const mockGameData = ProcessBetQueueTestFactory.createGameDataWithFeatures(gameDataOverrides);
-            
+
             return new CascadingProcessBetQueue({
                 definition: { id: chance.natural() },
                 gameData: mockGameData,
@@ -404,7 +406,7 @@ describe("cascadingProcessBetQueue", () => {
             mockGameData = ProcessBetQueueTestFactory.createGameDataWithFeatures();
             mockPlayer = ProcessBetQueueTestFactory.createPlayer();
             enhancedConsumer = ProcessBetQueueTestFactory.createMockConsumer();
-            
+
             // Setup common mocks
             freeSpinsConsumer.hasFreeSpin.mockReturnValue(false);
             enhancedConsumer.hasValidPromotion = jest.fn().mockReturnValue(true);
@@ -583,7 +585,7 @@ describe("cascadingProcessBetQueue", () => {
         describe("proceedBet", () => {
             beforeEach(() => {
                 enhancedConsumer.isValidBuyFreeSpin = jest.fn();
-                jest.spyOn(CascadingProcessBetQueue.prototype.__proto__, 'proceedBet').mockImplementation(() => Promise.resolve());
+                jest.spyOn(CascadingProcessBetQueue.prototype.__proto__, "proceedBet").mockImplementation(() => Promise.resolve());
             });
 
             describe("when buyFreeSpin is requested", () => {
@@ -741,8 +743,7 @@ describe("cascadingProcessBetQueue", () => {
                     const playerWithSession = ProcessBetQueueTestFactory.createPlayer();
 
                     // Act & Assert
-                    await expect(consumerWithoutFeatures.generateBetInfo(payload, null, playerWithSession))
-                        .rejects.toThrow();
+                    await expect(consumerWithoutFeatures.generateBetInfo(payload, null, playerWithSession)).rejects.toThrow();
                 });
             });
         });
@@ -809,13 +810,15 @@ describe("cascadingProcessBetQueue", () => {
                     // Assert
                     const transformCall = enhancedConsumer.executeInterceptorTransform.mock.calls[0];
                     const betRecord = transformCall[2].betRecord;
-                    expect(betRecord).toEqual(expect.objectContaining({
-                        id: roundId,
-                        uid: playerWithSession.UID,
-                        name: playerWithSession.profile.name,
-                        betLevel: betInfo.betLevel,
-                        coinValue: betInfo.coinValue,
-                    }));
+                    expect(betRecord).toEqual(
+                        expect.objectContaining({
+                            id: roundId,
+                            uid: playerWithSession.UID,
+                            name: playerWithSession.profile.name,
+                            betLevel: betInfo.betLevel,
+                            coinValue: betInfo.coinValue,
+                        })
+                    );
                 });
             });
 
@@ -883,7 +886,7 @@ describe("cascadingProcessBetQueue", () => {
                 const player = ProcessBetQueueTestFactory.createPlayer();
                 const payload = ProcessBetQueueTestFactory.createPayload({ buyFreeSpin: true });
                 enhancedConsumer.isValidBuyFreeSpin = jest.fn().mockReturnValue(true);
-                jest.spyOn(CascadingProcessBetQueue.prototype.__proto__, 'proceedBet').mockImplementation(() => Promise.resolve());
+                jest.spyOn(CascadingProcessBetQueue.prototype.__proto__, "proceedBet").mockImplementation(() => Promise.resolve());
 
                 // Act
                 await enhancedConsumer.proceedBet(player, payload);
