@@ -184,7 +184,6 @@ describe("determineWinType", () => {
 
         const result = consumer.determineWinType(100, 10);
 
-        // Should return empty object
         expect(result).toEqual({});
     });
 });
@@ -1259,11 +1258,7 @@ describe("getChainResult", () => {
             await consumer.getChainResult(player, round, false);
 
             // Assert
-            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
-                "chainPlayer",
-                expect.any(Object),
-                expect.any(Object)
-            );
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith("chainPlayer", expect.any(Object), expect.any(Object));
         });
 
         it("should call getNextResult with correct bet parameters", async () => {
@@ -1280,11 +1275,7 @@ describe("getChainResult", () => {
             await consumer.getChainResult(player, round, false);
 
             // Assert
-            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
-                expect.any(String),
-                { betLevel: 8, coinValue: 0.25 },
-                expect.any(Object)
-            );
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(expect.any(String), { betLevel: 8, coinValue: 0.25 }, expect.any(Object));
         });
 
         it("should call getNextResult with isFreeSpin true when free spin", async () => {
@@ -1298,11 +1289,7 @@ describe("getChainResult", () => {
             await consumer.getChainResult(player, round, true);
 
             // Assert
-            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.any(Object),
-                { isFreeSpin: true }
-            );
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), { isFreeSpin: true });
         });
 
         it("should call getNextResult with isFreeSpin false when not free spin", async () => {
@@ -1316,11 +1303,7 @@ describe("getChainResult", () => {
             await consumer.getChainResult(player, round, false);
 
             // Assert
-            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.any(Object),
-                { isFreeSpin: false }
-            );
+            expect(resultChainManager.getNextResult).toHaveBeenCalledWith(expect.any(String), expect.any(Object), { isFreeSpin: false });
         });
 
         it("should return the result from chain manager", async () => {
@@ -1582,7 +1565,7 @@ describe("calculateBetResult", () => {
             const result = consumer.calculateBetResult(round);
 
             // Assert
-            expect(result.bigWin).toBe(false);
+            expect(result.bigWin).toBeUndefined();
         });
 
         it("should set bigWin to false when there is no win", () => {
@@ -1597,7 +1580,7 @@ describe("calculateBetResult", () => {
             const result = consumer.calculateBetResult(round);
 
             // Assert
-            expect(result.bigWin).toBe(false);
+            expect(result.bigWin).toBeUndefined();
         });
     });
 });
@@ -1841,12 +1824,12 @@ describe("formatEndGameInfo", () => {
             const roundId = 123;
             const time = new Date();
             const betResult = SettleGameRoundTestFactory.createBetResult();
-            
+
             // Mock the parent method
-            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), "formatEndGameInfo");
             parentFormatEndGameInfo.mockReturnValue({
                 gameInfo: { roundId },
-                settlementInfo: { redPlay: 10, baseTotalAmount: 15 }
+                settlementInfo: { redPlay: 10, baseTotalAmount: 15 },
             });
 
             // Act
@@ -1863,11 +1846,11 @@ describe("formatEndGameInfo", () => {
             const roundId = 456;
             const time = new Date();
             const betResult = SettleGameRoundTestFactory.createBetResult();
-            
-            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), "formatEndGameInfo");
             parentFormatEndGameInfo.mockReturnValue({
                 gameInfo: { roundId: 456, customData: "test" },
-                settlementInfo: { redPlay: 20, baseTotalAmount: 25 }
+                settlementInfo: { redPlay: 20, baseTotalAmount: 25 },
             });
 
             // Act
@@ -1884,11 +1867,11 @@ describe("formatEndGameInfo", () => {
             const roundId = 789;
             const time = new Date();
             const betResult = SettleGameRoundTestFactory.createBetResult();
-            
-            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), "formatEndGameInfo");
             parentFormatEndGameInfo.mockReturnValue({
                 gameInfo: { roundId },
-                settlementInfo: { redPlay: 30, baseTotalAmount: 40 }
+                settlementInfo: { redPlay: 30, baseTotalAmount: 40 },
             });
 
             // Act
@@ -1908,11 +1891,11 @@ describe("formatEndGameInfo", () => {
             const roundId = 111;
             const time = new Date();
             const betResult = SettleGameRoundTestFactory.createBetResult();
-            
-            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), "formatEndGameInfo");
             parentFormatEndGameInfo.mockReturnValue({
                 gameInfo: { roundId },
-                settlementInfo: { redPlay: 50, baseTotalAmount: 60 }
+                settlementInfo: { redPlay: 50, baseTotalAmount: 60 },
             });
 
             // Act
@@ -1929,11 +1912,11 @@ describe("formatEndGameInfo", () => {
             const roundId = 222;
             const time = new Date();
             const betResult = SettleGameRoundTestFactory.createBetResult();
-            
-            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), "formatEndGameInfo");
             parentFormatEndGameInfo.mockReturnValue({
                 gameInfo: { roundId },
-                settlementInfo: { redPlay: 70, baseTotalAmount: 80 }
+                settlementInfo: { redPlay: 70, baseTotalAmount: 80 },
             });
 
             // Act
@@ -1950,11 +1933,11 @@ describe("formatEndGameInfo", () => {
             const roundId = 333;
             const time = new Date();
             const betResult = SettleGameRoundTestFactory.createBetResult();
-            
-            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), 'formatEndGameInfo');
+
+            const parentFormatEndGameInfo = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(consumer)), "formatEndGameInfo");
             parentFormatEndGameInfo.mockReturnValue({
                 gameInfo: { roundId: 333, freeSpinData: "special" },
-                settlementInfo: { redPlay: 90, baseTotalAmount: 100 }
+                settlementInfo: { redPlay: 90, baseTotalAmount: 100 },
             });
 
             // Act
@@ -1974,39 +1957,36 @@ describe("processSpinning - Error Handling", () => {
             const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "errorPlayer" } });
             const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1, totalAmount: 10 });
             const error = new Error("Chain update failed");
-            
+
             totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
             consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
-            
+
             // Mock logService
-            consumer.logService = { 
-                logInfo: jest.fn(), 
-                logWarning: jest.fn(), 
-                logError: jest.fn() 
+            consumer.logService = {
+                logInfo: jest.fn(),
+                logWarning: jest.fn(),
+                logError: jest.fn(),
             };
-            
+
             // Mock selectPreGeneratedResult to return chain result
-            jest.spyOn(consumer, 'selectPreGeneratedResult').mockResolvedValue({
-                data: [{ newBoard: [1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10] }],
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
+                data: [{ newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }],
                 isFromChain: true,
             });
-            
+
             // Mock roundCalculator.processSpinning
-            jest.spyOn(consumer.roundCalculator, 'processSpinning').mockImplementation((round) => {
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
                 round.settlementResult = { tumbles: [] };
                 return round;
             });
-            
+
             userChainConsumer.updateChainProgress.mockRejectedValue(error);
 
             // Act
             await consumer.processSpinning(player, round);
 
             // Assert
-            expect(consumer.logService.logError).toHaveBeenCalledWith(
-                `Failed to update chain progress for errorPlayer`,
-                error
-            );
+            expect(consumer.logService.logError).toHaveBeenCalledWith(`Failed to update chain progress for errorPlayer`, error);
         });
 
         it("should continue processing when chain update fails", async () => {
@@ -2014,36 +1994,36 @@ describe("processSpinning - Error Handling", () => {
             const consumer = initConsumer();
             const player = SettleGameRoundTestFactory.createPlayer();
             const round = SettleGameRoundTestFactory.createRound({ freeSpin: true, betwin: 10, multiplier: 2 });
-            
+
             totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
             consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
-            
+
             // Mock logService
-            consumer.logService = { 
-                logInfo: jest.fn(), 
-                logWarning: jest.fn(), 
-                logError: jest.fn() 
+            consumer.logService = {
+                logInfo: jest.fn(),
+                logWarning: jest.fn(),
+                logError: jest.fn(),
             };
-            
-            jest.spyOn(consumer, 'selectPreGeneratedResult').mockResolvedValue({
+
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
                 data: null,
                 isFromChain: true,
             });
-            
+
             // Mock roundCalculator.processSpinning
-            jest.spyOn(consumer.roundCalculator, 'processSpinning').mockImplementation((round) => {
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
                 round.settlementResult = { tumbles: [{ win: 10 }, { win: 5 }] };
                 round.betwin = 10;
                 round.multiplier = 2;
                 return round;
             });
-            
+
             userChainConsumer.updateChainProgress.mockRejectedValue(new Error("Failed"));
 
             // Act
             await consumer.processSpinning(player, round);
 
-            // Assert  
+            // Assert
             expect(totalMultiplierConsumer.increaseTotalMultiplier).toHaveBeenCalled();
         });
     });
@@ -2068,7 +2048,7 @@ describe("settleRound - Edge Cases", () => {
             // Arrange
             const consumer = initConsumer();
             const player = SettleGameRoundTestFactory.createPlayer();
-            const processSpinningSpy = jest.spyOn(consumer, 'processSpinning');
+            const processSpinningSpy = jest.spyOn(consumer, "processSpinning");
             roundsRepository.findOne().exec.mockResolvedValue(null);
 
             // Act
@@ -2086,9 +2066,9 @@ describe("settleRound - Edge Cases", () => {
             const player = SettleGameRoundTestFactory.createPlayer();
             const round = SettleGameRoundTestFactory.createRound({ paid: false });
             roundsRepository.findOne().exec.mockResolvedValue(round);
-            
-            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
-            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            jest.spyOn(consumer, "processSpinning").mockResolvedValue();
+            jest.spyOn(consumer, "processFreeSpins").mockResolvedValue();
 
             // Act
             await consumer.settleRound(player, 1);
@@ -2103,9 +2083,9 @@ describe("settleRound - Edge Cases", () => {
             const player = SettleGameRoundTestFactory.createPlayer();
             const round = SettleGameRoundTestFactory.createRound();
             roundsRepository.findOne().exec.mockResolvedValue(round);
-            
-            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
-            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            jest.spyOn(consumer, "processSpinning").mockResolvedValue();
+            jest.spyOn(consumer, "processFreeSpins").mockResolvedValue();
 
             // Act
             await consumer.settleRound(player, 1);
@@ -2118,13 +2098,13 @@ describe("settleRound - Edge Cases", () => {
             // Arrange
             const consumer = initConsumer();
             const player = SettleGameRoundTestFactory.createPlayer({
-                session: { sessionId: "unique-session-123" }
+                session: { sessionId: "unique-session-123" },
             });
             const round = SettleGameRoundTestFactory.createRound();
             roundsRepository.findOne().exec.mockResolvedValue(round);
-            
-            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
-            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            jest.spyOn(consumer, "processSpinning").mockResolvedValue();
+            jest.spyOn(consumer, "processFreeSpins").mockResolvedValue();
 
             // Act
             await consumer.settleRound(player, 1);
@@ -2139,9 +2119,9 @@ describe("settleRound - Edge Cases", () => {
             const player = SettleGameRoundTestFactory.createPlayer();
             const round = SettleGameRoundTestFactory.createRound();
             roundsRepository.findOne().exec.mockResolvedValue(round);
-            
-            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
-            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            jest.spyOn(consumer, "processSpinning").mockResolvedValue();
+            jest.spyOn(consumer, "processFreeSpins").mockResolvedValue();
 
             // Act
             await consumer.settleRound(player, 1);
@@ -2156,9 +2136,9 @@ describe("settleRound - Edge Cases", () => {
             const player = SettleGameRoundTestFactory.createPlayer();
             const round = SettleGameRoundTestFactory.createRound({ betwin: 42.5 });
             roundsRepository.findOne().exec.mockResolvedValue(round);
-            
-            jest.spyOn(consumer, 'processSpinning').mockResolvedValue();
-            jest.spyOn(consumer, 'processFreeSpins').mockResolvedValue();
+
+            jest.spyOn(consumer, "processSpinning").mockResolvedValue();
+            jest.spyOn(consumer, "processFreeSpins").mockResolvedValue();
 
             // Act
             const result = await consumer.settleRound(player, 1);
