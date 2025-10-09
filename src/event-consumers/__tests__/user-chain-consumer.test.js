@@ -146,6 +146,31 @@ describe("UserChainConsumer", () => {
     });
 
     describe("loadActive", () => {
+        describe("when chains are disabled", () => {
+            it("should return early without loading chains", async () => {
+                // Arrange
+                mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(mockAssignmentRepository.find).not.toHaveBeenCalled();
+            });
+
+            it("should not populate playerChains", async () => {
+                // Arrange
+                mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+                mockGameData.playerChains = {};
+
+                // Act
+                await userChainConsumer.loadActive();
+
+                // Assert
+                expect(Object.keys(mockGameData.playerChains)).toHaveLength(0);
+            });
+        });
+
         describe("when memoryExpirationMinutes is not configured", () => {
             it("should log error message", async () => {
                 // Arrange
@@ -1123,6 +1148,43 @@ describe("UserChainConsumer", () => {
     });
 
     describe("clean", () => {
+        describe("when chains are disabled", () => {
+            it("should return early without cleaning chains", () => {
+                // Arrange
+                mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+                const now = new Date();
+                const expiredTime = now.getTime() - 31 * 60 * 1000; // 31 minutes ago (expired)
+                mockGameData.playerChains = {
+                    "expired1-0.10": {
+                        lastActivityAt: new Date(expiredTime),
+                        assignedAt: new Date(expiredTime),
+                    },
+                };
+
+                // Act
+                userChainConsumer.clean();
+
+                // Assert
+                expect(mockGameData.playerChains["expired1-0.10"]).toBeDefined();
+            });
+
+            it("should not call cleanExpired or limitPerPlayer or enforceGlobalLimit", () => {
+                // Arrange
+                mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+                const cleanExpiredSpy = jest.spyOn(userChainConsumer, "cleanExpired");
+                const limitPerPlayerSpy = jest.spyOn(userChainConsumer, "limitPerPlayer");
+                const enforceGlobalLimitSpy = jest.spyOn(userChainConsumer, "enforceGlobalLimit");
+
+                // Act
+                userChainConsumer.clean();
+
+                // Assert
+                expect(cleanExpiredSpy).not.toHaveBeenCalled();
+                expect(limitPerPlayerSpy).not.toHaveBeenCalled();
+                expect(enforceGlobalLimitSpy).not.toHaveBeenCalled();
+            });
+        });
+
         it("should return early when memoryExpirationMinutes is not configured", () => {
             // Create consumer with missing memoryExpirationMinutes config
             const incompleteAppConfigs = {

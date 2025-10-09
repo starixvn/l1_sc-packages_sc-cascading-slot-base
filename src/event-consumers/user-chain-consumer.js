@@ -11,6 +11,8 @@ export default class UserChainConsumer {
         this.assignmentRepository = assignmentRepository;
         this.logService = logService;
         this.appConfigs = appConfigs;
+
+        this.gameData.playerChains = this.gameData.playerChains || {};
     }
 
     /**
@@ -85,10 +87,8 @@ export default class UserChainConsumer {
         const MAX_PER_PLAYER = 2;
         const { playerChains } = this.gameData;
 
-        // Group chains by player name
         const groups = this.groupChainsByPlayer();
 
-        // Limit chains for each player
         Object.entries(groups).forEach(([playerName, keys]) => {
             if (keys.length > MAX_PER_PLAYER) {
                 const sorted = this.sortByActivity(keys);
@@ -153,6 +153,10 @@ export default class UserChainConsumer {
     }
 
     clean() {
+        if (!this.isChainEnabled()) {
+            return;
+        }
+
         this.cleanExpired();
         this.limitPerPlayer();
         this.enforceGlobalLimit();
@@ -256,6 +260,10 @@ export default class UserChainConsumer {
     }
 
     async loadActive() {
+        if (!this.isChainEnabled()) {
+            return;
+        }
+
         try {
             const { memoryExpirationMinutes: expMinutes, maxPlayerChains: maxChains } = this.appConfigs?.resultChains;
 
