@@ -9859,10 +9859,10 @@ sc-semantic-release@1.3.0:
   resolved "https://npm.lumigame.com/sc-semantic-release/-/sc-semantic-release-1.3.0.tgz"
   integrity sha512-mbqN7ehzwVELq0aAns4ONTPMGkJh6pDgfA+2r3DiRVVX1viiVRbj3zpxT5yhSB8KuKE5hbUAgULYAEH+fsEBMg==
 
-sc-slot-board-generator@2.0.1-beta.0:
-  version "2.0.1-beta.0"
-  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-2.0.1-beta.0.tgz"
-  integrity sha512-JeNycoPf4jlWRRQf9tcFdBynTUprRhNV6+AbLCzrtgC0r8CXsNONcZ/fKwie6su2gpXvi56L6vvcRDEeHM4NcA==
+sc-slot-board-generator@2.1.0:
+  version "2.1.0"
+  resolved "http://npm.lumigame.com/sc-slot-board-generator/-/sc-slot-board-generator-2.1.0.tgz#722f221d07192aab1777f7b67d98302a5b75e1db"
+  integrity sha512-/J6bEw+PExSa1af8XUr2F2+DHOSYPOFx8GcOnN1graNCUGQZ8UhBMCNsw0ZpHDJGc2igK6tbbwiqdWYbEuSpQg==
   dependencies:
     chance "^1.1.7"
     ramda "^0.28.0"
@@ -11084,7 +11084,7 @@ wordwrap@^1.0.0:
   resolved "https://npm.lumigame.com/wordwrap/-/wordwrap-1.0.0.tgz"
   integrity sha1-J1hIEIkUVqQXHI0CJkQa3pDLyus=
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
   version "7.0.0"
   resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -11097,15 +11097,6 @@ wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-6.2.0.tgz"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
-  dependencies:
-    ansi-styles "^4.0.0"
-    string-width "^4.1.0"
-    strip-ansi "^6.0.0"
-
-wrap-ansi@^7.0.0:
-  version "7.0.0"
-  resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
-  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"
