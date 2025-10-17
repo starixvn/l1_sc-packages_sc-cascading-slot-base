@@ -68,6 +68,11 @@ const playerChainAssignmentSchema = new Schema(
             required: false, // Set when chain is finished
             default: null,
         },
+        deactivatedAt: {
+            type: Date,
+            required: false, // Set when chain is deactivated
+            default: null,
+        },
         lastActivityAt: {
             type: Date,
             required: true,
@@ -78,7 +83,7 @@ const playerChainAssignmentSchema = new Schema(
         status: {
             type: String,
             required: true,
-            enum: ["active", "completed"],
+            enum: ["active", "completed", "inactive"],
             default: "active",
         },
 

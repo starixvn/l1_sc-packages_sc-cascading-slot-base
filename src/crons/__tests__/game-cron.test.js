@@ -60,6 +60,7 @@ describe("gameCron", () => {
     const promotionFreeSpinsConsumer = stub(EventConsumers.PromotionFreeSpinsConsumer);
     const resultChainManager = {
         loadChains: jest.fn().mockResolvedValue(),
+        reloadChains: jest.fn().mockResolvedValue(),
     };
     const userChainConsumer = {
         loadActive: jest.fn().mockResolvedValue(),

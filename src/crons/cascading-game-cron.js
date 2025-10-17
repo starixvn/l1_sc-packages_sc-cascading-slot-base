@@ -17,6 +17,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {TotalMultiplierConsumer} dependencies.totalMultiplierConsumer
      * @param {UserChainConsumer} dependencies.userChainConsumer
+     * @param {ChainManager} dependencies.resultChainManager
      */
     constructor({
         definition,
@@ -85,7 +86,6 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
         await this.chainManager.loadChains();
         await this.userChainConsumer.loadActive();
 
-        // Initialize the board generator
         this.boardGenerator.initialize();
 
         await this.getSettingForNewRound();
@@ -125,6 +125,7 @@ export default class CascadingGameCron extends Crons.SlotGameCron {
             await this.promotionFreeSpinsConsumer.loadPromotionsRunning();
             await this.freeSpinsConsumer.reload();
             await this.totalMultiplierConsumer.reload();
+            await this.chainManager.reloadChains();
 
             this.userChainConsumer.clean();
         }

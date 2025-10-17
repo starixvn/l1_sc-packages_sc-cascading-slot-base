@@ -1,12 +1,12 @@
-// Status constants
 const ASSIGNMENT_STATUS = {
     ACTIVE: "active",
     COMPLETED: "completed",
+    INACTIVE: "inactive",
 };
 
 export default class ChainManager {
     /**
-     * @param {Object} dependencies - Destructured dependencies for proxy injection
+     * @param {Object} dependencies
      * @param {SlotGameData} dependencies.gameData
      * @param {logger} dependencies.logService
      * @param {mongoose.Model} dependencies.resultChainRepository
@@ -27,9 +27,9 @@ export default class ChainManager {
 
     /**
      * Calculate normalized base bet amount with floating point precision fix
-     * @param {number} betLevel - Bet level
-     * @param {number} coinValue - Coin value
-     * @returns {number} Normalized base bet amount
+     * @param {number} betLevel
+     * @param {number} coinValue
+     * @returns {number}
      */
     calculateBaseBetAmount(betLevel, coinValue) {
         return Math.round(betLevel * coinValue * 100) / 100;
@@ -37,10 +37,10 @@ export default class ChainManager {
 
     /**
      * Generate consistent chain key from player name and bet parameters
-     * @param {string} playerName - Player identifier
-     * @param {number} betLevel - Bet level
-     * @param {number} coinValue - Coin value
-     * @returns {string} Normalized chain key
+     * @param {string} playerName
+     * @param {number} betLevel
+     * @param {number} coinValue
+     * @returns {string}
      */
     generateChainKey(playerName, betLevel, coinValue) {
         const baseBetAmount = this.calculateBaseBetAmount(betLevel, coinValue);
@@ -49,8 +49,8 @@ export default class ChainManager {
 
     /**
      * Check if player already has an active chain
-     * @param {string} chainKey - Chain identifier
-     * @returns {Object|null} Existing chain or null
+     * @param {string} chainKey
+     * @returns {Object|null}
      */
     findExistingChain(chainKey) {
         return this.gameData.playerChains[chainKey] || null;
@@ -58,7 +58,7 @@ export default class ChainManager {
 
     /**
      * Check if result chains are enabled from gameConfigs
-     * @returns {boolean} - True if chains are enabled
+     * @returns {boolean}
      */
     isChainEnabled() {
         return this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains?.enabled || false;
@@ -81,6 +81,53 @@ export default class ChainManager {
     }
 
     /**
+     * Get max valid board count from configuration
+     * @returns {number}
+     */
+    getMaxValidBoardCount() {
+        const { boardRange } = this.appConfigs?.resultChains?.assignment || {};
+        return boardRange && boardRange.length > 0 ? Math.max(...boardRange) : 200;
+    }
+
+    /**
+     * Fetch chains from database with board count limit
+     * @param {number} limit
+     * @returns {Promise<Array>}
+     */
+    async fetchChainsFromDatabase(limit) {
+        const maxValidBoardCount = this.getMaxValidBoardCount();
+
+        return await this.resultChainRepository
+            .find({ totalBoardCount: { $lte: maxValidBoardCount } })
+            .sort({ _id: -1 })
+            .limit(limit)
+            .lean()
+            .exec();
+    }
+
+    /**
+     * Add new chains to availableChains
+     * @param {Array} newChains
+     * @param {number} limit
+     * @returns {number}
+     */
+    addNewChainsToAvailable(newChains, limit) {
+        const chainsToAdd = Math.min(newChains.length, limit);
+
+        for (let i = 0; i < chainsToAdd; i++) {
+            const chain = newChains[i];
+            const chainData = {
+                name: chain.name,
+                baseBetAmount: chain.baseBetAmount,
+                totalBoardCount: chain.totalBoardCount,
+            };
+            this.gameData.availableChains.push(chainData);
+        }
+
+        return chainsToAdd;
+    }
+
+    /**
      * Load chains from database
      */
     async loadChains() {
@@ -90,17 +137,7 @@ export default class ChainManager {
 
         try {
             const remainingSlots = this.getNumberToLoad(this.gameData.availableChains, this.appConfigs);
-
-            // Get valid board counts from assignment configuration
-            const { boardRange } = this.appConfigs?.resultChains?.assignment || {};
-            const maxValidBoardCount = boardRange && boardRange.length > 0 ? Math.max(...boardRange) : 200;
-
-            const resultChains = await this.resultChainRepository
-                .find({ totalBoardCount: { $lte: maxValidBoardCount } })
-                .sort({ _id: -1 })
-                .limit(remainingSlots)
-                .lean()
-                .exec();
+            const resultChains = await this.fetchChainsFromDatabase(remainingSlots);
 
             for (const chain of resultChains) {
                 const existingChain = this.gameData.availableChains.find((c) => c.name === chain.name);
@@ -115,18 +152,16 @@ export default class ChainManager {
                 }
             }
         } catch (error) {
-            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chains from database:`, error);
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to load chains:`, error);
         }
     }
 
     async getBoardsByChainName(chainName) {
         try {
-            // Check if boards are already cached
             if (this.gameData.chainBoardsCache[chainName]) {
                 return this.gameData.chainBoardsCache[chainName];
             }
 
-            // Load from database and cache
             const chain = await this.resultChainRepository.findOne({ name: chainName }).lean().exec();
             const boardsData = chain?.boardsData || null;
 
@@ -143,10 +178,10 @@ export default class ChainManager {
 
     /**
      * Get or load player chain from memory or database
-     * @param {string} playerName - Player identifier
-     * @param {number} betLevel - Bet level
-     * @param {number} coinValue - Coin value
-     * @returns {Promise<Object|null>} Player chain or null
+     * @param {string} playerName
+     * @param {number} betLevel
+     * @param {number} coinValue
+     * @returns {Promise<Object|null>}
      */
     async getPlayerChain(playerName, betLevel, coinValue) {
         const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
@@ -185,10 +220,10 @@ export default class ChainManager {
 
     /**
      * Reload chain from database when not found in memory
-     * @param {string} playerName - Player identifier
-     * @param {number} betLevel - Bet level
-     * @param {number} coinValue - Coin value
-     * @returns {Promise<Object|null>} Reloaded chain or null
+     * @param {string} playerName
+     * @param {number} betLevel
+     * @param {number} coinValue
+     * @returns {Promise<Object|null>}
      */
     async reloadChainFromDatabase(playerName, betLevel, coinValue) {
         try {
@@ -204,10 +239,8 @@ export default class ChainManager {
                 .exec();
 
             if (!activeAssignment) {
-                return null; // No active assignment
+                return null;
             }
-
-            // Create chain entry in memory from database data
             const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
             const playerChain = {
                 name: activeAssignment.chainName,
@@ -244,8 +277,6 @@ export default class ChainManager {
                     newSymbols: [],
                 };
 
-                // Settlement data from current tumble goes to the NEXT preGeneratedResult item
-                // This is because cascade data describes what happens AFTER the current tumble
                 if (i > 0) {
                     const previousTumble = tumbles[i - 1];
                     preGeneratedItem.explodedSymbols = previousTumble.explodedSymbols || [];
@@ -284,5 +315,151 @@ export default class ChainManager {
             betLevel: playerChain.betLevel,
             coinValue: playerChain.coinValue,
         };
+    }
+
+    /**
+     * Check if reload is enabled from gameConfigs
+     * @returns {boolean}
+     */
+    isReloadEnabled() {
+        return this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains?.reload || false;
+    }
+
+    /**
+     * Get chains that exist in availableChains but not in database result
+     * @param {Array} availableChains
+     * @param {Array} dbChains
+     * @returns {Array}
+     */
+    getDeactivatedChains(availableChains, dbChains) {
+        const dbChainNames = new Set(dbChains.map((chain) => chain.name));
+        return availableChains.filter((chain) => !dbChainNames.has(chain.name)).map((chain) => chain.name);
+    }
+
+    /**
+     * Get chains that exist in database but not in availableChains
+     * @param {Array} availableChains
+     * @param {Array} dbChains
+     * @returns {Array}
+     */
+    getNewChains(availableChains, dbChains) {
+        const availableChainNames = new Set(availableChains.map((chain) => chain.name));
+        return dbChains.filter((chain) => !availableChainNames.has(chain.name));
+    }
+
+    /**
+     * Mark player chain assignments as inactive for deactivated chains
+     * @param {Array} deactivatedChainNames
+     * @returns {Promise<number>}
+     */
+    async markAssignmentsInactive(deactivatedChainNames) {
+        if (deactivatedChainNames.length === 0) {
+            return 0;
+        }
+
+        try {
+            const result = await this.assignmentRepository.updateMany(
+                {
+                    chainName: { $in: deactivatedChainNames },
+                    status: ASSIGNMENT_STATUS.ACTIVE,
+                    gameId: this.gameData.gameConfigs.gameId,
+                },
+                {
+                    $set: {
+                        status: ASSIGNMENT_STATUS.INACTIVE,
+                        deactivatedAt: new Date(),
+                    },
+                }
+            );
+
+            return result.modifiedCount;
+        } catch (error) {
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to mark assignments as inactive:`, error);
+            return 0;
+        }
+    }
+
+    /**
+     * Remove player chains from memory cache for deactivated chains
+     * @param {Array} deactivatedChainNames
+     * @returns {number}
+     */
+    clearPlayerChainsCache(deactivatedChainNames) {
+        const chainNamesSet = new Set(deactivatedChainNames);
+        const keysToRemove = Object.keys(this.gameData.playerChains).filter((key) => {
+            const playerChain = this.gameData.playerChains[key];
+            return chainNamesSet.has(playerChain.name);
+        });
+
+        keysToRemove.forEach((key) => {
+            delete this.gameData.playerChains[key];
+        });
+
+        return keysToRemove.length;
+    }
+
+    /**
+     * Clear board cache for deactivated chains
+     * @param {Array} deactivatedChainNames
+     * @returns {number}
+     */
+    clearBoardsCache(deactivatedChainNames) {
+        let removedCount = 0;
+        deactivatedChainNames.forEach((chainName) => {
+            if (this.gameData.chainBoardsCache[chainName]) {
+                delete this.gameData.chainBoardsCache[chainName];
+                removedCount++;
+            }
+        });
+
+        return removedCount;
+    }
+
+    /**
+     * Handle deactivated chains - remove from memory and mark as inactive
+     * @param {Array} deactivatedChainNames
+     */
+    async handleDeactivatedChains(deactivatedChainNames) {
+        if (deactivatedChainNames.length === 0) {
+            return;
+        }
+
+        this.gameData.availableChains = this.gameData.availableChains.filter((chain) => !deactivatedChainNames.includes(chain.name));
+
+        const modifiedCount = await this.markAssignmentsInactive(deactivatedChainNames);
+        const playerChainsRemoved = this.clearPlayerChainsCache(deactivatedChainNames);
+        const boardsRemoved = this.clearBoardsCache(deactivatedChainNames);
+
+        this.logService.log(
+            `[GameID: ${this.gameData.gameConfigs?.gameId}] Deactivated ${
+                deactivatedChainNames.length
+            } chains (${modifiedCount} assignments, ${playerChainsRemoved} player cache, ${boardsRemoved} board cache): ${deactivatedChainNames.join(
+                ", "
+            )}`
+        );
+    }
+
+    /**
+     * Reload chains from database - update availableChains with new chains and handle deactivated chains
+     */
+    async reloadChains() {
+        if (!this.isChainEnabled() || !this.isReloadEnabled()) {
+            return;
+        }
+
+        try {
+            const dbChains = await this.fetchChainsFromDatabase(Number.MAX_SAFE_INTEGER);
+            const newChains = this.getNewChains(this.gameData.availableChains, dbChains);
+            const deactivatedChainNames = this.getDeactivatedChains(this.gameData.availableChains, dbChains);
+
+            if (newChains.length > 0) {
+                const remainingSlots = this.getNumberToLoad(this.gameData.availableChains, this.appConfigs);
+                this.addNewChainsToAvailable(newChains, remainingSlots);
+            }
+
+            await this.handleDeactivatedChains(deactivatedChainNames);
+        } catch (error) {
+            this.logService.logError(`[GameID: ${this.gameData.gameConfigs?.gameId}] Failed to reload chains:`, error);
+        }
     }
 }

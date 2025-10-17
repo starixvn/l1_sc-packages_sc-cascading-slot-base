@@ -26,6 +26,7 @@ const mockAssignmentRepository = {
     create: jest.fn().mockResolvedValue({ _id: "test-assignment-id" }),
     findOne: jest.fn().mockResolvedValue(null),
     findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: "test-assignment-id" }),
+    updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
     find: jest.fn().mockReturnValue({
         lean: jest.fn().mockReturnValue({
             exec: jest.fn().mockResolvedValue([]),
@@ -831,7 +832,7 @@ describe("ChainManager", () => {
             ],
         };
 
-        describe("exploded symbols behavior with multiple tumbles", () => {
+        describe("with multiple tumbles", () => {
             it("should verify explodedSymbols behavior in multi-tumble scenarios", () => {
                 // Find boards with multiple tumbles
                 const multiTumbleBoards = mockMultiTumbleTestData.boards.filter((board) => board.settlementResult?.tumbles?.length > 2);
@@ -1025,6 +1026,343 @@ describe("ChainManager", () => {
                     expect(Array.isArray(tumble.multipliers)).toBe(true);
                 });
             });
+        });
+    });
+
+    describe("isReloadEnabled", () => {
+        it("should return true when gameConfigs.resultChains.reload is true", () => {
+            chainManager.gameData.gameConfigs.cascadingSlotsConfig.resultChains.reload = true;
+            expect(chainManager.isReloadEnabled()).toBe(true);
+        });
+
+        it("should return false when gameConfigs.resultChains.reload is false", () => {
+            chainManager.gameData.gameConfigs.cascadingSlotsConfig.resultChains.reload = false;
+            expect(chainManager.isReloadEnabled()).toBe(false);
+        });
+
+        it("should return false when reload property is not defined", () => {
+            chainManager.gameData.gameConfigs.cascadingSlotsConfig.resultChains = {};
+            expect(chainManager.isReloadEnabled()).toBe(false);
+        });
+    });
+
+    describe("getDeactivatedChains", () => {
+        it("should return chains that exist in availableChains but not in dbChains", () => {
+            // Arrange
+            const availableChains = [
+                { name: "chain-A", totalBoardCount: 100 },
+                { name: "chain-B", totalBoardCount: 75 },
+                { name: "chain-C", totalBoardCount: 50 },
+            ];
+            const dbChains = [
+                { name: "chain-A", totalBoardCount: 100 },
+                { name: "chain-C", totalBoardCount: 50 },
+            ];
+
+            // Act
+            const deactivated = chainManager.getDeactivatedChains(availableChains, dbChains);
+
+            // Assert
+            expect(deactivated).toEqual(["chain-B"]);
+        });
+
+        it("should return empty array when no chains are deactivated", () => {
+            // Arrange
+            const availableChains = [{ name: "chain-A", totalBoardCount: 100 }];
+            const dbChains = [{ name: "chain-A", totalBoardCount: 100 }];
+
+            // Act
+            const deactivated = chainManager.getDeactivatedChains(availableChains, dbChains);
+
+            // Assert
+            expect(deactivated).toEqual([]);
+        });
+
+        it("should return all chains when db has no chains", () => {
+            // Arrange
+            const availableChains = [
+                { name: "chain-A", totalBoardCount: 100 },
+                { name: "chain-B", totalBoardCount: 75 },
+            ];
+            const dbChains = [];
+
+            // Act
+            const deactivated = chainManager.getDeactivatedChains(availableChains, dbChains);
+
+            // Assert
+            expect(deactivated).toEqual(["chain-A", "chain-B"]);
+        });
+    });
+
+    describe("getNewChains", () => {
+        it("should return chains that exist in dbChains but not in availableChains", () => {
+            // Arrange
+            const availableChains = [{ name: "chain-A", totalBoardCount: 100 }];
+            const dbChains = [
+                { name: "chain-A", totalBoardCount: 100 },
+                { name: "chain-B", totalBoardCount: 75 },
+                { name: "chain-C", totalBoardCount: 50 },
+            ];
+
+            // Act
+            const newChains = chainManager.getNewChains(availableChains, dbChains);
+
+            // Assert
+            expect(newChains).toHaveLength(2);
+            expect(newChains.map((c) => c.name)).toEqual(["chain-B", "chain-C"]);
+        });
+
+        it("should return empty array when no new chains exist", () => {
+            // Arrange
+            const availableChains = [
+                { name: "chain-A", totalBoardCount: 100 },
+                { name: "chain-B", totalBoardCount: 75 },
+            ];
+            const dbChains = [
+                { name: "chain-A", totalBoardCount: 100 },
+                { name: "chain-B", totalBoardCount: 75 },
+            ];
+
+            // Act
+            const newChains = chainManager.getNewChains(availableChains, dbChains);
+
+            // Assert
+            expect(newChains).toEqual([]);
+        });
+    });
+
+    describe("markAssignmentsInactive", () => {
+        it("should update assignments to inactive status", async () => {
+            // Arrange
+            const deactivatedChainNames = ["chain-B", "chain-C"];
+            mockAssignmentRepository.updateMany.mockResolvedValue({ modifiedCount: 5 });
+
+            // Act
+            await chainManager.markAssignmentsInactive(deactivatedChainNames);
+
+            // Assert
+            expect(mockAssignmentRepository.updateMany).toHaveBeenCalledWith(
+                {
+                    chainName: { $in: deactivatedChainNames },
+                    status: "active",
+                    gameId: "test-game-123",
+                },
+                {
+                    $set: {
+                        status: "inactive",
+                        deactivatedAt: expect.any(Date),
+                    },
+                }
+            );
+        });
+
+        it("should not call updateMany when deactivatedChainNames is empty", async () => {
+            // Arrange
+            jest.clearAllMocks();
+
+            // Act
+            await chainManager.markAssignmentsInactive([]);
+
+            // Assert
+            expect(mockAssignmentRepository.updateMany).not.toHaveBeenCalled();
+        });
+
+        it("should log errors when database update fails", async () => {
+            // Arrange
+            const deactivatedChainNames = ["chain-B"];
+            mockAssignmentRepository.updateMany.mockRejectedValue(new Error("Database error"));
+            jest.clearAllMocks();
+
+            // Act
+            await chainManager.markAssignmentsInactive(deactivatedChainNames);
+
+            // Assert
+            expect(mockLogService.logError).toHaveBeenCalled();
+        });
+    });
+
+    describe("clearPlayerChainsCache", () => {
+        it("should remove player chains from cache for deactivated chains", () => {
+            // Arrange
+            mockGameData.playerChains = {
+                "player1-0.10": { name: "chain-A", currentIndex: 5 },
+                "player2-0.20": { name: "chain-B", currentIndex: 3 },
+                "player3-0.15": { name: "chain-C", currentIndex: 2 },
+            };
+
+            // Act
+            chainManager.clearPlayerChainsCache(["chain-B", "chain-C"]);
+
+            // Assert
+            expect(mockGameData.playerChains).toEqual({
+                "player1-0.10": { name: "chain-A", currentIndex: 5 },
+            });
+        });
+
+        it("should not remove any chains when deactivatedChainNames is empty", () => {
+            // Arrange
+            mockGameData.playerChains = {
+                "player1-0.10": { name: "chain-A", currentIndex: 5 },
+            };
+            const original = { ...mockGameData.playerChains };
+
+            // Act
+            chainManager.clearPlayerChainsCache([]);
+
+            // Assert
+            expect(mockGameData.playerChains).toEqual(original);
+        });
+    });
+
+    describe("clearBoardsCache", () => {
+        it("should remove board cache for deactivated chains", () => {
+            // Arrange
+            mockGameData.chainBoardsCache = {
+                "chain-A": [{ board: [1, 2, 3] }],
+                "chain-B": [{ board: [4, 5, 6] }],
+                "chain-C": [{ board: [7, 8, 9] }],
+            };
+
+            // Act
+            chainManager.clearBoardsCache(["chain-B", "chain-C"]);
+
+            // Assert
+            expect(mockGameData.chainBoardsCache).toEqual({
+                "chain-A": [{ board: [1, 2, 3] }],
+            });
+        });
+
+        it("should not remove any cache when deactivatedChainNames is empty", () => {
+            // Arrange
+            mockGameData.chainBoardsCache = {
+                "chain-A": [{ board: [1, 2, 3] }],
+            };
+            const original = { ...mockGameData.chainBoardsCache };
+
+            // Act
+            chainManager.clearBoardsCache([]);
+
+            // Assert
+            expect(mockGameData.chainBoardsCache).toEqual(original);
+        });
+    });
+
+    describe("reloadChains", () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            mockGameData.availableChains = [];
+            mockGameData.playerChains = {};
+            mockGameData.chainBoardsCache = {};
+            chainManager.appConfigs.resultChains.reload = true;
+        });
+
+        it("should not reload when chains are disabled", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
+
+            // Act
+            await chainManager.reloadChains();
+
+            // Assert
+            expect(mockResultChainRepository.find).not.toHaveBeenCalled();
+        });
+
+        it("should not reload when reload is disabled", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.reload = false;
+
+            // Act
+            await chainManager.reloadChains();
+
+            // Assert
+            expect(mockResultChainRepository.find).not.toHaveBeenCalled();
+        });
+
+        it("should add new chains when they appear in database", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.reload = true;
+            mockGameData.availableChains = [{ name: "chain-A", baseBetAmount: 0.1, totalBoardCount: 100 }];
+
+            const newDbChains = [
+                { name: "chain-A", baseBetAmount: 0.1, totalBoardCount: 100 },
+                { name: "chain-B", baseBetAmount: 0.2, totalBoardCount: 75 },
+            ];
+
+            mockResultChainRepository.find.mockImplementation(() => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(newDbChains),
+                        }),
+                    }),
+                }),
+            }));
+
+            // Act
+            await chainManager.reloadChains();
+
+            // Assert
+            expect(mockGameData.availableChains).toHaveLength(2);
+            expect(mockGameData.availableChains.map((c) => c.name)).toContain("chain-B");
+        });
+
+        it("should remove deactivated chains and clear related data", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.reload = true;
+            mockGameData.availableChains = [
+                { name: "chain-A", baseBetAmount: 0.1, totalBoardCount: 100 },
+                { name: "chain-B", baseBetAmount: 0.2, totalBoardCount: 75 },
+            ];
+            mockGameData.playerChains = {
+                "player1-0.10": { name: "chain-A", currentIndex: 5 },
+                "player2-0.20": { name: "chain-B", currentIndex: 3 },
+            };
+            mockGameData.chainBoardsCache = {
+                "chain-A": [{ board: [1, 2, 3] }],
+                "chain-B": [{ board: [4, 5, 6] }],
+            };
+
+            const updatedDbChains = [{ name: "chain-A", baseBetAmount: 0.1, totalBoardCount: 100 }];
+
+            mockResultChainRepository.find.mockImplementation(() => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(updatedDbChains),
+                        }),
+                    }),
+                }),
+            }));
+
+            mockAssignmentRepository.updateMany.mockResolvedValue({ modifiedCount: 1 });
+
+            // Act
+            await chainManager.reloadChains();
+
+            // Assert
+            expect(mockGameData.availableChains).toHaveLength(1);
+            expect(mockGameData.availableChains[0].name).toBe("chain-A");
+            expect(mockGameData.playerChains["player2-0.20"]).toBeUndefined();
+            expect(mockGameData.chainBoardsCache["chain-B"]).toBeUndefined();
+            expect(mockAssignmentRepository.updateMany).toHaveBeenCalled();
+        });
+
+        it("should handle database errors gracefully", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.reload = true;
+            mockResultChainRepository.find.mockImplementation(() => {
+                throw new Error("Database connection error");
+            });
+
+            // Act
+            await chainManager.reloadChains();
+
+            // Assert
+            expect(mockLogService.logError).toHaveBeenCalled();
         });
     });
 });
