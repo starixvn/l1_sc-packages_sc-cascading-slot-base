@@ -97,7 +97,7 @@ export default class ChainManager {
     async fetchChainsFromDatabase(limit) {
         const maxValidBoardCount = this.getMaxValidBoardCount();
 
-        return await this.resultChainRepository
+        return this.resultChainRepository
             .find({ totalBoardCount: { $lte: maxValidBoardCount } })
             .sort({ _id: -1 })
             .limit(limit)
