@@ -1547,4 +1547,705 @@ describe("ChainManager", () => {
             expect(mockLogService.logError).toHaveBeenCalled();
         });
     });
+
+    describe("getBoardsByChainName", () => {
+        const createMockChainBoards = () => [
+            createMockBoard(),
+            createMockBoard({ board: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] }),
+        ];
+
+        beforeEach(() => {
+            mockGameData.chainBoardsCache = {};
+        });
+
+        describe("when boards are in cache", () => {
+            it("should return boards from cache", async () => {
+                // Arrange
+                const cachedBoards = createMockChainBoards();
+                mockGameData.chainBoardsCache[TEST_CHAIN_NAME] = cachedBoards;
+
+                // Act
+                const result = await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(result).toBe(cachedBoards);
+            });
+
+            it("should not call database when boards are cached", async () => {
+                // Arrange
+                const cachedBoards = createMockChainBoards();
+                mockGameData.chainBoardsCache[TEST_CHAIN_NAME] = cachedBoards;
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockResultChainRepository.findOne).not.toHaveBeenCalled();
+            });
+        });
+
+        describe("when boards are not in cache", () => {
+            it("should fetch boards from database", async () => {
+                // Arrange
+                const boardsData = createMockChainBoards();
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue({ name: TEST_CHAIN_NAME, boardsData }),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(result).toEqual(boardsData);
+            });
+
+            it("should call findOne with correct chain name", async () => {
+                // Arrange
+                const boardsData = createMockChainBoards();
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue({ name: TEST_CHAIN_NAME, boardsData }),
+                    }),
+                });
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockResultChainRepository.findOne).toHaveBeenCalledWith({ name: TEST_CHAIN_NAME });
+            });
+
+            it("should cache boards after fetching from database", async () => {
+                // Arrange
+                const boardsData = createMockChainBoards();
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue({ name: TEST_CHAIN_NAME, boardsData }),
+                    }),
+                });
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockGameData.chainBoardsCache[TEST_CHAIN_NAME]).toEqual(boardsData);
+            });
+
+            it("should return null when chain is not found in database", async () => {
+                // Arrange
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should not cache when chain is not found", async () => {
+                // Arrange
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockGameData.chainBoardsCache[TEST_CHAIN_NAME]).toBeUndefined();
+            });
+
+            it("should not cache when boardsData is undefined", async () => {
+                // Arrange
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue({ name: TEST_CHAIN_NAME }),
+                    }),
+                });
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockGameData.chainBoardsCache[TEST_CHAIN_NAME]).toBeUndefined();
+            });
+        });
+
+        describe("error handling", () => {
+            it("should return null when database query fails", async () => {
+                // Arrange
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockRejectedValue(new Error("Database error")),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should log error when database query fails", async () => {
+                // Arrange
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockRejectedValue(new Error("Database error")),
+                    }),
+                });
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockLogService.logError).toHaveBeenCalled();
+            });
+
+            it("should not cache when database query fails", async () => {
+                // Arrange
+                mockResultChainRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockRejectedValue(new Error("Database error")),
+                    }),
+                });
+
+                // Act
+                await chainManager.getBoardsByChainName(TEST_CHAIN_NAME);
+
+                // Assert
+                expect(mockGameData.chainBoardsCache[TEST_CHAIN_NAME]).toBeUndefined();
+            });
+        });
+    });
+
+    describe("getPlayerChain", () => {
+        const TEST_PLAYER_NAME = "testPlayer";
+        const TEST_BET_LEVEL = 1;
+        const TEST_COIN_VALUE = 0.1;
+
+        const createMockPlayerChain = (overrides = {}) => ({
+            name: TEST_CHAIN_NAME,
+            currentIndex: 0,
+            totalBoards: 100,
+            assignedAt: new Date(),
+            lastActivityAt: new Date(),
+            betLevel: TEST_BET_LEVEL,
+            coinValue: TEST_COIN_VALUE,
+            playerName: TEST_PLAYER_NAME,
+            ...overrides,
+        });
+
+        beforeEach(() => {
+            mockGameData.playerChains = {};
+        });
+
+        describe("when player chain exists in memory", () => {
+            it("should return chain from memory", async () => {
+                // Arrange
+                const playerChain = createMockPlayerChain();
+                const chainKey = chainManager.generateChainKey(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+                mockGameData.playerChains[chainKey] = playerChain;
+
+                // Act
+                const result = await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).toBe(playerChain);
+            });
+
+            it("should not call reloadChainFromDatabase when chain exists in memory", async () => {
+                // Arrange
+                const playerChain = createMockPlayerChain();
+                const chainKey = chainManager.generateChainKey(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+                mockGameData.playerChains[chainKey] = playerChain;
+                const reloadSpy = jest.spyOn(chainManager, "reloadChainFromDatabase");
+
+                // Act
+                await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(reloadSpy).not.toHaveBeenCalled();
+            });
+        });
+
+        describe("when player chain does not exist in memory", () => {
+            it("should call reloadChainFromDatabase", async () => {
+                // Arrange
+                const reloadSpy = jest.spyOn(chainManager, "reloadChainFromDatabase").mockResolvedValue(null);
+
+                // Act
+                await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(reloadSpy).toHaveBeenCalled();
+            });
+
+            it("should call reloadChainFromDatabase with correct playerName", async () => {
+                // Arrange
+                const reloadSpy = jest.spyOn(chainManager, "reloadChainFromDatabase").mockResolvedValue(null);
+
+                // Act
+                await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(reloadSpy).toHaveBeenCalledWith(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+            });
+
+            it("should return result from reloadChainFromDatabase", async () => {
+                // Arrange
+                const playerChain = createMockPlayerChain();
+                jest.spyOn(chainManager, "reloadChainFromDatabase").mockResolvedValue(playerChain);
+
+                // Act
+                const result = await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).toBe(playerChain);
+            });
+
+            it("should return null when reloadChainFromDatabase returns null", async () => {
+                // Arrange
+                jest.spyOn(chainManager, "reloadChainFromDatabase").mockResolvedValue(null);
+
+                // Act
+                const result = await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+        });
+
+        describe("chain key generation", () => {
+            it("should use correct chain key for different bet levels", async () => {
+                // Arrange
+                const playerChain = createMockPlayerChain({ betLevel: 5 });
+                const chainKey = chainManager.generateChainKey(TEST_PLAYER_NAME, 5, TEST_COIN_VALUE);
+                mockGameData.playerChains[chainKey] = playerChain;
+
+                // Act
+                const result = await chainManager.getPlayerChain(TEST_PLAYER_NAME, 5, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).toBe(playerChain);
+            });
+
+            it("should use correct chain key for different coin values", async () => {
+                // Arrange
+                const playerChain = createMockPlayerChain({ coinValue: 0.5 });
+                const chainKey = chainManager.generateChainKey(TEST_PLAYER_NAME, TEST_BET_LEVEL, 0.5);
+                mockGameData.playerChains[chainKey] = playerChain;
+
+                // Act
+                const result = await chainManager.getPlayerChain(TEST_PLAYER_NAME, TEST_BET_LEVEL, 0.5);
+
+                // Assert
+                expect(result).toBe(playerChain);
+            });
+        });
+    });
+
+    describe("reloadChainFromDatabase", () => {
+        const TEST_PLAYER_NAME = "testPlayer";
+        const TEST_BET_LEVEL = 1;
+        const TEST_COIN_VALUE = 0.1;
+        const TEST_PLAYER_ID = "player-123";
+
+        const createMockAssignment = (overrides = {}) => ({
+            _id: "assignment-id",
+            playerName: TEST_PLAYER_NAME,
+            playerId: TEST_PLAYER_ID,
+            chainName: TEST_CHAIN_NAME,
+            currentBoardIndex: 5,
+            totalBoards: 100,
+            betLevel: TEST_BET_LEVEL,
+            coinValue: TEST_COIN_VALUE,
+            assignedAt: new Date("2025-01-01T00:00:00.000Z"),
+            lastActivityAt: new Date("2025-01-02T00:00:00.000Z"),
+            status: "active",
+            gameId: TEST_GAME_ID,
+            ...overrides,
+        });
+
+        beforeEach(() => {
+            mockGameData.playerChains = {};
+        });
+
+        describe("when active assignment exists", () => {
+            it("should return player chain object", async () => {
+                // Arrange
+                const assignment = createMockAssignment();
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).not.toBeNull();
+            });
+
+            it("should set correct chain name in player chain", async () => {
+                // Arrange
+                const assignment = createMockAssignment({ chainName: "custom-chain" });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.name).toBe("custom-chain");
+            });
+
+            it("should set correct currentIndex from assignment", async () => {
+                // Arrange
+                const assignment = createMockAssignment({ currentBoardIndex: 42 });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.currentIndex).toBe(42);
+            });
+
+            it("should set correct totalBoards from assignment", async () => {
+                // Arrange
+                const assignment = createMockAssignment({ totalBoards: 150 });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.totalBoards).toBe(150);
+            });
+
+            it("should set correct betLevel from assignment", async () => {
+                // Arrange
+                const assignment = createMockAssignment({ betLevel: 5 });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, 5, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.betLevel).toBe(5);
+            });
+
+            it("should set correct coinValue from assignment", async () => {
+                // Arrange
+                const assignment = createMockAssignment({ coinValue: 0.5 });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, 0.5);
+
+                // Assert
+                expect(result.coinValue).toBe(0.5);
+            });
+
+            it("should set correct playerId from assignment", async () => {
+                // Arrange
+                const assignment = createMockAssignment({ playerId: "player-xyz" });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.playerId).toBe("player-xyz");
+            });
+
+            it("should set correct playerName from assignment", async () => {
+                // Arrange
+                const assignment = createMockAssignment();
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.playerName).toBe(TEST_PLAYER_NAME);
+            });
+
+            it("should convert assignedAt to Date object", async () => {
+                // Arrange
+                const assignment = createMockAssignment();
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.assignedAt).toBeInstanceOf(Date);
+            });
+
+            it("should convert lastActivityAt to Date object", async () => {
+                // Arrange
+                const assignment = createMockAssignment();
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.lastActivityAt).toBeInstanceOf(Date);
+            });
+
+            it("should use assignedAt when lastActivityAt is missing", async () => {
+                // Arrange
+                const assignedDate = new Date("2025-01-01T00:00:00.000Z");
+                const assignment = createMockAssignment({ assignedAt: assignedDate, lastActivityAt: null });
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result.lastActivityAt.getTime()).toBe(assignedDate.getTime());
+            });
+
+            it("should store player chain in memory cache", async () => {
+                // Arrange
+                const assignment = createMockAssignment();
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                const chainKey = chainManager.generateChainKey(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+                expect(mockGameData.playerChains[chainKey]).toBeDefined();
+            });
+
+            it("should use correct chain key when storing in memory", async () => {
+                // Arrange
+                const assignment = createMockAssignment();
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(assignment),
+                    }),
+                });
+                const chainKey = chainManager.generateChainKey(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockGameData.playerChains[chainKey]).toBe(result);
+            });
+        });
+
+        describe("when no active assignment exists", () => {
+            it("should return null when assignment is not found", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should not store in memory when assignment is not found", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(Object.keys(mockGameData.playerChains)).toHaveLength(0);
+            });
+        });
+
+        describe("database query parameters", () => {
+            it("should query with correct playerName", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ playerName: TEST_PLAYER_NAME }));
+            });
+
+            it("should query with correct betLevel", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ betLevel: TEST_BET_LEVEL }));
+            });
+
+            it("should query with correct coinValue", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ coinValue: TEST_COIN_VALUE }));
+            });
+
+            it("should query with active status", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }));
+            });
+
+            it("should query with correct gameId", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ gameId: TEST_GAME_ID }));
+            });
+        });
+
+        describe("error handling", () => {
+            it("should return null when database query fails", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockRejectedValue(new Error("Database connection error")),
+                    }),
+                });
+
+                // Act
+                const result = await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should log error when database query fails", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockRejectedValue(new Error("Database connection error")),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(mockLogService.logError).toHaveBeenCalled();
+            });
+
+            it("should not store in memory when database query fails", async () => {
+                // Arrange
+                mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockRejectedValue(new Error("Database connection error")),
+                    }),
+                });
+
+                // Act
+                await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
+
+                // Assert
+                expect(Object.keys(mockGameData.playerChains)).toHaveLength(0);
+            });
+        });
+    });
 });
