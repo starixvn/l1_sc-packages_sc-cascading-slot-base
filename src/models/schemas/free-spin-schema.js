@@ -16,4 +16,5 @@ export default new mongoose.Schema({
     betMultiplier: { type: Number, require: true },
     promotionId: { type: String, required: false },
     buyFreeSpinRefRoundId: { type: Number, require: false },
+    autoSettle: { type: Boolean, default: false },
 });

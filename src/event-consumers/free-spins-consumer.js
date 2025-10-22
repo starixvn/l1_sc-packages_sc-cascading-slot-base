@@ -155,6 +155,8 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
     }
 
     async settleExpiredFreeSpins(expiredFreeSpins) {
+        //TODO temporary solution to set autoSettle to true
+        await this.freeSpinsRepository.updateMany({ id: { $in: expiredFreeSpins.map((freeSpin) => freeSpin.id) } }, { $set: { autoSettle: true } });
         const freeSpinsGroupedByNames = this.groupFreeSpinsByNames(expiredFreeSpins);
 
         await Promise.all(
@@ -197,8 +199,10 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
     }
 
     queryFreeSpins() {
+        //TODO temporary solution to filter out autoSettle free spins
         const filter = {
             available: { $gt: 0 },
+            autoSettle: { $ne: true },
         };
         const projection = {
             _id: false,
