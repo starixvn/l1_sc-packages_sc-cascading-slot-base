@@ -128,7 +128,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
-        const freeSpinsNeedToSettle = expiredFreeSpins.filter((freeSpin) => !this.isPlayerInGame(freeSpin.name) && !freeSpin.autoSettle);
+        const freeSpinsNeedToSettle = expiredFreeSpins.filter((freeSpin) => !this.isPlayerInGame(freeSpin.name));
         const freeSpinsNeedToCache = expiredFreeSpins.filter((freeSpin) => this.isPlayerInGame(freeSpin.name));
 
         freeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(freeSpinsNeedToSettle));
@@ -188,11 +188,14 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
                 if (player.session.currencyGroupId && player.session.currencyCode) {
                     this.initPlayerFreeSpins(name, loadedFreeSpins);
 
-                    const totalFreeSpins = loadedFreeSpins.reduce((sum, freeSpin) => sum + freeSpin.available, 0);
+                    const totalFreeSpins = loadedFreeSpins
+                        .filter((freeSpin) => !freeSpin.autoSettle)
+                        .reduce((sum, freeSpin) => sum + freeSpin.available, 0);
 
-                    this.gameData.ingame[name].betQueue.push(
-                        ...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true, autoSettle: true } })
-                    );
+                    totalFreeSpins > 0 &&
+                        this.gameData.ingame[name].betQueue.push(
+                            ...Array.from({ length: totalFreeSpins }).fill({ player, payload: { freeSpin: true, autoSettle: true } })
+                        );
                 }
             })
         );
