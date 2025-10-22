@@ -128,7 +128,7 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
 
         const expiredFreeSpins = freeSpins.filter((freeSpin) => freeSpin.expiryTime <= execTime);
 
-        const freeSpinsNeedToSettle = expiredFreeSpins.filter((freeSpin) => !this.isPlayerInGame(freeSpin.name));
+        const freeSpinsNeedToSettle = expiredFreeSpins.filter((freeSpin) => !this.isPlayerInGame(freeSpin.name) && !freeSpin.autoSettle);
         const freeSpinsNeedToCache = expiredFreeSpins.filter((freeSpin) => this.isPlayerInGame(freeSpin.name));
 
         freeSpinsNeedToSettle.length > 0 && (await this.settleExpiredFreeSpins(freeSpinsNeedToSettle));
@@ -202,7 +202,6 @@ export default class FreeSpinsConsumer extends EventConsumers.FreeSpinsConsumer 
         //temporary solution to filter out autoSettle free spins
         const filter = {
             available: { $gt: 0 },
-            autoSettle: { $ne: true },
         };
         const projection = {
             _id: false,
