@@ -39,4 +39,7 @@ export default new mongoose.Schema({
     sessionId: { type: String },
     promotionId: { type: String },
     appType: { type: Number },
+
+    chainName: { type: String },
+    currentBoardIndex: { type: Number },
 });

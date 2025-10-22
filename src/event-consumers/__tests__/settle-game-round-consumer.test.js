@@ -719,7 +719,17 @@ describe("selectPreGeneratedResult", () => {
         }
 
         if (mocks.chainResult !== undefined) {
-            resultChainManager.getNextResult.mockResolvedValue(mocks.chainResult);
+            // Chain result now returns an object with result and chainMetadata
+            const chainResultData = mocks.chainResult
+                ? {
+                      result: mocks.chainResult,
+                      chainMetadata: {
+                          chainName: mocks.chainName || "test-chain",
+                          currentBoardIndex: mocks.currentBoardIndex || 0,
+                      },
+                  }
+                : null;
+            resultChainManager.getNextResult.mockResolvedValue(chainResultData);
         }
 
         if (mocks.buyFreeSpinBoard !== undefined) {
@@ -796,6 +806,23 @@ describe("selectPreGeneratedResult", () => {
 
             // Assert
             expect(result.isFromBuyFreeSpin).toBe(false);
+        });
+
+        it("should not return chain metadata when using admin result", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const adminResult = { board: "admin-board", win: 100 };
+            const consumer = createConsumerWithMocks({
+                adminResult,
+                playerName: player.profile.name,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.chainMetadata).toBeNull();
         });
     });
 
@@ -953,6 +980,29 @@ describe("selectPreGeneratedResult", () => {
 
             // Assert
             expect(result.isFromBuyFreeSpin).toBe(false);
+        });
+
+        it("should return chain metadata when chain result exists", async () => {
+            // Arrange
+            const player = createTestPlayer();
+            const round = createTestRound();
+            const chainResult = { board: "chain-board", win: 25 };
+            const consumer = createConsumerWithMocks({
+                adminResult: null,
+                chainResult,
+                buyFreeSpinBoard: null,
+                chainName: "specific-chain",
+                currentBoardIndex: 5,
+            });
+
+            // Act
+            const result = await consumer.selectPreGeneratedResult(player, round);
+
+            // Assert
+            expect(result.chainMetadata).toEqual({
+                chainName: "specific-chain",
+                currentBoardIndex: 5,
+            });
         });
 
         it("should call getNextResult with correct parameters", async () => {
@@ -1336,7 +1386,10 @@ describe("chooseResult", () => {
             const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
 
             // Assert
-            expect(result).toEqual(adminResult);
+            expect(result).toEqual({
+                result: adminResult,
+                chainMetadata: null,
+            });
         });
     });
 
@@ -1352,7 +1405,10 @@ describe("chooseResult", () => {
             const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
 
             // Assert
-            expect(result).toEqual(buyFreeSpinBoard);
+            expect(result).toEqual({
+                result: buyFreeSpinBoard,
+                chainMetadata: null,
+            });
         });
     });
 
@@ -1373,7 +1429,7 @@ describe("chooseResult", () => {
     });
 
     describe("when no results exist", () => {
-        it("should return null", () => {
+        it("should return object with null result and chainMetadata", () => {
             // Arrange
             const consumer = initConsumer();
             const adminResult = null;
@@ -1384,7 +1440,10 @@ describe("chooseResult", () => {
             const result = consumer.chooseResult(adminResult, chainResult, buyFreeSpinBoard);
 
             // Assert
-            expect(result).toBeNull();
+            expect(result).toEqual({
+                result: null,
+                chainMetadata: null,
+            });
         });
     });
 });
