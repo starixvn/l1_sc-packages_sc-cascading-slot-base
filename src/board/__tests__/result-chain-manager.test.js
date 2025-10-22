@@ -665,12 +665,12 @@ describe("ChainManager", () => {
         });
 
         describe("successful scenarios", () => {
-            it("should return converted board result", async () => {
+            it("should return converted board result with chain metadata", async () => {
                 // Arrange
                 const playerName = "testPlayer";
                 const playerContext = createTestPlayerContext();
                 const roundContext = createTestRoundContext();
-                const playerChain = createTestPlayerChain({ currentIndex: 1 });
+                const playerChain = createTestPlayerChain({ currentIndex: 1, name: "test-chain" });
                 const boards = [createTestBoard(), createTestBoard(), createTestBoard()];
                 const expectedResult = [{ board: "converted-result" }];
                 const manager = createManagerWithMocks({
@@ -684,7 +684,13 @@ describe("ChainManager", () => {
                 const result = await manager.getNextResult(playerName, playerContext, roundContext);
 
                 // Assert
-                expect(result).toEqual(expectedResult);
+                expect(result).toEqual({
+                    result: expectedResult,
+                    chainMetadata: {
+                        chainName: "test-chain",
+                        currentBoardIndex: 1,
+                    },
+                });
             });
 
             it("should call convertChainBoardToResult with current board", async () => {

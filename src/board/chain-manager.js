@@ -215,7 +215,13 @@ export default class ChainManager {
 
         const currentBoard = boards[playerChain.currentIndex];
 
-        return this.convertChainBoardToResult(currentBoard);
+        return {
+            result: this.convertChainBoardToResult(currentBoard),
+            chainMetadata: {
+                chainName: playerChain.name,
+                currentBoardIndex: playerChain.currentIndex,
+            },
+        };
     }
 
     /**

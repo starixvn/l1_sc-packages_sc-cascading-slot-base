@@ -29,6 +29,8 @@ export default class HistoryQuery {
             operatorId: false,
             endTime: false,
             odds: false,
+            chainName: false,
+            currentBoardIndex: false,
         };
 
         const rawBetLogs = await this.roundsRepository
