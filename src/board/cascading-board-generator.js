@@ -1,5 +1,6 @@
 import { BoardGenerator } from "sc-slot-board-generator";
 import defaultDefinition from "./default-definition";
+import FsbBoardDefinition from "./fsb-board-definition";
 
 export default class CascadingBoardGenerator {
     constructor(definition, gameData, boardSettings, logService) {
@@ -11,8 +12,9 @@ export default class CascadingBoardGenerator {
         this.boardGenerator = null;
     }
 
-    initialize(isFreeSpin) {
+    initialize(isFreeSpin, promotionId) {
         const { multiplierBonus, volatility } = this.gameData.gameConfigs.cascadingSlotsConfig;
+        const { enablePromotionRTP } = this.gameData.gameConfigs;
         this.multiplierBonus = multiplierBonus;
 
         this.boardGenerator = new BoardGenerator(
@@ -22,7 +24,7 @@ export default class CascadingBoardGenerator {
                 min: multiplierBonus.min,
                 max: multiplierBonus.max,
             },
-            null,
+            promotionId && enablePromotionRTP ? FsbBoardDefinition : null,
             volatility,
             isFreeSpin
         );

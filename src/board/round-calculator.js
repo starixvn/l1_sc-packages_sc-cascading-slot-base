@@ -1,5 +1,5 @@
-import defaultDefinition from "./default-definition";
 import { round as mathRound } from "mathjs";
+import defaultDefinition from "./default-definition";
 
 export default class RoundCalculator {
     constructor({ boardGenerator, tumbleCalculator }) {
@@ -8,7 +8,7 @@ export default class RoundCalculator {
     }
 
     processSpinning(round, totalMultiplier = 0, maxWinPerRound = Number.MAX_VALUE, preGeneratedResult = null) {
-        const boardGenerator = this.boardGenerator.initialize(round.freeSpin);
+        const boardGenerator = this.boardGenerator.initialize(round.freeSpin, round.promotionId);
         const generatedResult = preGeneratedResult?.shift() ?? boardGenerator.generate();
         round.result = generatedResult.newBoard.join(",");
 
