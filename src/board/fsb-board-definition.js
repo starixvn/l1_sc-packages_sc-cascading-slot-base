@@ -1,7 +1,5 @@
-import { Volatility } from "sc-slot-board-generator/lib/volatility";
-
 export default {
-    [Volatility.MediumLow]: {
+    2: {
         freeSpin: {
             multiplierWeights: {
                 2: 60,
@@ -40,7 +38,7 @@ export default {
             },
         },
     },
-    [Volatility.VeryHigh]: {
+    5: {
         freeSpin: {
             multiplierWeights: {
                 2: 60,
