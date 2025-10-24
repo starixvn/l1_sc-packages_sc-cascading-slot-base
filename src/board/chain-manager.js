@@ -90,19 +90,25 @@ export default class ChainManager {
     }
 
     /**
-     * Fetch chains from database with board count limit
+     * Fetch chains from database with board count and volatility filter
      * @param {number} limit
      * @returns {Promise<Array>}
      */
     async fetchChainsFromDatabase(limit) {
         const maxValidBoardCount = this.getMaxValidBoardCount();
+        const volatility = this.gameData.gameConfigs?.cascadingSlotsConfig?.volatility;
 
-        return this.resultChainRepository
-            .find({ totalBoardCount: { $lte: maxValidBoardCount } })
-            .sort({ _id: -1 })
-            .limit(limit)
-            .lean()
-            .exec();
+        const query = { totalBoardCount: { $lte: maxValidBoardCount } };
+
+        if (volatility) {
+            if (volatility === 2) {
+                query.$or = [{ volatility: 2 }, { volatility: { $exists: false } }];
+            } else {
+                query.volatility = volatility;
+            }
+        }
+
+        return this.resultChainRepository.find(query).sort({ _id: -1 }).limit(limit).lean().exec();
     }
 
     /**
@@ -120,6 +126,7 @@ export default class ChainManager {
                 name: chain.name,
                 baseBetAmount: chain.baseBetAmount,
                 totalBoardCount: chain.totalBoardCount,
+                volatility: chain.volatility ?? 2,
             };
             this.gameData.availableChains.push(chainData);
         }
@@ -146,6 +153,7 @@ export default class ChainManager {
                         name: chain.name,
                         baseBetAmount: chain.baseBetAmount,
                         totalBoardCount: chain.totalBoardCount,
+                        volatility: chain.volatility ?? 2,
                     };
 
                     this.gameData.availableChains.push(chainData);

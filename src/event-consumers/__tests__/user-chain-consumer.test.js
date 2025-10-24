@@ -1490,7 +1490,7 @@ describe("UserChainConsumer", () => {
                 await consumer.findSuitable(playerContext);
 
                 // Assert
-                expect(filterChainsSpy).toHaveBeenCalledWith(availableChains, 100);
+                expect(filterChainsSpy).toHaveBeenCalledWith(availableChains, 100, null);
             });
 
             it("should call selectRandom with filtered chains", async () => {
@@ -1634,6 +1634,96 @@ describe("UserChainConsumer", () => {
                 expect(result).not.toBeNull();
             });
         });
+
+        describe("with volatility filtering", () => {
+            it("should pass volatility from gameConfigs to filterChains", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 3;
+                const filterChainsSpy = jest.spyOn(userChainConsumer, "filterChains");
+
+                // Act
+                await userChainConsumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), 3);
+            });
+
+            it("should pass null volatility when not configured", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                delete mockGameData.gameConfigs.cascadingSlotsConfig.volatility;
+                const filterChainsSpy = jest.spyOn(userChainConsumer, "filterChains");
+
+                // Act
+                await userChainConsumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), null);
+            });
+
+            it("should return chain matching configured volatility", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const expectedChain = createTestChain({ name: "matching-vol-chain", totalBoardCount: 75, volatility: 1 });
+                mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 1;
+                const availableChains = [expectedChain, createTestChain({ name: "chain2", totalBoardCount: 75, volatility: 2 })];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                    cryptoRandomInt: 0,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result.volatility).toBe(1);
+            });
+
+            it("should return null when no chains match configured volatility", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 4;
+                const availableChains = [
+                    createTestChain({ name: "chain1", totalBoardCount: 75, volatility: 1 }),
+                    createTestChain({ name: "chain2", totalBoardCount: 75, volatility: 2 }),
+                ];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 75,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBeNull();
+            });
+
+            it("should match both board count and volatility", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const expectedChain = createTestChain({ name: "matching-both", totalBoardCount: 100, volatility: 3 });
+                mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 3;
+                const availableChains = [
+                    createTestChain({ name: "wrong-boards", totalBoardCount: 75, volatility: 3 }),
+                    createTestChain({ name: "wrong-volatility", totalBoardCount: 100, volatility: 2 }),
+                    expectedChain,
+                ];
+                const consumer = createConsumerWithMocks({
+                    availableChains,
+                    getApplicableBoardCount: 100,
+                    cryptoRandomInt: 0,
+                });
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result.name).toBe("matching-both");
+            });
+        });
     });
 
     describe("filterChains", () => {
@@ -1753,6 +1843,203 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result).toEqual([createChain({ name: "chain-50", totalBoardCount: 50 })]);
+            });
+        });
+
+        describe("volatility filtering", () => {
+            it("should return only chains matching the specified volatility", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1", totalBoardCount: 100, volatility: 1 }),
+                    createChain({ name: "chain-v2", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v3", totalBoardCount: 100, volatility: 3 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result).toEqual([createChain({ name: "chain-v2", totalBoardCount: 100, volatility: 2 })]);
+            });
+
+            it("should return chains with both matching board count and volatility", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1-50", totalBoardCount: 50, volatility: 1 }),
+                    createChain({ name: "chain-v2-100-a", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v2-100-b", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v3-100", totalBoardCount: 100, volatility: 3 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result).toHaveLength(2);
+            });
+
+            it("should verify first chain has correct volatility", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v2-100-a", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v2-100-b", totalBoardCount: 100, volatility: 2 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result[0].volatility).toBe(2);
+            });
+
+            it("should verify second chain has correct volatility", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v2-100-a", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v2-100-b", totalBoardCount: 100, volatility: 2 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result[1].volatility).toBe(2);
+            });
+
+            it("should return empty array when no chains match the volatility", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1", totalBoardCount: 100, volatility: 1 }),
+                    createChain({ name: "chain-v2", totalBoardCount: 100, volatility: 2 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 5;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result).toEqual([]);
+            });
+
+            it("should return all matching board count chains when volatility is null", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1", totalBoardCount: 100, volatility: 1 }),
+                    createChain({ name: "chain-v2", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v3", totalBoardCount: 100, volatility: 3 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = null;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result).toHaveLength(3);
+            });
+
+            it("should return all matching board count chains when volatility is undefined", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1", totalBoardCount: 100, volatility: 1 }),
+                    createChain({ name: "chain-v2", totalBoardCount: 100, volatility: 2 }),
+                ];
+                const applicableBoardCount = 100;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount);
+
+                // Assert
+                expect(result).toHaveLength(2);
+            });
+
+            it("should filter by volatility 1 (lowest)", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1", totalBoardCount: 100, volatility: 1 }),
+                    createChain({ name: "chain-v5", totalBoardCount: 100, volatility: 5 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 1;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result[0].name).toBe("chain-v1");
+            });
+
+            it("should filter by volatility 5 (highest)", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v1", totalBoardCount: 100, volatility: 1 }),
+                    createChain({ name: "chain-v5", totalBoardCount: 100, volatility: 5 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 5;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result[0].name).toBe("chain-v5");
+            });
+
+            it("should handle chains with default volatility value", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-default", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v3", totalBoardCount: 100, volatility: 3 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result).toEqual([createChain({ name: "chain-default", totalBoardCount: 100, volatility: 2 })]);
+            });
+
+            it("should exclude chains with mismatched volatility", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-v2", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "chain-v4", totalBoardCount: 100, volatility: 4 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result.some((chain) => chain.volatility === 4)).toBe(false);
+            });
+
+            it("should exclude chains with mismatched board count even if volatility matches", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "chain-50-v2", totalBoardCount: 50, volatility: 2 }),
+                    createChain({ name: "chain-100-v2", totalBoardCount: 100, volatility: 2 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility);
+
+                // Assert
+                expect(result.some((chain) => chain.totalBoardCount === 50)).toBe(false);
             });
         });
     });

@@ -11,6 +11,13 @@ const resultChainSchema = new Schema(
             type: Array,
             required: true,
         },
+        volatility: {
+            type: Number,
+            required: false,
+            default: 2,
+            min: 1,
+            max: 5,
+        },
     },
     {
         timestamps: true,

@@ -11,6 +11,7 @@ const createMockGameData = (overrides = {}) => ({
                 enabled: false,
                 reload: false,
             },
+            volatility: 2,
         },
     },
     chainBoardsCache: {},
@@ -85,6 +86,7 @@ const createMockChain = (overrides = {}) => ({
     baseBetAmount: 0.1,
     boardsData: [createMockBoard()],
     createdAt: new Date("2025-09-05T06:25:43.344Z"),
+    volatility: 2,
     ...overrides,
 });
 
@@ -263,7 +265,7 @@ describe("ChainManager", () => {
 
         it("should add new chains to availableChains", async () => {
             // Arrange
-            mockGameData.availableChains = [{ name: "old-chain", baseBetAmount: 0.05, totalBoardCount: 75 }];
+            mockGameData.availableChains = [{ name: "old-chain", baseBetAmount: 0.05, totalBoardCount: 75, volatility: 2 }];
 
             // Act
             await chainManager.loadChains();
@@ -351,6 +353,246 @@ describe("ChainManager", () => {
             mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = false;
             // Even if appConfigs has different settings, should only check gameConfigs
             expect(chainManager.isChainEnabled()).toBe(false);
+        });
+    });
+
+    describe("fetchChainsFromDatabase - volatility filtering", () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it("should include $or query when volatility is 2 to include old chains", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 2;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            expect(findSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    $or: [{ volatility: 2 }, { volatility: { $exists: false } }],
+                })
+            );
+        });
+
+        it("should not include $or in query when volatility is not configured", async () => {
+            // Arrange
+            delete mockGameData.gameConfigs.cascadingSlotsConfig.volatility;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            const callArg = findSpy.mock.calls[0][0];
+            expect(callArg).not.toHaveProperty("$or");
+        });
+
+        it("should only query chains with exact volatility 1 (no old chains)", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 1;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            const callArg = findSpy.mock.calls[0][0];
+            expect(callArg.volatility).toBe(1);
+            expect(callArg).not.toHaveProperty("$or");
+        });
+
+        it("should only query chains with exact volatility 5 (no old chains)", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 5;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            const callArg = findSpy.mock.calls[0][0];
+            expect(callArg.volatility).toBe(5);
+            expect(callArg).not.toHaveProperty("$or");
+        });
+
+        it("should only query chains with exact volatility 3 (no old chains)", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 3;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            const callArg = findSpy.mock.calls[0][0];
+            expect(callArg.volatility).toBe(3);
+            expect(callArg).not.toHaveProperty("$or");
+        });
+
+        it("should include both totalBoardCount and volatility in query", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 4;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            const callArg = findSpy.mock.calls[0][0];
+            expect(callArg).toHaveProperty("totalBoardCount");
+        });
+
+        it("should treat old chains as volatility 2 by including them only for volatility 2 query", async () => {
+            // Arrange
+            mockGameData.gameConfigs.cascadingSlotsConfig.volatility = 2;
+            const findSpy = jest.spyOn(mockResultChainRepository, "find");
+
+            // Act
+            await chainManager.fetchChainsFromDatabase(100);
+
+            // Assert
+            const callArg = findSpy.mock.calls[0][0];
+            expect(callArg.$or).toEqual([{ volatility: 2 }, { volatility: { $exists: false } }]);
+        });
+    });
+
+    describe("loadChains - volatility field", () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            mockGameData.availableChains = [];
+            mockGameData.gameConfigs.cascadingSlotsConfig.resultChains.enabled = true;
+        });
+
+        it("should include volatility field in loaded chains", async () => {
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const loadedChain = mockGameData.availableChains.find((c) => c.name === TEST_CHAIN_NAME);
+            expect(loadedChain).toHaveProperty("volatility");
+        });
+
+        it("should set correct volatility value from database", async () => {
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const loadedChain = mockGameData.availableChains.find((c) => c.name === TEST_CHAIN_NAME);
+            expect(loadedChain.volatility).toBe(2);
+        });
+
+        it("should use default volatility when chain has no volatility", async () => {
+            // Arrange
+            const chainWithoutVolatility = createMockChain({ name: "no-volatility-chain" });
+            delete chainWithoutVolatility.volatility;
+
+            mockResultChainRepository.find.mockImplementation((query = {}) => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue([chainWithoutVolatility]),
+                        }),
+                    }),
+                }),
+            }));
+
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const loadedChain = mockGameData.availableChains.find((c) => c.name === "no-volatility-chain");
+            expect(loadedChain.volatility).toBe(2);
+        });
+
+        it("should preserve volatility 1 from database", async () => {
+            // Arrange
+            const lowVolatilityChain = createMockChain({ name: "low-vol-chain", volatility: 1 });
+            mockResultChainRepository.find.mockImplementation(() => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue([lowVolatilityChain]),
+                        }),
+                    }),
+                }),
+            }));
+
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const loadedChain = mockGameData.availableChains.find((c) => c.name === "low-vol-chain");
+            expect(loadedChain.volatility).toBe(1);
+        });
+
+        it("should preserve volatility 5 from database", async () => {
+            // Arrange
+            const highVolatilityChain = createMockChain({ name: "high-vol-chain", volatility: 5 });
+            mockResultChainRepository.find.mockImplementation(() => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue([highVolatilityChain]),
+                        }),
+                    }),
+                }),
+            }));
+
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const loadedChain = mockGameData.availableChains.find((c) => c.name === "high-vol-chain");
+            expect(loadedChain.volatility).toBe(5);
+        });
+
+        it("should include volatility in all loaded chains", async () => {
+            // Arrange
+            const chains = [
+                createMockChain({ name: "chain1", volatility: 1 }),
+                createMockChain({ name: "chain2", volatility: 3 }),
+                createMockChain({ name: "chain3", volatility: 5 }),
+            ];
+            mockResultChainRepository.find.mockImplementation(() => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(chains),
+                        }),
+                    }),
+                }),
+            }));
+
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const allHaveVolatility = mockGameData.availableChains.every((chain) => chain.hasOwnProperty("volatility"));
+            expect(allHaveVolatility).toBe(true);
+        });
+
+        it("should not modify volatility value from database", async () => {
+            // Arrange
+            const originalChain = createMockChain({ name: "original-chain", volatility: 4 });
+            mockResultChainRepository.find.mockImplementation(() => ({
+                sort: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue([originalChain]),
+                        }),
+                    }),
+                }),
+            }));
+
+            // Act
+            await chainManager.loadChains();
+
+            // Assert
+            const loadedChain = mockGameData.availableChains.find((c) => c.name === "original-chain");
+            expect(loadedChain.volatility).toBe(originalChain.volatility);
         });
     });
 

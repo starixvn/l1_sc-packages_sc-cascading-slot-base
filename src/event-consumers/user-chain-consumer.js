@@ -192,13 +192,23 @@ export default class UserChainConsumer {
     }
 
     /**
-     * Filter available chains by applicable board count
+     * Filter available chains by applicable board count and volatility
      * @param {Array} availableChains - All available chains
      * @param {number} applicableBoardCount - Closest valid board count for player
+     * @param {number|null} volatility - Volatility level from gameConfigs (1-5)
      * @returns {Array} Matching chains
      */
-    filterChains(availableChains, applicableBoardCount) {
-        return availableChains.filter((chain) => chain.totalBoardCount === applicableBoardCount);
+    filterChains(availableChains, applicableBoardCount, volatility = null) {
+        return availableChains.filter((chain) => {
+            const boardCountMatches = chain.totalBoardCount === applicableBoardCount;
+
+            if (!volatility) {
+                return boardCountMatches;
+            }
+
+            const volatilityMatches = chain.volatility === volatility;
+            return boardCountMatches && volatilityMatches;
+        });
     }
 
     /**
@@ -339,7 +349,8 @@ export default class UserChainConsumer {
         }
 
         const { availableChains = [] } = this.gameData;
-        const matching = this.filterChains(availableChains, boardCount);
+        const volatility = this.gameData.gameConfigs?.cascadingSlotsConfig?.volatility || null;
+        const matching = this.filterChains(availableChains, boardCount, volatility);
 
         return this.selectRandom(matching);
     }
