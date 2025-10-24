@@ -41,5 +41,5 @@ export default new mongoose.Schema({
     appType: { type: Number },
 
     chainName: { type: String },
-    currentBoardIndex: { type: Number },
+    boardIndex: { type: Number },
 });

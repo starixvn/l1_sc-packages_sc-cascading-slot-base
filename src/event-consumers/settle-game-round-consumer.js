@@ -82,7 +82,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
 
         if (preGeneratedResultInfo?.chainMetadata) {
             round.chainName = preGeneratedResultInfo.chainMetadata.chainName;
-            round.currentBoardIndex = preGeneratedResultInfo.chainMetadata.currentBoardIndex;
+            round.boardIndex = preGeneratedResultInfo.chainMetadata.currentBoardIndex;
         }
 
         if (preGeneratedResultInfo?.isFromChain) {

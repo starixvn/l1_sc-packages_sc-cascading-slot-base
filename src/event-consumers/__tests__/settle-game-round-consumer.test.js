@@ -2088,6 +2088,180 @@ describe("processSpinning - Error Handling", () => {
     });
 });
 
+describe("processSpinning - Chain Metadata", () => {
+    describe("when chain metadata exists", () => {
+        it("should populate chainName on round", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "testPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1 });
+
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+
+            consumer.logService = {
+                logInfo: jest.fn(),
+                logWarning: jest.fn(),
+                logError: jest.fn(),
+            };
+
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
+                data: [{ newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }],
+                chainMetadata: {
+                    chainName: "test-chain-123",
+                    currentBoardIndex: 5,
+                },
+                isFromChain: true,
+            });
+
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
+                round.settlementResult = { tumbles: [] };
+                return round;
+            });
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert
+            expect(round.chainName).toBe("test-chain-123");
+        });
+
+        it("should populate boardIndex on round", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "testPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1 });
+
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+
+            consumer.logService = {
+                logInfo: jest.fn(),
+                logWarning: jest.fn(),
+                logError: jest.fn(),
+            };
+
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
+                data: [{ newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }],
+                chainMetadata: {
+                    chainName: "test-chain-123",
+                    currentBoardIndex: 7,
+                },
+                isFromChain: true,
+            });
+
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
+                round.settlementResult = { tumbles: [] };
+                return round;
+            });
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert
+            expect(round.boardIndex).toBe(7);
+        });
+
+        it("should populate both chainName and boardIndex on round", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "testPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1 });
+
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+
+            consumer.logService = {
+                logInfo: jest.fn(),
+                logWarning: jest.fn(),
+                logError: jest.fn(),
+            };
+
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
+                data: [{ newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }],
+                chainMetadata: {
+                    chainName: "my-special-chain",
+                    currentBoardIndex: 15,
+                },
+                isFromChain: true,
+            });
+
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
+                round.settlementResult = { tumbles: [] };
+                return round;
+            });
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert
+            expect(round.chainName).toBe("my-special-chain");
+            expect(round.boardIndex).toBe(15);
+        });
+    });
+
+    describe("when chain metadata is null", () => {
+        it("should not populate chain fields on round", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "testPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1 });
+
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
+                data: [{ newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }],
+                chainMetadata: null,
+                isFromChain: false,
+            });
+
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
+                round.settlementResult = { tumbles: [] };
+                return round;
+            });
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert
+            expect(round.chainName).toBeUndefined();
+            expect(round.boardIndex).toBeUndefined();
+        });
+    });
+
+    describe("when using admin result", () => {
+        it("should not populate chain fields on round", async () => {
+            // Arrange
+            const consumer = initConsumer();
+            const player = SettleGameRoundTestFactory.createPlayer({ profile: { name: "testPlayer" } });
+            const round = SettleGameRoundTestFactory.createRound({ betLevel: 5, coinValue: 0.1 });
+
+            totalMultiplierConsumer.getCurrentMultiplier.mockReturnValue(1);
+            consumer.gameData.currencyGroupGames = [{ groupId: "g1", maxWinPerRound: 100 }];
+
+            jest.spyOn(consumer, "selectPreGeneratedResult").mockResolvedValue({
+                data: [{ newBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }],
+                chainMetadata: null,
+                isFromAdmin: true,
+                isFromChain: false,
+            });
+
+            jest.spyOn(consumer.roundCalculator, "processSpinning").mockImplementation((round) => {
+                round.settlementResult = { tumbles: [] };
+                return round;
+            });
+
+            // Act
+            await consumer.processSpinning(player, round);
+
+            // Assert
+            expect(round.chainName).toBeUndefined();
+            expect(round.boardIndex).toBeUndefined();
+        });
+    });
+});
+
 describe("settleRound - Edge Cases", () => {
     describe("when round is not found", () => {
         it("should return betwin 0", async () => {

@@ -30,7 +30,7 @@ export default class HistoryQuery {
             endTime: false,
             odds: false,
             chainName: false,
-            currentBoardIndex: false,
+            boardIndex: false,
         };
 
         const rawBetLogs = await this.roundsRepository
