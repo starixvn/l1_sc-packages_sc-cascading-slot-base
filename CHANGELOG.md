@@ -1,3 +1,10 @@
+# [2.6.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.5.1...v2.6.0) (2025-10-27)
+
+
+### Features
+
+* add promotion reels settings with RTP 105% ([fdbc70f](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/fdbc70f471002cae794deabb90b6bb3273bdf634))
+
 # [2.5.1](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.5.0...v2.5.1) (2025-10-22)
 ### Bug Fixes
 * Because Gitlab CI couldn't even run publishing job, so I had to add this shit by myself.
