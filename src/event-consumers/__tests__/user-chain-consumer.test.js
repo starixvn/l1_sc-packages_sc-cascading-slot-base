@@ -1,4 +1,4 @@
-import UserChainConsumer from "../user-chain-consumer";
+import UserChainConsumer, { RTP_TYPE } from "../user-chain-consumer";
 
 // Mock crypto module
 const crypto = require("crypto");
@@ -49,6 +49,45 @@ const createMockAppConfigs = (overrides = {}) => ({
         ...overrides,
     },
 });
+
+// Shared consumer creation utility
+const createConsumerWithMocks = (mocks = {}) => {
+    // Reset all mocks
+    jest.clearAllMocks();
+
+    // Apply custom mocks
+    if (mocks.availableChains !== undefined) {
+        mockGameData.availableChains = mocks.availableChains;
+    }
+
+    if (mocks.getApplicableBoardCount !== undefined) {
+        jest.spyOn(userChainConsumer, "getApplicableBoardCount").mockReturnValue(mocks.getApplicableBoardCount);
+    }
+
+    if (mocks.calculateBaseBetAmount !== undefined) {
+        jest.spyOn(userChainConsumer, "calculateBaseBetAmount").mockReturnValue(mocks.calculateBaseBetAmount);
+    }
+
+    if (mocks.filterChains !== undefined) {
+        jest.spyOn(userChainConsumer, "filterChains").mockReturnValue(mocks.filterChains);
+    }
+
+    if (mocks.selectRandom !== undefined) {
+        jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue(mocks.selectRandom);
+    }
+
+    if (mocks.cryptoRandomInt !== undefined) {
+        jest.spyOn(crypto, "randomInt").mockReturnValue(mocks.cryptoRandomInt);
+    }
+
+    // Create consumer instance
+    return new UserChainConsumer({
+        gameData: mockGameData,
+        assignmentRepository: mockAssignmentRepository,
+        logService: mockLogService,
+        appConfigs: mockAppConfigs,
+    });
+};
 
 const createMockAssignmentRepository = () => ({
     create: jest.fn().mockResolvedValue({ _id: "test-assignment-id" }),
@@ -1490,7 +1529,7 @@ describe("UserChainConsumer", () => {
                 await consumer.findSuitable(playerContext);
 
                 // Assert
-                expect(filterChainsSpy).toHaveBeenCalledWith(availableChains, 100, null);
+                expect(filterChainsSpy).toHaveBeenCalledWith(availableChains, 100, null, null);
             });
 
             it("should call selectRandom with filtered chains", async () => {
@@ -1646,7 +1685,7 @@ describe("UserChainConsumer", () => {
                 await userChainConsumer.findSuitable(playerContext);
 
                 // Assert
-                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), 3);
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), 3, null);
             });
 
             it("should pass null volatility when not configured", async () => {
@@ -1659,7 +1698,7 @@ describe("UserChainConsumer", () => {
                 await userChainConsumer.findSuitable(playerContext);
 
                 // Assert
-                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), null);
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), null, null);
             });
 
             it("should return chain matching configured volatility", async () => {
@@ -1722,6 +1761,119 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result.name).toBe("matching-both");
+            });
+        });
+
+        describe("with RTP cooldown strategy", () => {
+            it("should apply BALANCE RTP filter when last completed assignment was HIGH RTP", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const consumer = createConsumerWithMocks({
+                    availableChains: [
+                        createTestChain({ name: "wave-test", totalBoardCount: 75 }),
+                        createTestChain({ name: "discovery-test", totalBoardCount: 75 }),
+                    ],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Mock getRTPFilter to return BALANCE
+                jest.spyOn(consumer, "getRTPFilter").mockResolvedValue(RTP_TYPE.BALANCE);
+                const filterChainsSpy = jest.spyOn(consumer, "filterChains");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), 75, null, RTP_TYPE.BALANCE);
+            });
+
+            it("should apply null RTP filter when last completed assignment was BALANCE RTP", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const consumer = createConsumerWithMocks({
+                    availableChains: [
+                        createTestChain({ name: "wave-test", totalBoardCount: 75 }),
+                        createTestChain({ name: "discovery-test", totalBoardCount: 75 }),
+                    ],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Mock getRTPFilter to return null
+                jest.spyOn(consumer, "getRTPFilter").mockResolvedValue(null);
+                const filterChainsSpy = jest.spyOn(consumer, "filterChains");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), 75, null, null);
+            });
+
+            it("should apply null RTP filter when player has no previous completed assignments", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const consumer = createConsumerWithMocks({
+                    availableChains: [
+                        createTestChain({ name: "wave-test", totalBoardCount: 75 }),
+                        createTestChain({ name: "discovery-test", totalBoardCount: 75 }),
+                    ],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Mock getRTPFilter to return null
+                jest.spyOn(consumer, "getRTPFilter").mockResolvedValue(null);
+                const filterChainsSpy = jest.spyOn(consumer, "filterChains");
+
+                // Act
+                await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(filterChainsSpy).toHaveBeenCalledWith(expect.anything(), 75, null, null);
+            });
+
+            it("should return balance RTP chain when cooldown strategy filters for balance RTP", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const balanceChain = createTestChain({ name: "wave-test", totalBoardCount: 75 });
+                const highChain = createTestChain({ name: "discovery-test", totalBoardCount: 75 });
+
+                const consumer = createConsumerWithMocks({
+                    availableChains: [balanceChain, highChain],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Mock getRTPFilter to return BALANCE (cooldown from high RTP)
+                jest.spyOn(consumer, "getRTPFilter").mockResolvedValue(RTP_TYPE.BALANCE);
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBe(balanceChain);
+            });
+
+            it("should return any RTP chain when no cooldown filter is applied", async () => {
+                // Arrange
+                const playerContext = createTestPlayerContext();
+                const balanceChain = createTestChain({ name: "wave-test", totalBoardCount: 75 });
+                const highChain = createTestChain({ name: "discovery-test", totalBoardCount: 75 });
+
+                const consumer = createConsumerWithMocks({
+                    availableChains: [balanceChain, highChain],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Mock getRTPFilter to return null (no cooldown)
+                jest.spyOn(consumer, "getRTPFilter").mockResolvedValue(null);
+
+                // Mock selectRandom to return first chain for predictable test
+                jest.spyOn(consumer, "selectRandom").mockReturnValue(balanceChain);
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert
+                expect(result).toBe(balanceChain);
             });
         });
     });
@@ -2042,6 +2194,122 @@ describe("UserChainConsumer", () => {
                 expect(result.some((chain) => chain.totalBoardCount === 50)).toBe(false);
             });
         });
+
+        describe("RTP filtering", () => {
+            it("should return only HIGH RTP chains when RTP filter is HIGH", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "discovery-chain", totalBoardCount: 100 }),
+                    createChain({ name: "wave-chain", totalBoardCount: 100 }),
+                    createChain({ name: "cliffhanger-chain", totalBoardCount: 100 }),
+                    createChain({ name: "regular-chain", totalBoardCount: 100 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = null;
+                const rtpType = RTP_TYPE.HIGH;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility, rtpType);
+
+                // Assert
+                expect(result).toHaveLength(2);
+                expect(result.map((chain) => chain.name)).toEqual(expect.arrayContaining(["discovery-chain", "cliffhanger-chain"]));
+            });
+
+            it("should return only BALANCE RTP chains when RTP filter is BALANCE", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "discovery-chain", totalBoardCount: 100 }),
+                    createChain({ name: "wave-chain", totalBoardCount: 100 }),
+                    createChain({ name: "tease-chain", totalBoardCount: 100 }),
+                    createChain({ name: "comeback-chain", totalBoardCount: 100 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = null;
+                const rtpType = RTP_TYPE.BALANCE;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility, rtpType);
+
+                // Assert
+                expect(result).toHaveLength(3);
+                expect(result.map((chain) => chain.name)).toEqual(expect.arrayContaining(["wave-chain", "tease-chain", "comeback-chain"]));
+            });
+
+            it("should return all chains when RTP filter is null", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "discovery-chain", totalBoardCount: 100 }),
+                    createChain({ name: "wave-chain", totalBoardCount: 100 }),
+                    createChain({ name: "regular-chain", totalBoardCount: 100 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = null;
+                const rtpType = null;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility, rtpType);
+
+                // Assert
+                expect(result).toHaveLength(3);
+                expect(result.map((chain) => chain.name)).toEqual(expect.arrayContaining(["discovery-chain", "wave-chain", "regular-chain"]));
+            });
+
+            it("should combine RTP filter with board count filter", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "discovery-chain", totalBoardCount: 100 }),
+                    createChain({ name: "wave-chain", totalBoardCount: 75 }),
+                    createChain({ name: "tease-chain", totalBoardCount: 100 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = null;
+                const rtpType = RTP_TYPE.BALANCE;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility, rtpType);
+
+                // Assert
+                expect(result).toHaveLength(1);
+                expect(result[0].name).toBe("tease-chain");
+            });
+
+            it("should combine RTP filter with volatility filter", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "discovery-chain", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "wave-chain", totalBoardCount: 100, volatility: 2 }),
+                    createChain({ name: "tease-chain", totalBoardCount: 100, volatility: 3 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = 2;
+                const rtpType = RTP_TYPE.BALANCE;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility, rtpType);
+
+                // Assert
+                expect(result).toHaveLength(1);
+                expect(result[0].name).toBe("wave-chain");
+            });
+
+            it("should return empty array when no chains match RTP filter", () => {
+                // Arrange
+                const availableChains = [
+                    createChain({ name: "regular-chain", totalBoardCount: 100 }),
+                    createChain({ name: "unknown-chain", totalBoardCount: 100 }),
+                ];
+                const applicableBoardCount = 100;
+                const volatility = null;
+                const rtpType = RTP_TYPE.HIGH;
+
+                // Act
+                const result = userChainConsumer.filterChains(availableChains, applicableBoardCount, volatility, rtpType);
+
+                // Assert
+                expect(result).toEqual([]);
+            });
+        });
     });
 
     describe("storeAssignment", () => {
@@ -2098,6 +2366,53 @@ describe("UserChainConsumer", () => {
 
             // Error should be logged
             expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to create chain assignment for"));
+        });
+    });
+
+    describe("getRTPFilter", () => {
+        it("should return BALANCE when last completed assignment was HIGH RTP", async () => {
+            // Arrange
+            const consumer = createConsumerWithMocks();
+            const playerName = "testPlayer";
+
+            // Mock getLastCompletedAssignmentRTPType to return HIGH
+            jest.spyOn(consumer, "getLastCompletedAssignmentRTPType").mockResolvedValue(RTP_TYPE.HIGH);
+
+            // Act
+            const result = await consumer.getRTPFilter(playerName);
+
+            // Assert
+            expect(result).toBe(RTP_TYPE.BALANCE);
+        });
+
+        it("should return null when last completed assignment was BALANCE RTP", async () => {
+            // Arrange
+            const consumer = createConsumerWithMocks();
+            const playerName = "testPlayer";
+
+            // Mock getLastCompletedAssignmentRTPType to return BALANCE
+            jest.spyOn(consumer, "getLastCompletedAssignmentRTPType").mockResolvedValue(RTP_TYPE.BALANCE);
+
+            // Act
+            const result = await consumer.getRTPFilter(playerName);
+
+            // Assert
+            expect(result).toBeNull();
+        });
+
+        it("should return null when player has no previous completed assignments", async () => {
+            // Arrange
+            const consumer = createConsumerWithMocks();
+            const playerName = "testPlayer";
+
+            // Mock getLastCompletedAssignmentRTPType to return null
+            jest.spyOn(consumer, "getLastCompletedAssignmentRTPType").mockResolvedValue(null);
+
+            // Act
+            const result = await consumer.getRTPFilter(playerName);
+
+            // Assert
+            expect(result).toBeNull();
         });
     });
 });

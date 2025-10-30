@@ -5,6 +5,19 @@ const ASSIGNMENT_STATUS = {
     COMPLETED: "completed",
 };
 
+const RTP_TYPE = {
+    HIGH: "high",
+    BALANCE: "balance",
+};
+
+// Chain RTP categorization based on chain names
+const RTP_CHAIN_CATEGORIES = {
+    [RTP_TYPE.HIGH]: ["discovery", "cliffhanger"],
+    [RTP_TYPE.BALANCE]: ["tease", "wave", "comeback"],
+};
+
+export { RTP_TYPE };
+
 export default class UserChainConsumer {
     constructor({ gameData, assignmentRepository, logService, appConfigs }) {
         this.gameData = gameData;
@@ -52,6 +65,58 @@ export default class UserChainConsumer {
      */
     isChainEnabled() {
         return this.gameData.gameConfigs?.cascadingSlotsConfig?.resultChains?.enabled || false;
+    }
+
+    /**
+     * Get RTP type for a given chain name
+     * @param {string} chainName - Name of the chain
+     * @returns {string|null} RTP type (HIGH, BALANCE) or null if not categorized
+     */
+    getChainRTPType(chainName) {
+        for (const [rtpType, chainNames] of Object.entries(RTP_CHAIN_CATEGORIES)) {
+            if (chainNames.some((name) => chainName.toLowerCase().startsWith(name.toLowerCase() + "-"))) {
+                return rtpType;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get the RTP type of player's last completed assignment
+     * @param {string} playerName - Player identifier
+     * @returns {Promise<string|null>} RTP type of last completed assignment or null
+     */
+    async getLastCompletedAssignmentRTPType(playerName) {
+        try {
+            const lastCompletedAssignment = await this.assignmentRepository
+                .findOne({
+                    playerName,
+                    status: ASSIGNMENT_STATUS.COMPLETED,
+                    gameId: this.gameData.gameConfigs.gameId,
+                })
+                .sort({ completedAt: -1 })
+                .lean()
+                .exec();
+
+            if (!lastCompletedAssignment) {
+                return null;
+            }
+
+            return this.getChainRTPType(lastCompletedAssignment.chainName);
+        } catch (error) {
+            this.logService.logError(`Failed to get last completed assignment RTP type for ${playerName}: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Get RTP filter for cooldown strategy
+     * @param {string} playerName - Player identifier
+     * @returns {Promise<string|null>} RTP filter type or null
+     */
+    async getRTPFilter(playerName) {
+        const lastRTP = await this.getLastCompletedAssignmentRTPType(playerName);
+        return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.BALANCE : null;
     }
 
     /**
@@ -192,22 +257,34 @@ export default class UserChainConsumer {
     }
 
     /**
-     * Filter available chains by applicable board count and volatility
+     * Filter available chains by applicable board count, volatility, and RTP type
      * @param {Array} availableChains - All available chains
      * @param {number} applicableBoardCount - Closest valid board count for player
      * @param {number|null} volatility - Volatility level from gameConfigs (1-5)
+     * @param {string|null} rtpType - RTP type filter (HIGH, BALANCE, or null for no RTP filtering)
      * @returns {Array} Matching chains
      */
-    filterChains(availableChains, applicableBoardCount, volatility = null) {
+    filterChains(availableChains, applicableBoardCount, volatility = null, rtpType = null) {
         return availableChains.filter((chain) => {
             const boardCountMatches = chain.totalBoardCount === applicableBoardCount;
 
-            if (!volatility) {
+            if (!volatility && !rtpType) {
                 return boardCountMatches;
             }
 
-            const volatilityMatches = chain.volatility === volatility;
-            return boardCountMatches && volatilityMatches;
+            let matches = boardCountMatches;
+
+            if (volatility) {
+                const volatilityMatches = chain.volatility === volatility;
+                matches = matches && volatilityMatches;
+            }
+
+            if (rtpType) {
+                const rtpMatches = this.getChainRTPType(chain.name) === rtpType;
+                matches = matches && rtpMatches;
+            }
+
+            return matches;
         });
     }
 
@@ -340,7 +417,7 @@ export default class UserChainConsumer {
      * @returns {Object|null} Selected chain or null if none available
      */
     async findSuitable(playerContext) {
-        const { betLevel, coinValue } = playerContext;
+        const { betLevel, coinValue, playerName } = playerContext;
         const baseBet = this.calculateBaseBetAmount(betLevel, coinValue);
         const boardCount = this.getApplicableBoardCount(playerContext, baseBet);
 
@@ -350,9 +427,11 @@ export default class UserChainConsumer {
 
         const { availableChains = [] } = this.gameData;
         const volatility = this.gameData.gameConfigs?.cascadingSlotsConfig?.volatility || null;
-        const matching = this.filterChains(availableChains, boardCount, volatility);
 
-        return this.selectRandom(matching);
+        const rtp = await this.getRTPFilter(playerName);
+        const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtp);
+
+        return this.selectRandom(matchingChains);
     }
 
     /**
