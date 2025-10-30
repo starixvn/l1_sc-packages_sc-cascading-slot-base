@@ -24,7 +24,7 @@ export default class CascadingBoardGenerator {
                 min: multiplierBonus.min,
                 max: multiplierBonus.max,
             },
-            promotionId && enablePromotionRTP ? FsbBoardDefinition : null,
+            isFreeSpin && promotionId && enablePromotionRTP ? FsbBoardDefinition : null,
             volatility,
             isFreeSpin
         );
