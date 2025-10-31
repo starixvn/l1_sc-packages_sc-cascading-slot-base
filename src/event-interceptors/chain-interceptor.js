@@ -14,7 +14,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
             const playerName = player.profile.name;
 
             const playerContext = {
-                playerId: player.session?.playerId || player.UID,
+                playerId: player.session?.playerId,
                 sessionId: player.session?.sessionId,
                 operatorId: player.session?.operatorId,
                 gameId: this.gameData.gameConfigs.gameId,

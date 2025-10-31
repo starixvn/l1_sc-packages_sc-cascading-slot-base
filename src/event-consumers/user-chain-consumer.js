@@ -426,7 +426,7 @@ export default class UserChainConsumer {
      * @returns {Object|null} Selected chain or null if none available
      */
     async findSuitable(playerContext) {
-        const { betLevel, coinValue, playerName } = playerContext;
+        const { betLevel, coinValue, playerId } = playerContext;
         const baseBet = this.calculateBaseBetAmount(betLevel, coinValue);
         const boardCount = this.getApplicableBoardCount(playerContext, baseBet);
 
@@ -437,16 +437,16 @@ export default class UserChainConsumer {
         const { availableChains = [] } = this.gameData;
         const volatility = this.gameData.gameConfigs?.cascadingSlotsConfig?.volatility || null;
 
-        const rtp = await this.getRTPFilter(playerName);
+        const rtp = await this.getRTPFilter(playerId);
         const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtp);
 
-        this.logService.log(`[Player: ${playerName}] RTP filter: ${rtp || "none"}, found ${matchingChains.length} matching chains`);
+        this.logService.log(`[Player: ${playerId}] RTP filter: ${rtp || "none"}, found ${matchingChains.length} matching chains`);
 
         const selectedChain = this.selectRandom(matchingChains);
 
         if (selectedChain) {
             this.logService.log(
-                `[Player: ${playerName}] Selected chain: ${selectedChain.name} (RTP: ${this.getChainRTPType(selectedChain.name) || "unknown"})`
+                `[Player: ${playerId}] Selected chain: ${selectedChain.name} (RTP: ${this.getChainRTPType(selectedChain.name) || "unknown"})`
             );
         }
 
