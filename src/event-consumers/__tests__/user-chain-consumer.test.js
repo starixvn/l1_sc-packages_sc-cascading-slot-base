@@ -31,6 +31,7 @@ const createMockGameData = (overrides = {}) => ({
 });
 
 const createMockLogService = () => ({
+    log: jest.fn(),
     logWarning: jest.fn(),
     logError: jest.fn(),
 });
@@ -1874,6 +1875,29 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result).toBe(balanceChain);
+            });
+
+            it("should assign balance RTP when player completed cliffhanger chain and is now applicable for 75 boards", async () => {
+                // Arrange - Player completed 50 boards with cliffhanger (HIGH RTP), now applicable for 75 boards
+                const playerContext = createTestPlayerContext();
+                const cliffhangerChain1 = createTestChain({ name: "cliffhanger-75boards-01", totalBoardCount: 75 });
+                const cliffhangerChain2 = createTestChain({ name: "cliffhanger-75boards-02", totalBoardCount: 75 });
+                const balanceRTPChain = createTestChain({ name: "wave-75boards", totalBoardCount: 75 });
+
+                const consumer = createConsumerWithMocks({
+                    availableChains: [cliffhangerChain1, cliffhangerChain2, balanceRTPChain],
+                    getApplicableBoardCount: 75,
+                });
+
+                // Mock that last completed assignment was cliffhanger (HIGH RTP)
+                jest.spyOn(consumer, "getRTPFilter").mockResolvedValue(RTP_TYPE.BALANCE);
+
+                // Act
+                const result = await consumer.findSuitable(playerContext);
+
+                // Assert - Should return balance RTP chain due to cooldown strategy
+                expect(result).toBe(balanceRTPChain);
+                expect(result.name).toBe("wave-75boards");
             });
         });
     });

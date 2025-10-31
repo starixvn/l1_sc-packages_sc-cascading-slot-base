@@ -88,6 +88,8 @@ export default class UserChainConsumer {
      */
     async getLastCompletedAssignmentRTPType(playerName) {
         try {
+            this.logService.log(`[Player: ${playerName}] Checking last completed assignment for RTP cooldown...`);
+
             const lastCompletedAssignment = await this.assignmentRepository
                 .findOne({
                     playerName,
@@ -99,10 +101,16 @@ export default class UserChainConsumer {
                 .exec();
 
             if (!lastCompletedAssignment) {
+                this.logService.log(`[Player: ${playerName}] No completed assignments found, no RTP cooldown applied`);
                 return null;
             }
 
-            return this.getChainRTPType(lastCompletedAssignment.chainName);
+            const chainRTPType = this.getChainRTPType(lastCompletedAssignment.chainName);
+            this.logService.log(
+                `[Player: ${playerName}] Last completed chain: ${lastCompletedAssignment.chainName} (RTP: ${chainRTPType || "unknown"})`
+            );
+
+            return chainRTPType;
         } catch (error) {
             this.logService.logError(`Failed to get last completed assignment RTP type for ${playerName}: ${error.message}`);
             return null;
@@ -116,6 +124,7 @@ export default class UserChainConsumer {
      */
     async getRTPFilter(playerName) {
         const lastRTP = await this.getLastCompletedAssignmentRTPType(playerName);
+
         return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.BALANCE : null;
     }
 
@@ -431,7 +440,17 @@ export default class UserChainConsumer {
         const rtp = await this.getRTPFilter(playerName);
         const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtp);
 
-        return this.selectRandom(matchingChains);
+        this.logService.log(`[Player: ${playerName}] RTP filter: ${rtp || "none"}, found ${matchingChains.length} matching chains`);
+
+        const selectedChain = this.selectRandom(matchingChains);
+
+        if (selectedChain) {
+            this.logService.log(
+                `[Player: ${playerName}] Selected chain: ${selectedChain.name} (RTP: ${this.getChainRTPType(selectedChain.name) || "unknown"})`
+            );
+        }
+
+        return selectedChain;
     }
 
     /**
@@ -457,20 +476,17 @@ export default class UserChainConsumer {
     async assignChain(playerName, playerContext = {}) {
         const { betLevel, coinValue } = playerContext;
 
-        // Check if result chains are enabled
         if (!this.isChainEnabled()) {
             return false;
         }
 
         const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
-
-        // Check if player already has an active chain in memory
         const existingChain = this.findExistingChain(chainKey);
+
         if (existingChain) {
-            return false; // Chain already exists
+            return false;
         }
 
-        // Check if player has an active assignment in database
         try {
             const activeAssignment = await this.assignmentRepository
                 .findOne({
@@ -484,14 +500,13 @@ export default class UserChainConsumer {
                 .exec();
 
             if (activeAssignment) {
-                return false; // Player already has an active assignment
+                return false;
             }
         } catch (error) {
             this.logService.logError(`Failed to check database for active chain assignment: ${error.message}`);
             return false;
         }
 
-        // Find and assign a suitable chain
         const selectedChain = await this.findSuitable(playerContext);
         if (!selectedChain) {
             return false;
