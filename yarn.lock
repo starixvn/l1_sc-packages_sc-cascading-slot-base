@@ -9807,10 +9807,10 @@ sc-common@3.0.0:
     mongoose-long "0.8.0"
     numeral "2.0.6"
 
-sc-game-base@6.3.2:
-  version "6.3.2"
-  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.3.2.tgz#ad00c6168b65c6774f2cb0ae3332601f6f8ac007"
-  integrity sha512-TvczvcX2yeuz0Il0BLIwOEK6FsM4F1rTyc9e9FtYgNrRBENuNbcZEMTt/px0R0nOcOVDeF1SIvVdZYJLqTmi7g==
+sc-game-base@6.3.4-beta.1:
+  version "6.3.4-beta.1"
+  resolved "https://npm.lumigame.com/sc-game-base/-/sc-game-base-6.3.4-beta.1.tgz#71313977a4763341bc99c3406d2e604692f2e316"
+  integrity sha512-3+lT8nbi1oEvsVyZOzoOhT/Uau32LPbQFJt0uS0vI4bxEJxT5zDJvieesPeZGAfd4dYmY58asRU4FJmlVbfMnQ==
   dependencies:
     "@sc/game-promotion-api-client" "1.0.4"
     "@sc/user-tracking-client" "1.0.0"
@@ -9847,6 +9847,14 @@ sc-game-management-client@0.1.5:
     axios "1.6.2"
     axios-retry "^4.0.0"
 
+sc-game-management-client@0.1.6:
+  version "0.1.6"
+  resolved "https://npm.lumigame.com/sc-game-management-client/-/sc-game-management-client-0.1.6.tgz#6a8d1a8c85b1344ce6ad8c587e4c12c88981f85c"
+  integrity sha512-6DBHFlWrebaAqtsneo1aG04gycLdDHr9IcZAux65zma4pmRXnfJE8LW4Gvb2ELV1lPAa3MWFIoGKFNbGxciFkg==
+  dependencies:
+    axios "1.6.2"
+    axios-retry "^4.0.0"
+
 sc-pf-client-seed@1.0.5:
   version "1.0.5"
   resolved "http://npm.lumigame.com/sc-pf-client-seed/-/sc-pf-client-seed-1.0.5.tgz"
@@ -9867,15 +9875,15 @@ sc-slot-board-generator@2.1.0:
     chance "^1.1.7"
     ramda "^0.28.0"
 
-sc-slot-game-base@3.2.1:
-  version "3.2.1"
-  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.2.1.tgz#8f4b276347c8ee63022f2db616f389785b91afb9"
-  integrity sha512-M9sIaG5uNu+ihSUWBEaleEhrE2ywAC/ZKwaQalm3lFhB4ZzLs4w2FdGvUcTm1O8BZZ8J79qoJ1ZW2igqMoYi2g==
+sc-slot-game-base@3.2.3-beta.1:
+  version "3.2.3-beta.1"
+  resolved "https://npm.lumigame.com/sc-slot-game-base/-/sc-slot-game-base-3.2.3-beta.1.tgz#7fd4d474bcc67e2bdbd065f8011b91fb66fe900c"
+  integrity sha512-JF6jYRO0m+QeMb+sR5oX0lMYbLV8YOTun1iaZfT31cWgH3xufTIInljBn0exO6z7hz2T1xg9Dt0d3o9E8i4YtQ==
   dependencies:
     chance "^1.1.9"
     lodash "^4.17.21"
-    sc-game-base "6.3.2"
-    sc-game-management-client "0.1.5"
+    sc-game-base "6.3.4-beta.1"
+    sc-game-management-client "0.1.6"
 
 seedrandom@^3.0.5:
   version "3.0.5"
@@ -11084,7 +11092,7 @@ wordwrap@^1.0.0:
   resolved "https://npm.lumigame.com/wordwrap/-/wordwrap-1.0.0.tgz"
   integrity sha1-J1hIEIkUVqQXHI0CJkQa3pDLyus=
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
   version "7.0.0"
   resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -11097,6 +11105,15 @@ wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-6.2.0.tgz"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
+
+wrap-ansi@^7.0.0:
+  version "7.0.0"
+  resolved "https://npm.lumigame.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"
