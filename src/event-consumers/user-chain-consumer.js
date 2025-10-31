@@ -83,16 +83,16 @@ export default class UserChainConsumer {
 
     /**
      * Get the RTP type of player's last completed assignment
-     * @param {string} playerName - Player identifier
+     * @param {string} playerId - Player identifier
      * @returns {Promise<string|null>} RTP type of last completed assignment or null
      */
-    async getLastCompletedAssignmentRTPType(playerName) {
+    async getLastCompletedAssignmentRTPType(playerId) {
         try {
-            this.logService.log(`[Player: ${playerName}] Checking last completed assignment for RTP cooldown...`);
+            this.logService.log(`[Player: ${playerId}] Checking last completed assignment for RTP cooldown...`);
 
             const lastCompletedAssignment = await this.assignmentRepository
                 .findOne({
-                    playerName,
+                    playerId,
                     status: ASSIGNMENT_STATUS.COMPLETED,
                     gameId: this.gameData.gameConfigs.gameId,
                 })
@@ -101,29 +101,29 @@ export default class UserChainConsumer {
                 .exec();
 
             if (!lastCompletedAssignment) {
-                this.logService.log(`[Player: ${playerName}] No completed assignments found, no RTP cooldown applied`);
+                this.logService.log(`[Player: ${playerId}] No completed assignments found, no RTP cooldown applied`);
                 return null;
             }
 
             const chainRTPType = this.getChainRTPType(lastCompletedAssignment.chainName);
             this.logService.log(
-                `[Player: ${playerName}] Last completed chain: ${lastCompletedAssignment.chainName} (RTP: ${chainRTPType || "unknown"})`
+                `[Player: ${playerId}] Last completed chain: ${lastCompletedAssignment.chainName} (RTP: ${chainRTPType || "unknown"})`
             );
 
             return chainRTPType;
         } catch (error) {
-            this.logService.logError(`Failed to get last completed assignment RTP type for ${playerName}: ${error.message}`);
+            this.logService.logError(`Failed to get last completed assignment RTP type for ${playerId}: ${error.message}`);
             return null;
         }
     }
 
     /**
      * Get RTP filter for cooldown strategy
-     * @param {string} playerName - Player identifier
+     * @param {string} playerId - Player identifier
      * @returns {Promise<string|null>} RTP filter type or null
      */
-    async getRTPFilter(playerName) {
-        const lastRTP = await this.getLastCompletedAssignmentRTPType(playerName);
+    async getRTPFilter(playerId) {
+        const lastRTP = await this.getLastCompletedAssignmentRTPType(playerId);
 
         return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.BALANCE : null;
     }
