@@ -1,8 +1,5 @@
 import UserChainConsumer, { RTP_TYPE } from "../user-chain-consumer";
 
-// Mock crypto module
-const crypto = require("crypto");
-
 // Shared test data factories (DRY principle)
 const createMockGameData = (overrides = {}) => ({
     gameConfigs: {
@@ -61,33 +58,32 @@ const createConsumerWithMocks = (mocks = {}) => {
         mockGameData.availableChains = mocks.availableChains;
     }
 
-    if (mocks.getApplicableBoardCount !== undefined) {
-        jest.spyOn(userChainConsumer, "getApplicableBoardCount").mockReturnValue(mocks.getApplicableBoardCount);
-    }
-
-    if (mocks.calculateBaseBetAmount !== undefined) {
-        jest.spyOn(userChainConsumer, "calculateBaseBetAmount").mockReturnValue(mocks.calculateBaseBetAmount);
-    }
-
-    if (mocks.filterChains !== undefined) {
-        jest.spyOn(userChainConsumer, "filterChains").mockReturnValue(mocks.filterChains);
-    }
-
-    if (mocks.selectRandom !== undefined) {
-        jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue(mocks.selectRandom);
-    }
-
-    if (mocks.cryptoRandomInt !== undefined) {
-        jest.spyOn(crypto, "randomInt").mockReturnValue(mocks.cryptoRandomInt);
-    }
-
     // Create consumer instance
-    return new UserChainConsumer({
+    const consumer = new UserChainConsumer({
         gameData: mockGameData,
         assignmentRepository: mockAssignmentRepository,
         logService: mockLogService,
         appConfigs: mockAppConfigs,
     });
+
+    // Apply method mocks after consumer is created
+    if (mocks.getApplicableBoardCount !== undefined) {
+        jest.spyOn(consumer, "getApplicableBoardCount").mockReturnValue(mocks.getApplicableBoardCount);
+    }
+
+    if (mocks.calculateBaseBetAmount !== undefined) {
+        jest.spyOn(consumer, "calculateBaseBetAmount").mockReturnValue(mocks.calculateBaseBetAmount);
+    }
+
+    if (mocks.filterChains !== undefined) {
+        jest.spyOn(consumer, "filterChains").mockReturnValue(mocks.filterChains);
+    }
+
+    if (mocks.selectRandom !== undefined) {
+        jest.spyOn(consumer, "selectRandom").mockReturnValue(mocks.selectRandom);
+    }
+
+    return consumer;
 };
 
 const createMockAssignmentRepository = () => ({
@@ -591,8 +587,6 @@ describe("UserChainConsumer", () => {
         });
 
         it("should use random selection when multiple chains are available", async () => {
-            const originalRandomInt = crypto.randomInt;
-
             // Temporarily modify available chains to have multiple chains with same totalBoardCount
             const originalChains = mockGameData.availableChains;
             mockGameData.availableChains = [
@@ -600,7 +594,12 @@ describe("UserChainConsumer", () => {
                 { name: "test-chain-2", baseBetAmount: 0.1, totalBoardCount: 75 }, // Same board count
             ];
 
-            crypto.randomInt = jest.fn().mockReturnValue(1); // Should select the second chain (index 1)
+            // Mock selectRandom to return the second chain
+            const selectRandomSpy = jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue({
+                name: "test-chain-2",
+                baseBetAmount: 0.1,
+                totalBoardCount: 75,
+            });
 
             // Adjust balance so getApplicableBoardCount returns 75 (matches both chains)
             // playableBoards = floor(120 / 0.1 / 20) = 60, applicableBoards = 75, closest = 75
@@ -614,14 +613,18 @@ describe("UserChainConsumer", () => {
             expect(result).toBe(true);
             expect(mockGameData.playerChains["randomTestPlayer-0.10"].name).toBe("test-chain-2");
 
-            // Restore original chains and crypto.randomInt
+            // Restore original chains
             mockGameData.availableChains = originalChains;
-            crypto.randomInt = originalRandomInt;
+            selectRandomSpy.mockRestore();
         });
 
         it("should assign chain regardless of betLevel and coinValue (no filtering)", async () => {
-            const originalRandomInt = crypto.randomInt;
-            crypto.randomInt = jest.fn().mockReturnValue(0); // Should select first chain (index 0)
+            // Mock selectRandom to return the first chain
+            const selectRandomSpy = jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue({
+                name: "test-chain-1",
+                baseBetAmount: 0.1,
+                totalBoardCount: 75,
+            });
 
             const result = await userChainConsumer.assignChain("noFilterTestPlayer", {
                 playerId: "noFilterTestPlayer",
@@ -637,7 +640,7 @@ describe("UserChainConsumer", () => {
             // Should not query assignments for filtering - assignChain no longer does this
             expect(mockGameData.playerChains["noFilterTestPlayer-0.10"].name).toBe("test-chain-1");
 
-            crypto.randomInt = originalRandomInt;
+            selectRandomSpy.mockRestore();
         });
 
         it("should return false when player balance is insufficient", async () => {
@@ -1360,10 +1363,6 @@ describe("UserChainConsumer", () => {
                 jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue(mocks.selectRandom);
             }
 
-            if (mocks.cryptoRandomInt !== undefined) {
-                jest.spyOn(crypto, "randomInt").mockReturnValue(mocks.cryptoRandomInt);
-            }
-
             return userChainConsumer;
         };
 
@@ -1553,7 +1552,7 @@ describe("UserChainConsumer", () => {
         });
 
         describe("random selection behavior", () => {
-            it("should select first chain when crypto.randomInt returns 0", async () => {
+            it("should select first chain when using enhanced random selection", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
                 const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
@@ -1562,17 +1561,20 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // Both chains match exactly
-                    cryptoRandomInt: 0, // Select first chain (index 0)
                 });
+
+                // Mock selectRandom to return first chain (testing the interface, not the implementation)
+                const selectRandomSpy = jest.spyOn(consumer, "selectRandom").mockReturnValue(firstChain);
 
                 // Act
                 const result = await consumer.findSuitable(playerContext);
 
                 // Assert
                 expect(result).toEqual(firstChain);
+                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, secondChain]);
             });
 
-            it("should select last chain when crypto.randomInt returns last index", async () => {
+            it("should select last chain when using enhanced random selection", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
                 const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
@@ -1581,17 +1583,20 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // Both chains match exactly
-                    cryptoRandomInt: 1, // Select last chain (index 1)
                 });
+
+                // Mock selectRandom to return last chain (testing the interface, not the implementation)
+                const selectRandomSpy = jest.spyOn(consumer, "selectRandom").mockReturnValue(lastChain);
 
                 // Act
                 const result = await consumer.findSuitable(playerContext);
 
                 // Assert
                 expect(result).toEqual(lastChain);
+                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, lastChain]);
             });
 
-            it("should select middle chain when crypto.randomInt returns middle index", async () => {
+            it("should select middle chain when using enhanced random selection", async () => {
                 // Arrange
                 const playerContext = createTestPlayerContext();
                 const firstChain = createTestChain({ name: "first-chain", totalBoardCount: 75 });
@@ -1601,14 +1606,17 @@ describe("UserChainConsumer", () => {
                 const consumer = createConsumerWithMocks({
                     availableChains,
                     getApplicableBoardCount: 75, // All chains match exactly
-                    cryptoRandomInt: 1, // Select middle chain (index 1)
                 });
+
+                // Mock selectRandom to return middle chain (testing the interface, not the implementation)
+                const selectRandomSpy = jest.spyOn(consumer, "selectRandom").mockReturnValue(middleChain);
 
                 // Act
                 const result = await consumer.findSuitable(playerContext);
 
                 // Assert
                 expect(result).toEqual(middleChain);
+                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, middleChain, lastChain]);
             });
         });
 

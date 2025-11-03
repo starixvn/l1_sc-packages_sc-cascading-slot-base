@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import Chance from "chance";
 
 const ASSIGNMENT_STATUS = {
     ACTIVE: "active",
@@ -88,8 +89,6 @@ export default class UserChainConsumer {
      */
     async getLastCompletedAssignmentRTPType(playerId) {
         try {
-            this.logService.log(`[Player: ${playerId}] Checking last completed assignment for RTP cooldown...`);
-
             const lastCompletedAssignment = await this.assignmentRepository
                 .findOne({
                     playerId,
@@ -101,14 +100,10 @@ export default class UserChainConsumer {
                 .exec();
 
             if (!lastCompletedAssignment) {
-                this.logService.log(`[Player: ${playerId}] No completed assignments found, no RTP cooldown applied`);
                 return null;
             }
 
             const chainRTPType = this.getChainRTPType(lastCompletedAssignment.chainName);
-            this.logService.log(
-                `[Player: ${playerId}] Last completed chain: ${lastCompletedAssignment.chainName} (RTP: ${chainRTPType || "unknown"})`
-            );
 
             return chainRTPType;
         } catch (error) {
@@ -298,7 +293,7 @@ export default class UserChainConsumer {
     }
 
     /**
-     * Select random chain from available options using cryptographically secure randomness
+     * Select random chain from available options using chancejs
      * @param {Array} matchingChains - Filtered chains
      * @returns {Object|null} Selected chain or null
      */
@@ -306,9 +301,14 @@ export default class UserChainConsumer {
         if (chains.length === 0) {
             return null;
         }
-        const index = crypto.randomInt(0, chains.length);
 
-        return chains[index];
+        const chance = new Chance();
+
+        let shuffledChains = [...chains];
+        for (let i = 0; i < 3; i++) {
+            shuffledChains = chance.shuffle(shuffledChains);
+        }
+        return chance.pickone(shuffledChains);
     }
 
     /**
