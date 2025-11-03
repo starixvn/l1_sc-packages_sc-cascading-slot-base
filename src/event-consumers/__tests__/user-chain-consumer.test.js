@@ -1,5 +1,11 @@
 import UserChainConsumer, { RTP_TYPE } from "../user-chain-consumer";
 
+// Chain RTP categorization based on chain names (same as in source)
+const RTP_CHAIN_CATEGORIES = {
+    [RTP_TYPE.HIGH]: ["discovery", "cliffhanger"],
+    [RTP_TYPE.BALANCE]: ["tease", "wave", "comeback"],
+};
+
 // Shared test data factories (DRY principle)
 const createMockGameData = (overrides = {}) => ({
     gameConfigs: {
@@ -1547,7 +1553,7 @@ describe("UserChainConsumer", () => {
                 await consumer.findSuitable(playerContext);
 
                 // Assert
-                expect(selectRandomSpy).toHaveBeenCalledWith(matchingChains);
+                expect(selectRandomSpy).toHaveBeenCalledWith(matchingChains, null);
             });
         });
 
@@ -1571,7 +1577,7 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result).toEqual(firstChain);
-                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, secondChain]);
+                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, secondChain], null);
             });
 
             it("should select last chain when using enhanced random selection", async () => {
@@ -1593,7 +1599,7 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result).toEqual(lastChain);
-                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, lastChain]);
+                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, lastChain], null);
             });
 
             it("should select middle chain when using enhanced random selection", async () => {
@@ -1616,7 +1622,7 @@ describe("UserChainConsumer", () => {
 
                 // Assert
                 expect(result).toEqual(middleChain);
-                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, middleChain, lastChain]);
+                expect(selectRandomSpy).toHaveBeenCalledWith([firstChain, middleChain, lastChain], null);
             });
         });
 
@@ -1907,6 +1913,88 @@ describe("UserChainConsumer", () => {
                 expect(result).toBe(balanceRTPChain);
                 expect(result.name).toBe("wave-75boards");
             });
+        });
+    });
+
+    describe("randomWithWeight", () => {
+        const createChain = (overrides = {}) => ({
+            name: "test-chain",
+            baseBetAmount: 0.1,
+            totalBoardCount: 75,
+            ...overrides,
+        });
+
+        it("should return null when chains array is empty", () => {
+            // Arrange
+            const chains = [];
+
+            // Act
+            const result = userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
+
+            // Assert
+            expect(result).toBeNull();
+        });
+
+        it("should return null when rtpFilter is not RTP_TYPE.HIGH", () => {
+            // Arrange
+            const chains = [createChain({ name: "test-chain" })];
+
+            // Act & Assert
+            expect(userChainConsumer.randomWithWeight(chains, null)).toBeNull();
+            expect(userChainConsumer.randomWithWeight(chains, RTP_TYPE.BALANCE)).toBeNull();
+        });
+
+        it("should return null when rtpFilter is RTP_TYPE.HIGH but chains array is empty", () => {
+            // Arrange
+            const chains = [];
+
+            // Act
+            const result = userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
+
+            // Assert
+            expect(result).toBeNull();
+        });
+
+        it("should return a HIGH RTP pattern name when RTP filter is HIGH and random selection chooses HIGH", () => {
+            // Arrange
+            const chains = [createChain({ name: "discovery-test", totalBoardCount: 75 }), createChain({ name: "tease-test", totalBoardCount: 75 })];
+
+            // Mock chance.bool to return true (30% HIGH RTP selection)
+            const chanceBoolSpy = jest.spyOn(require("chance").Chance.prototype, "bool").mockReturnValue(true);
+            const chancePickoneSpy = jest.spyOn(require("chance").Chance.prototype, "pickone").mockReturnValue("discovery");
+
+            // Act
+            const result = userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
+
+            // Assert
+            expect(result).toBe("discovery");
+            expect(chanceBoolSpy).toHaveBeenCalledWith({ likelihood: 30 });
+            expect(chancePickoneSpy).toHaveBeenCalledWith(RTP_CHAIN_CATEGORIES[RTP_TYPE.HIGH]);
+
+            // Cleanup
+            chanceBoolSpy.mockRestore();
+            chancePickoneSpy.mockRestore();
+        });
+
+        it("should return a BALANCE RTP pattern name when RTP filter is HIGH and random selection chooses BALANCE", () => {
+            // Arrange
+            const chains = [createChain({ name: "discovery-test", totalBoardCount: 75 }), createChain({ name: "tease-test", totalBoardCount: 75 })];
+
+            // Mock chance.bool to return false (70% BALANCE RTP selection)
+            const chanceBoolSpy = jest.spyOn(require("chance").Chance.prototype, "bool").mockReturnValue(false);
+            const chancePickoneSpy = jest.spyOn(require("chance").Chance.prototype, "pickone").mockReturnValue("tease");
+
+            // Act
+            const result = userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
+
+            // Assert
+            expect(result).toBe("tease");
+            expect(chanceBoolSpy).toHaveBeenCalledWith({ likelihood: 30 });
+            expect(chancePickoneSpy).toHaveBeenCalledWith(RTP_CHAIN_CATEGORIES[RTP_TYPE.BALANCE]);
+
+            // Cleanup
+            chanceBoolSpy.mockRestore();
+            chancePickoneSpy.mockRestore();
         });
     });
 
@@ -2402,7 +2490,7 @@ describe("UserChainConsumer", () => {
     });
 
     describe("getRTPFilter", () => {
-        it("should return BALANCE when last completed assignment was HIGH RTP", async () => {
+        it("should return HIGH when last completed assignment was HIGH RTP", async () => {
             // Arrange
             const consumer = createConsumerWithMocks();
             const playerName = "testPlayer";
@@ -2414,7 +2502,7 @@ describe("UserChainConsumer", () => {
             const result = await consumer.getRTPFilter(playerName);
 
             // Assert
-            expect(result).toBe(RTP_TYPE.BALANCE);
+            expect(result).toBe(RTP_TYPE.HIGH);
         });
 
         it("should return null when last completed assignment was BALANCE RTP", async () => {

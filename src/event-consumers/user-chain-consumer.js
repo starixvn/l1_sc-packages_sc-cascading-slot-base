@@ -120,7 +120,7 @@ export default class UserChainConsumer {
     async getRTPFilter(playerId) {
         const lastRTP = await this.getLastCompletedAssignmentRTPType(playerId);
 
-        return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.BALANCE : null;
+        return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.HIGH : null;
     }
 
     /**
@@ -178,7 +178,7 @@ export default class UserChainConsumer {
         const groups = {};
 
         Object.keys(playerChains).forEach((key) => {
-            const playerName = key.split("-")[0]; // Extract player name from "playerName-baseBetAmount"
+            const playerName = key.split("-")[0];
             if (!groups[playerName]) {
                 groups[playerName] = [];
             }
@@ -293,18 +293,44 @@ export default class UserChainConsumer {
     }
 
     /**
+     * Get weighted pattern name based on RTP filter
+     * @param {Array} chains - Available chains
+     * @param {string|null} rtpFilter - RTP filter type for weighted selection
+     * @returns {string|null} Pattern name for filtering or null
+     */
+    randomWithWeight(chains, rtpFilter = null) {
+        if (chains.length === 0 || rtpFilter !== RTP_TYPE.HIGH) {
+            return null;
+        }
+
+        const chance = new Chance();
+        const isHighRTP = chance.bool({ likelihood: 30 });
+        const patternsToPick = isHighRTP ? RTP_CHAIN_CATEGORIES[RTP_TYPE.HIGH] : RTP_CHAIN_CATEGORIES[RTP_TYPE.BALANCE];
+
+        return chance.pickone(patternsToPick);
+    }
+
+    /**
      * Select random chain from available options using chancejs
      * @param {Array} matchingChains - Filtered chains
+     * @param {string|null} rtpFilter - RTP filter type for weighted selection
      * @returns {Object|null} Selected chain or null
      */
-    selectRandom(chains) {
+    selectRandom(chains, rtpFilter = null) {
         if (chains.length === 0) {
             return null;
         }
 
         const chance = new Chance();
 
-        let shuffledChains = [...chains];
+        const patternName = this.randomWithWeight(chains, rtpFilter);
+        let chainsToSelectFrom = chains;
+
+        if (patternName !== null) {
+            chainsToSelectFrom = chains.filter((chain) => chain.name.startsWith(patternName));
+        }
+
+        let shuffledChains = [...chainsToSelectFrom];
         for (let i = 0; i < 3; i++) {
             shuffledChains = chance.shuffle(shuffledChains);
         }
@@ -438,19 +464,10 @@ export default class UserChainConsumer {
         const volatility = this.gameData.gameConfigs?.cascadingSlotsConfig?.volatility || null;
 
         const rtp = await this.getRTPFilter(playerId);
-        const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtp);
+        const rtpFilterForFiltering = rtp === RTP_TYPE.HIGH ? null : rtp;
+        const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtpFilterForFiltering);
 
-        this.logService.log(`[Player: ${playerId}] RTP filter: ${rtp || "none"}, found ${matchingChains.length} matching chains`);
-
-        const selectedChain = this.selectRandom(matchingChains);
-
-        if (selectedChain) {
-            this.logService.log(
-                `[Player: ${playerId}] Selected chain: ${selectedChain.name} (RTP: ${this.getChainRTPType(selectedChain.name) || "unknown"})`
-            );
-        }
-
-        return selectedChain;
+        return this.selectRandom(matchingChains, rtp);
     }
 
     /**
