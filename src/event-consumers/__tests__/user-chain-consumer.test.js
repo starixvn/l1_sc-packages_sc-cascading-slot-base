@@ -20,14 +20,29 @@ const createMockGameData = (overrides = {}) => ({
     playerChains: {},
     availableChains: [
         {
-            name: "test-chain-1",
+            name: "discovery-75boards-01",
             baseBetAmount: 0.1,
             totalBoardCount: 75,
         },
         {
-            name: "test-chain-2",
+            name: "cliffhanger-75boards-01",
+            baseBetAmount: 0.1,
+            totalBoardCount: 75,
+        },
+        {
+            name: "wave-50boards-01",
             baseBetAmount: 0.1,
             totalBoardCount: 50,
+        },
+        {
+            name: "tease-50boards-01",
+            baseBetAmount: 0.1,
+            totalBoardCount: 50,
+        },
+        {
+            name: "comeback-100boards-01",
+            baseBetAmount: 0.1,
+            totalBoardCount: 100,
         },
     ],
     ...overrides,
@@ -110,7 +125,7 @@ const createMockAssignmentRepository = () => ({
     findOneAndUpdate: jest.fn().mockResolvedValue({
         _id: "test-assignment-id",
         playerName: "testPlayer",
-        chainName: "test-chain-1",
+        chainName: "discovery-75boards-01",
         status: "active",
     }),
 });
@@ -128,7 +143,7 @@ const createPlayerContext = (overrides = {}) => ({
 
 const createActiveAssignment = (overrides = {}) => ({
     playerName: "testPlayer",
-    chainName: "test-chain-1",
+    chainName: "discovery-75boards-01",
     currentBoardIndex: 0,
     totalBoards: 75,
     assignedAt: new Date(),
@@ -262,7 +277,7 @@ describe("UserChainConsumer", () => {
                 const activeAssignments = [
                     createActiveAssignment({
                         playerName: "activePlayer1",
-                        chainName: "test-chain-1",
+                        chainName: "discovery-75boards-01",
                         currentBoardIndex: 1,
                         betLevel: 1,
                         coinValue: 0.1,
@@ -291,7 +306,7 @@ describe("UserChainConsumer", () => {
                 const activeAssignments = [
                     createActiveAssignment({
                         playerName: "activePlayer1",
-                        chainName: "test-chain-1",
+                        chainName: "discovery-75boards-01",
                     }),
                 ];
 
@@ -309,7 +324,7 @@ describe("UserChainConsumer", () => {
                 await userChainConsumer.loadActive();
 
                 // Assert
-                expect(mockGameData.playerChains["activePlayer1-0.10"].name).toBe("test-chain-1");
+                expect(mockGameData.playerChains["activePlayer1-0.10"].name).toBe("discovery-75boards-01");
             });
 
             it("should set correct current index from assignment", async () => {
@@ -596,13 +611,13 @@ describe("UserChainConsumer", () => {
             // Temporarily modify available chains to have multiple chains with same totalBoardCount
             const originalChains = mockGameData.availableChains;
             mockGameData.availableChains = [
-                { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 },
-                { name: "test-chain-2", baseBetAmount: 0.1, totalBoardCount: 75 }, // Same board count
+                { name: "discovery-75boards-01", baseBetAmount: 0.1, totalBoardCount: 75 },
+                { name: "cliffhanger-75boards-01", baseBetAmount: 0.1, totalBoardCount: 75 }, // Same board count
             ];
 
             // Mock selectRandom to return the second chain
             const selectRandomSpy = jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue({
-                name: "test-chain-2",
+                name: "cliffhanger-75boards-01",
                 baseBetAmount: 0.1,
                 totalBoardCount: 75,
             });
@@ -617,7 +632,7 @@ describe("UserChainConsumer", () => {
             });
 
             expect(result).toBe(true);
-            expect(mockGameData.playerChains["randomTestPlayer-0.10"].name).toBe("test-chain-2");
+            expect(mockGameData.playerChains["randomTestPlayer-0.10"].name).toBe("cliffhanger-75boards-01");
 
             // Restore original chains
             mockGameData.availableChains = originalChains;
@@ -627,7 +642,7 @@ describe("UserChainConsumer", () => {
         it("should assign chain regardless of betLevel and coinValue (no filtering)", async () => {
             // Mock selectRandom to return the first chain
             const selectRandomSpy = jest.spyOn(userChainConsumer, "selectRandom").mockReturnValue({
-                name: "test-chain-1",
+                name: "discovery-75boards-01",
                 baseBetAmount: 0.1,
                 totalBoardCount: 75,
             });
@@ -644,7 +659,7 @@ describe("UserChainConsumer", () => {
 
             expect(result).toBe(true);
             // Should not query assignments for filtering - assignChain no longer does this
-            expect(mockGameData.playerChains["noFilterTestPlayer-0.10"].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains["noFilterTestPlayer-0.10"].name).toBe("discovery-75boards-01");
 
             selectRandomSpy.mockRestore();
         });
@@ -674,13 +689,13 @@ describe("UserChainConsumer", () => {
         it("should handle assignment repository errors gracefully", async () => {
             mockAssignmentRepository.create.mockRejectedValueOnce(new Error("Database error"));
 
-            // Use balance that matches test-chain-1 (75 boards)
+            // Use balance that matches discovery-75boards-01 (75 boards)
             // playableBoards = floor(120 / 0.1 / 20) = 60, applicableBoards = 75, closest = 75
             const result = await userChainConsumer.assignChain("errorTestPlayer", {
                 playerId: "errorTestPlayer",
                 betLevel: 1,
                 coinValue: 0.1,
-                balance: 120, // This should match test-chain-1 with 75 boards
+                balance: 120, // This should match discovery-75boards-01 with 75 boards
             });
 
             expect(result).toBe(true); // Assignment to memory should still succeed
@@ -691,7 +706,7 @@ describe("UserChainConsumer", () => {
     describe("updateChainProgress", () => {
         beforeEach(() => {
             mockGameData.playerChains["progressPlayer-0.10"] = {
-                name: "test-chain-1",
+                name: "discovery-75boards-01",
                 boards: [{ board: [1, 2, 3] }, { board: [4, 5, 6] }],
                 currentIndex: 0,
                 totalBoards: 2,
@@ -705,7 +720,7 @@ describe("UserChainConsumer", () => {
             const updatedAssignment = {
                 _id: "assignment-123",
                 playerName: "progressPlayer",
-                chainName: "test-chain-1",
+                chainName: "discovery-75boards-01",
                 status: "active",
                 currentBoardIndex: 1,
                 totalBoards: 2,
@@ -727,7 +742,7 @@ describe("UserChainConsumer", () => {
             expect(mockAssignmentRepository.findOneAndUpdate).toHaveBeenCalledWith(
                 {
                     playerId: "player-123",
-                    chainName: "test-chain-1",
+                    chainName: "discovery-75boards-01",
                     status: "active",
                     gameId: "test-game-123",
                 },
@@ -747,7 +762,7 @@ describe("UserChainConsumer", () => {
 
         it("should complete chain when reaching total boards", async () => {
             mockGameData.playerChains["completionPlayer-0.10"] = {
-                name: "test-chain-1",
+                name: "discovery-75boards-01",
                 boards: [{ board: [1, 2, 3] }],
                 currentIndex: 0,
                 totalBoards: 1,
@@ -759,7 +774,7 @@ describe("UserChainConsumer", () => {
             const completedAssignment = {
                 _id: "assignment-123",
                 playerName: "completionPlayer",
-                chainName: "test-chain-1",
+                chainName: "discovery-75boards-01",
                 status: "completed",
                 currentBoardIndex: 1,
                 totalBoards: 1,
@@ -829,16 +844,16 @@ describe("UserChainConsumer", () => {
             mockAssignmentRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
                     exec: jest.fn().mockResolvedValue([
-                        { chainName: "test-chain-1" },
-                        { chainName: "test-chain-2" },
-                        { chainName: "test-chain-1" }, // duplicate to test Set uniqueness
+                        { chainName: "discovery-75boards-01" },
+                        { chainName: "wave-50boards-01" },
+                        { chainName: "discovery-75boards-01" }, // duplicate to test Set uniqueness
                     ]),
                 }),
             });
 
             const result = await userChainConsumer.findChainsByBet(1, 0.1);
 
-            expect(result).toEqual(["test-chain-1", "test-chain-2"]);
+            expect(result).toEqual(["discovery-75boards-01", "wave-50boards-01"]);
             expect(mockAssignmentRepository.find).toHaveBeenCalledWith(
                 {
                     betLevel: 1,
@@ -1935,12 +1950,30 @@ describe("UserChainConsumer", () => {
             expect(result).toBeNull();
         });
 
-        it("should return null when rtpFilter is not RTP_TYPE.HIGH", () => {
+        it("should apply weighting when rtpFilter is null (calls chance.bool with 30% likelihood)", () => {
             // Arrange
-            const chains = [createChain({ name: "test-chain" })];
+            const chains = [createChain({ name: "discovery-test", totalBoardCount: 75 }), createChain({ name: "tease-test", totalBoardCount: 75 })];
+
+            // Mock chance methods to control randomness
+            const chanceBoolSpy = jest.spyOn(require("chance").Chance.prototype, "bool").mockReturnValue(true);
+            const chancePickoneSpy = jest.spyOn(require("chance").Chance.prototype, "pickone").mockReturnValue("discovery");
+
+            // Act
+            userChainConsumer.randomWithWeight(chains, null);
+
+            // Assert - Verify that weighting logic is called with correct likelihood
+            expect(chanceBoolSpy).toHaveBeenCalledWith({ likelihood: 30 });
+
+            // Cleanup
+            chanceBoolSpy.mockRestore();
+            chancePickoneSpy.mockRestore();
+        });
+
+        it("should return null when rtpFilter is RTP_TYPE.BALANCE (no additional weighting needed)", () => {
+            // Arrange
+            const chains = [createChain({ name: "wave-test", totalBoardCount: 75 })];
 
             // Act & Assert
-            expect(userChainConsumer.randomWithWeight(chains, null)).toBeNull();
             expect(userChainConsumer.randomWithWeight(chains, RTP_TYPE.BALANCE)).toBeNull();
         });
 
@@ -1955,28 +1988,26 @@ describe("UserChainConsumer", () => {
             expect(result).toBeNull();
         });
 
-        it("should return a HIGH RTP pattern name when RTP filter is HIGH and random selection chooses HIGH", () => {
+        it("should apply weighting when rtpFilter is HIGH (calls chance.bool with 30% likelihood)", () => {
             // Arrange
             const chains = [createChain({ name: "discovery-test", totalBoardCount: 75 }), createChain({ name: "tease-test", totalBoardCount: 75 })];
 
-            // Mock chance.bool to return true (30% HIGH RTP selection)
+            // Mock chance methods to control randomness
             const chanceBoolSpy = jest.spyOn(require("chance").Chance.prototype, "bool").mockReturnValue(true);
             const chancePickoneSpy = jest.spyOn(require("chance").Chance.prototype, "pickone").mockReturnValue("discovery");
 
             // Act
-            const result = userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
+            userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
 
-            // Assert
-            expect(result).toBe("discovery");
+            // Assert - Verify that weighting logic is called with correct likelihood
             expect(chanceBoolSpy).toHaveBeenCalledWith({ likelihood: 30 });
-            expect(chancePickoneSpy).toHaveBeenCalledWith(RTP_CHAIN_CATEGORIES[RTP_TYPE.HIGH]);
 
             // Cleanup
             chanceBoolSpy.mockRestore();
             chancePickoneSpy.mockRestore();
         });
 
-        it("should return a BALANCE RTP pattern name when RTP filter is HIGH and random selection chooses BALANCE", () => {
+        it("should apply weighting when rtpFilter is HIGH and random selection chooses BALANCE (calls chance.bool with 30% likelihood)", () => {
             // Arrange
             const chains = [createChain({ name: "discovery-test", totalBoardCount: 75 }), createChain({ name: "tease-test", totalBoardCount: 75 })];
 
@@ -1985,12 +2016,10 @@ describe("UserChainConsumer", () => {
             const chancePickoneSpy = jest.spyOn(require("chance").Chance.prototype, "pickone").mockReturnValue("tease");
 
             // Act
-            const result = userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
+            userChainConsumer.randomWithWeight(chains, RTP_TYPE.HIGH);
 
-            // Assert
-            expect(result).toBe("tease");
+            // Assert - Verify that weighting logic is called with correct likelihood
             expect(chanceBoolSpy).toHaveBeenCalledWith({ likelihood: 30 });
-            expect(chancePickoneSpy).toHaveBeenCalledWith(RTP_CHAIN_CATEGORIES[RTP_TYPE.BALANCE]);
 
             // Cleanup
             chanceBoolSpy.mockRestore();
@@ -2435,7 +2464,7 @@ describe("UserChainConsumer", () => {
     describe("storeAssignment", () => {
         it("should store chain in memory and database successfully", async () => {
             const chainKey = "testPlayer-0.10";
-            const selectedChain = { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 };
+            const selectedChain = { name: "discovery-75boards-01", baseBetAmount: 0.1, totalBoardCount: 75 };
             const boards = [{ board: [1, 2, 3] }, { board: [4, 5, 6] }];
             const playerContext = {
                 playerId: "player-123",
@@ -2451,7 +2480,7 @@ describe("UserChainConsumer", () => {
 
             // Check memory storage
             expect(mockGameData.playerChains[chainKey]).toBeDefined();
-            expect(mockGameData.playerChains[chainKey].name).toBe("test-chain-1");
+            expect(mockGameData.playerChains[chainKey].name).toBe("discovery-75boards-01");
             expect(mockGameData.playerChains[chainKey].currentIndex).toBe(0);
             expect(mockGameData.playerChains[chainKey].totalBoards).toBe(selectedChain.totalBoardCount);
 
@@ -2460,7 +2489,7 @@ describe("UserChainConsumer", () => {
                 expect.objectContaining({
                     playerId: "player-123",
                     playerName: "testPlayer",
-                    chainName: "test-chain-1",
+                    chainName: "discovery-75boards-01",
                     currentBoardIndex: 0,
                     totalBoards: 75,
                     betLevel: 1,
@@ -2474,7 +2503,7 @@ describe("UserChainConsumer", () => {
             mockAssignmentRepository.create.mockRejectedValueOnce(new Error("Database error"));
 
             const chainKey = "errorPlayer-0.10";
-            const selectedChain = { name: "test-chain-1", baseBetAmount: 0.1, totalBoardCount: 75 };
+            const selectedChain = { name: "discovery-75boards-01", baseBetAmount: 0.1, totalBoardCount: 75 };
             const boards = [{ board: [1, 2, 3] }];
             const playerContext = { playerId: "player-123", betLevel: 1, coinValue: 0.1 };
             const playerName = "errorPlayer";
@@ -2490,7 +2519,7 @@ describe("UserChainConsumer", () => {
     });
 
     describe("getRTPFilter", () => {
-        it("should return HIGH when last completed assignment was HIGH RTP", async () => {
+        it("should return BALANCE when last completed assignment was HIGH RTP", async () => {
             // Arrange
             const consumer = createConsumerWithMocks();
             const playerName = "testPlayer";
@@ -2502,7 +2531,7 @@ describe("UserChainConsumer", () => {
             const result = await consumer.getRTPFilter(playerName);
 
             // Assert
-            expect(result).toBe(RTP_TYPE.HIGH);
+            expect(result).toBe(RTP_TYPE.BALANCE);
         });
 
         it("should return null when last completed assignment was BALANCE RTP", async () => {

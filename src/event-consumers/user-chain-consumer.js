@@ -120,7 +120,7 @@ export default class UserChainConsumer {
     async getRTPFilter(playerId) {
         const lastRTP = await this.getLastCompletedAssignmentRTPType(playerId);
 
-        return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.HIGH : null;
+        return lastRTP === RTP_TYPE.HIGH ? RTP_TYPE.BALANCE : null;
     }
 
     /**
@@ -299,7 +299,7 @@ export default class UserChainConsumer {
      * @returns {string|null} Pattern name for filtering or null
      */
     randomWithWeight(chains, rtpFilter = null) {
-        if (chains.length === 0 || rtpFilter !== RTP_TYPE.HIGH) {
+        if (chains.length === 0 || (rtpFilter !== null && rtpFilter !== RTP_TYPE.HIGH)) {
             return null;
         }
 
@@ -327,7 +327,11 @@ export default class UserChainConsumer {
         let chainsToSelectFrom = chains;
 
         if (patternName !== null) {
-            chainsToSelectFrom = chains.filter((chain) => chain.name.startsWith(patternName));
+            const patternFilteredChains = chains.filter((chain) => chain.name.startsWith(patternName));
+
+            if (patternFilteredChains.length > 0) {
+                chainsToSelectFrom = patternFilteredChains;
+            }
         }
 
         let shuffledChains = [...chainsToSelectFrom];
@@ -464,8 +468,7 @@ export default class UserChainConsumer {
         const volatility = this.gameData.gameConfigs?.cascadingSlotsConfig?.volatility || null;
 
         const rtp = await this.getRTPFilter(playerId);
-        const rtpFilterForFiltering = rtp === RTP_TYPE.HIGH ? null : rtp;
-        const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtpFilterForFiltering);
+        const matchingChains = this.filterChains(availableChains, boardCount, volatility, rtp);
 
         return this.selectRandom(matchingChains, rtp);
     }
