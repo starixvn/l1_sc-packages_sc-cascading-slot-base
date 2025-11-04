@@ -48,6 +48,7 @@ export default class UserChainConsumer {
      */
     generateChainKey(playerName, betLevel, coinValue) {
         const baseBetAmount = this.calculateBaseBetAmount(betLevel, coinValue);
+
         return `${playerName}-${baseBetAmount.toFixed(2)}`;
     }
 
@@ -371,6 +372,8 @@ export default class UserChainConsumer {
      */
     createAssignmentData(chain, context, playerName) {
         const now = new Date();
+        const baseBetAmount = this.calculateBaseBetAmount(context.betLevel, context.coinValue);
+
         return {
             ...context,
             playerName,
@@ -382,6 +385,7 @@ export default class UserChainConsumer {
             status: ASSIGNMENT_STATUS.ACTIVE,
             totalWinAmount: 0,
             totalBetAmount: 0,
+            baseBetAmount,
         };
     }
 
@@ -508,11 +512,11 @@ export default class UserChainConsumer {
         }
 
         try {
+            const baseBetAmount = this.calculateBaseBetAmount(betLevel, coinValue);
             const activeAssignment = await this.assignmentRepository
                 .findOne({
                     playerName,
-                    betLevel,
-                    coinValue,
+                    baseBetAmount,
                     status: ASSIGNMENT_STATUS.ACTIVE,
                     gameId: this.gameData.gameConfigs.gameId,
                 })
@@ -562,6 +566,7 @@ export default class UserChainConsumer {
                 {
                     playerId,
                     chainName: playerChain.name,
+                    baseBetAmount: this.calculateBaseBetAmount(playerChain.betLevel, playerChain.coinValue),
                     status: ASSIGNMENT_STATUS.ACTIVE,
                     gameId: this.gameData.gameConfigs.gameId,
                 },
@@ -599,12 +604,12 @@ export default class UserChainConsumer {
     async findChainsByBet(betLevel, coinValue, status = ASSIGNMENT_STATUS.ACTIVE) {
         try {
             const statusFilter = Array.isArray(status) ? { $in: status } : status;
+            const baseBetAmount = this.calculateBaseBetAmount(betLevel, coinValue);
 
             const assignments = await this.assignmentRepository
                 .find(
                     {
-                        betLevel,
-                        coinValue,
+                        baseBetAmount,
                         status: statusFilter,
                         gameId: this.gameData.gameConfigs.gameId,
                     },

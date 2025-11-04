@@ -2400,10 +2400,10 @@ describe("ChainManager", () => {
                 await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
 
                 // Assert
-                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ betLevel: TEST_BET_LEVEL }));
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ baseBetAmount: 0.1 }));
             });
 
-            it("should query with correct coinValue", async () => {
+            it("should query with correct baseBetAmount", async () => {
                 // Arrange
                 mockAssignmentRepository.findOne = jest.fn().mockReturnValue({
                     lean: jest.fn().mockReturnValue({
@@ -2415,7 +2415,7 @@ describe("ChainManager", () => {
                 await chainManager.reloadChainFromDatabase(TEST_PLAYER_NAME, TEST_BET_LEVEL, TEST_COIN_VALUE);
 
                 // Assert
-                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ coinValue: TEST_COIN_VALUE }));
+                expect(mockAssignmentRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({ baseBetAmount: 0.1 }));
             });
 
             it("should query with active status", async () => {

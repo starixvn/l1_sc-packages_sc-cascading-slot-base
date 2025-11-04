@@ -743,6 +743,7 @@ describe("UserChainConsumer", () => {
                 {
                     playerId: "player-123",
                     chainName: "discovery-75boards-01",
+                    baseBetAmount: 0.1,
                     status: "active",
                     gameId: "test-game-123",
                 },
@@ -856,8 +857,7 @@ describe("UserChainConsumer", () => {
             expect(result).toEqual(["discovery-75boards-01", "wave-50boards-01"]);
             expect(mockAssignmentRepository.find).toHaveBeenCalledWith(
                 {
-                    betLevel: 1,
-                    coinValue: 0.1,
+                    baseBetAmount: 0.1,
                     status: "active",
                     gameId: "test-game-123",
                 },
@@ -2494,6 +2494,7 @@ describe("UserChainConsumer", () => {
                     totalBoards: 75,
                     betLevel: 1,
                     coinValue: 0.1,
+                    baseBetAmount: 0.1,
                     status: "active",
                 })
             );

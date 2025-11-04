@@ -96,6 +96,10 @@ const playerChainAssignmentSchema = new Schema(
             type: Number,
             required: false,
         },
+        baseBetAmount: {
+            type: Number,
+            required: true,
+        },
 
         // Outcome tracking
         totalWinAmount: {

@@ -241,11 +241,11 @@ export default class ChainManager {
      */
     async reloadChainFromDatabase(playerName, betLevel, coinValue) {
         try {
+            const baseBetAmount = this.calculateBaseBetAmount(betLevel, coinValue);
             const activeAssignment = await this.assignmentRepository
                 .findOne({
                     playerName,
-                    betLevel,
-                    coinValue,
+                    baseBetAmount,
                     status: ASSIGNMENT_STATUS.ACTIVE,
                     gameId: this.gameData.gameConfigs.gameId,
                 })
