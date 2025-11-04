@@ -104,9 +104,7 @@ export default class UserChainConsumer {
                 return null;
             }
 
-            const chainRTPType = this.getChainRTPType(lastCompletedAssignment.chainName);
-
-            return chainRTPType;
+            return this.getChainRTPType(lastCompletedAssignment.chainName);
         } catch (error) {
             this.logService.logError(`Failed to get last completed assignment RTP type for ${playerId}: ${error.message}`);
             return null;
