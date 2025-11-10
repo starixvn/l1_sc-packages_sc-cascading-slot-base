@@ -60,6 +60,13 @@ export default class TotalMultiplierConsumer {
         this.gameData.ingame[player.profile.name].totalMultiplier = 0;
     }
 
+    async stopExpiredPromotionChain(runningPromotionIds) {
+        await this.totalMultiplierRepository.updateMany(
+            { promotionId: { $nin: runningPromotionIds, $exists: true }, ended: false },
+            { ended: true, endTime: new Date() }
+        );
+    }
+
     async reload(isRestart = false) {
         const totalMultipliers = await this.totalMultiplierRepository.find({ ended: false }).lean().exec();
 
