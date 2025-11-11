@@ -384,6 +384,7 @@ export default class UserChainConsumer {
             totalWinAmount: 0,
             totalBetAmount: 0,
             baseBetAmount,
+            balanceBeforeChain: context.balance,
         };
     }
 
@@ -539,7 +540,7 @@ export default class UserChainConsumer {
         return true;
     }
 
-    async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0 }) {
+    async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0, balance }) {
         try {
             const chainKey = this.generateChainKey(playerName, betLevel, coinValue);
             const playerChain = this.findExistingChain(chainKey);
@@ -558,6 +559,7 @@ export default class UserChainConsumer {
             if (isChainComplete) {
                 setOptions.status = ASSIGNMENT_STATUS.COMPLETED;
                 setOptions.completedAt = new Date();
+                setOptions.balanceAfterChain = balance;
             }
 
             const updatedAssignment = await this.assignmentRepository.findOneAndUpdate(

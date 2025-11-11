@@ -94,6 +94,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                     coinValue: round.coinValue,
                     roundBetAmount: round.totalAmount,
                     roundWinAmount: round.betwin || 0,
+                    balance: player.balance || 0,
                 });
             } catch (error) {
                 this.logService.logError(`Failed to update chain progress for ${playerName}`, error);
