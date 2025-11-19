@@ -1,3 +1,28 @@
+# [2.7.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.6.0...v2.7.0) (2025-11-19)
+
+
+### Bug Fixes
+
+* add debug log for chain assignment - Epic GL-5786 ([587df4a](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/587df4a95db72f7f8deed1dab787deaae3cf10be))
+* add weight only when not apply rtp filter - Epic GL-5786 ([ba520de](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/ba520de020a3e329b082e964b8973419007a89a9))
+* code smell - Epic GL-5786 ([6bf4920](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/6bf4920f0e501909737e63497ecdec7c1d4c42ae))
+* filter completed assignment by playerId - Epic GL-5786 ([76a3033](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/76a30332165564a56b9142bb5469d16f7133d676))
+* filter completed assignment by playerId - Epic GL-5786 ([14a3a22](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/14a3a22c73155b45b240a5003c41721d0c4910f7))
+* rename boadIndex in ticket to avoid confusion - Epic GL-5786 ([ea1f060](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/ea1f06015eb98b348a2bba23231690aba7cf1d2c))
+* revert fsb board 105% - Epic GL-5786 ([947dccc](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/947dccc0c205b224766c477504b7722f79efd2ab))
+* wrong increment of chain assignment - Epic GL-5786 ([8cbcbc6](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/8cbcbc6d22255708b1c4dcd1b7c95d4a80b44c78))
+
+
+### Features
+
+* add chain metadata to bet ticket ([295c31d](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/295c31d6b78259979e948082d1ad4a5254f451da))
+* add cool down strategy when assign new chain - Epic GL-5786 ([3892f68](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/3892f68b6a7e99a62638cef4a55cc0e28250b18a))
+* add shuffle chains - Epic GL-5786 ([69b688e](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/69b688e6d223c72e08699aab4a9e8c28012d88f3))
+* add weight when random chains - Epic GL-5786 ([ce56ec7](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/ce56ec7260d6995a411dbd549879d91de66e39c5))
+* filter chain by volatility - Epic GL-5786 ([6d9f9db](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/6d9f9dbcd148d3428b33c0aa2b90cc25ee22f6f5))
+* track balance in chain assignment - Epic GL-5786 ([6702ee9](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/6702ee94b83811157ac4be44adc1fe01fa620004))
+* update rtp to 115% for fsb ([0bed960](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/0bed960674b988dfb676f521e70727ecef7a5baa))
+
 # [2.6.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.5.1...v2.6.0) (2025-10-27)
 
 
