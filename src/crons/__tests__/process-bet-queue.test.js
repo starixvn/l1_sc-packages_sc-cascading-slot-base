@@ -87,6 +87,7 @@ describe("cascadingProcessBetQueue", () => {
                     contributionAmount: 0,
                     contributionRate: 0,
                     roundId: gameData.roundId,
+                    xMode: player.session.xMode,
                 });
             });
         });
@@ -107,6 +108,7 @@ describe("cascadingProcessBetQueue", () => {
                     contributionAmount: 0,
                     contributionRate: 0,
                     roundId: gameData.roundId,
+                    xMode: player.session.xMode,
                 });
             });
         });
@@ -308,6 +310,7 @@ describe("cascadingProcessBetQueue", () => {
                     playerId: chance.natural(),
                     system: "web",
                     siteName: "TestSite",
+                    xMode: 1,
                     ...overrides.session,
                 },
                 promotion: {
@@ -942,6 +945,7 @@ describe("cascadingProcessBetQueue", () => {
     function stubPlayer() {
         const userInfo = UserInfo();
         const userSession = UserSession();
+        userSession.xMode = 1;
         userSession.operatorId = userSession.partnerId;
         userSession.playerId = userSession.memberId;
         userSession.playerName = userSession.memberName;

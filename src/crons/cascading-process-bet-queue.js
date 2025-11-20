@@ -38,11 +38,17 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         betInfo.betMultiplier = cascadingSlotsConfig.betMultiplier;
 
         if (freeSpinInfo) {
-            const { betLevel, coinValue, betMultiplier } = freeSpinInfo;
+            const { betLevel, coinValue, betMultiplier, xMode } = freeSpinInfo;
 
             betInfo.betLevel = betLevel;
             betInfo.coinValue = coinValue;
             betInfo.betMultiplier = betMultiplier;
+            betInfo.xMode = xMode ?? 1;
+        } else {
+            betInfo.xMode = player.session.xMode;
+            if (!payload.usePromotion) {
+                betInfo.coinValue /= betInfo.xMode;
+            }
         }
 
         let buyFreeSpinMultiplier = 1;
@@ -80,6 +86,7 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
                 oddsByCounts: cascadingSlotsConfig.oddsByCounts,
                 freeSpins: cascadingSlotsConfig.freeSpins,
             },
+            xMode: bet.xMode,
         };
 
         if (applicableInterceptors) {

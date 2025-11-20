@@ -17,4 +17,5 @@ export default new mongoose.Schema({
     promotionId: { type: String, required: false },
     buyFreeSpinRefRoundId: { type: Number, require: false },
     autoSettle: { type: Boolean, default: false },
+    xMode: { type: Number, default: 1 },
 });

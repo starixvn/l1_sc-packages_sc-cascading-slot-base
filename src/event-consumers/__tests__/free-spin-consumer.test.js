@@ -42,6 +42,7 @@ describe("freeSpinsConsumer", () => {
             betLevel: chance.pickone([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
             coinValue: chance.floating({ min: 1, max: 20, fixed: 1 }),
             numberOfFreeSpins: chance.pickone([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+            xMode: 1,
         };
         const timeToLive = chance.natural();
 
@@ -77,6 +78,7 @@ describe("freeSpinsConsumer", () => {
                 coinValue: freeSpinData.coinValue,
                 betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
                 buyFreeSpinRefRoundId: undefined,
+                xMode: freeSpinData.xMode,
             });
         });
 
@@ -104,6 +106,7 @@ describe("freeSpinsConsumer", () => {
                     coinValue: freeSpinData.coinValue,
                     betMultiplier: gameData.gameConfigs.cascadingSlotsConfig.betMultiplier,
                     buyFreeSpinRefRoundId: undefined,
+                    xMode: freeSpinData.xMode,
                 },
             ]);
         });

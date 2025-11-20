@@ -42,4 +42,5 @@ export default new mongoose.Schema({
 
     chainName: { type: String },
     boardIndex: { type: Number },
+    xMode: { type: Number, default: 1 },
 });

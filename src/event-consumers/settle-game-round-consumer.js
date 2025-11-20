@@ -181,6 +181,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
                     numberOfFreeSpins: settlementResult.freeSpins.odds,
                     buyFreeSpin,
                     buyFreeSpinRefRoundId,
+                    xMode: round.xMode,
                 },
                 this.definition.freeSpinLiveSeconds
             );
