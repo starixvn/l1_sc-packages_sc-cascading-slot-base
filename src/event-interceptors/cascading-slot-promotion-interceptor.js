@@ -8,9 +8,10 @@ export default class CascadingSlotPromotionInterceptor extends EventInterceptors
      * @param {Object} dependencies.gameData - Game data
      * @param {Object} dependencies.placeBetPublisher - Publisher for bet events
      * @param {Object} dependencies.gamePromotionApiClient - Promotion API client
+     * @param {Object} dependencies.promotionAssignmentConsumer - Promotion assignment consumer
      */
-    constructor({ logService, definition, gameData, placeBetPublisher, gamePromotionApiClient }) {
-        super({ logService, definition, placeBetPublisher, gamePromotionApiClient });
+    constructor({ logService, definition, gameData, placeBetPublisher, gamePromotionApiClient, promotionAssignmentConsumer }) {
+        super({ logService, definition, placeBetPublisher, gamePromotionApiClient, promotionAssignmentConsumer });
         this.gameData = gameData;
     }
 
