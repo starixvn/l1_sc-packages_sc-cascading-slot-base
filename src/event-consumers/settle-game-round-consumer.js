@@ -73,7 +73,7 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const currencyGroupSettings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const currentTotalMultiplier = this.totalMultiplierConsumer.getCurrentMultiplier(player);
         const baseBetAmount = round.coinValue * round.betLevel * round.betMultiplier;
-        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * baseBetAmount, 2);
+        const maxWinPerRound = mathRound(currencyGroupSettings.maxWinPerRound * baseBetAmount, 6);
 
         const preGeneratedResultInfo = await this.selectPreGeneratedResult(player, round);
 

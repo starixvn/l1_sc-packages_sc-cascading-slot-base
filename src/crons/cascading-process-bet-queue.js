@@ -1,3 +1,4 @@
+import { round } from "mathjs";
 import { helpers } from "sc-common";
 import { Crons } from "sc-slot-game-base";
 import { isBuyFreeSpinEnabled } from "../utils";
@@ -57,9 +58,9 @@ export default class CascadingProcessBetQueue extends Crons.SlotProcessBetQueue 
         }
 
         betInfo.amount = betInfo.betLevel * betInfo.coinValue;
-        betInfo.totalAmount = parseFloat((betInfo.amount * betInfo.betMultiplier * buyFreeSpinMultiplier).toFixed(2));
-        betInfo.contributionRate = parseFloat(contributionRate.toFixed(4));
-        betInfo.contributionAmount = parseFloat((contributionRate * betInfo.totalAmount * buyFreeSpinMultiplier).toFixed(4));
+        betInfo.totalAmount = round(betInfo.amount * betInfo.betMultiplier * buyFreeSpinMultiplier, 6);
+        betInfo.contributionRate = round(contributionRate, 6);
+        betInfo.contributionAmount = round(contributionRate * betInfo.totalAmount * buyFreeSpinMultiplier, 6);
 
         return betInfo;
     }

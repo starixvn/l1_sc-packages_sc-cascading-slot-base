@@ -14,7 +14,7 @@ export default class TumbleCalculator {
     calculateWinAmount(tumble, baseBet) {
         let totalWin = 0;
         Object.values(tumble.icons).forEach((icon) => {
-            icon.win = round(baseBet * icon.odds, 2);
+            icon.win = round(baseBet * icon.odds, 6);
             totalWin += icon.win;
         });
 
