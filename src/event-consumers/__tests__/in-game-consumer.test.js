@@ -102,6 +102,7 @@ class PayloadBuilder {
     static createBaseFreeSpins() {
         return {
             total: 10,
+            xMode: 1,
             buyFreeSpins: false,
         };
     }
