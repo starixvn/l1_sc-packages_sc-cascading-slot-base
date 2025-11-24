@@ -1,3 +1,15 @@
+# [2.8.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.7.0...v2.8.0) (2025-11-24)
+
+
+### Bug Fixes
+
+* duplicate code ([cbe19e6](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/cbe19e64cfcc3ae30b1c8c9f07bc1d4b96a27eb9))
+
+
+### Features
+
+* inject promotionAssignmentConsumer into CascadingSlotPromotionInterceptor ([bd812d8](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/bd812d8ab03921399b35cb8b3c375ced51008e15))
+
 # [2.7.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.6.0...v2.7.0) (2025-11-19)
 
 
