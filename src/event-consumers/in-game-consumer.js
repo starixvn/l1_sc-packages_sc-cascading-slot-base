@@ -63,6 +63,7 @@ export default class InGameConsumer extends EventConsumers.InGameConsumer {
 
         const freeSpins = {
             total: totalOfFreeSpins,
+            xMode: soonestExpiredFreeSpin.xMode ?? 1,
             betLevel: soonestExpiredFreeSpin?.betLevel,
             coinValue: soonestExpiredFreeSpin?.coinValue,
             betMultiplier: soonestExpiredFreeSpin?.betMultiplier,
