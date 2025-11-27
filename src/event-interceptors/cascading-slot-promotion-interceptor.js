@@ -20,8 +20,9 @@ export default class CascadingSlotPromotionInterceptor extends EventInterceptors
     }
 
     async beforeEvent(context) {
-        await super.beforeEvent(context);
+        const result = await super.beforeEvent(context);
         this.updatePromotionRemainingBonusItems(context.player);
+        return result;
     }
 
     async afterFailureEvent(context) {
