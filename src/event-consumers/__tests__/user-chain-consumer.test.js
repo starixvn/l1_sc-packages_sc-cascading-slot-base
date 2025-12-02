@@ -698,7 +698,7 @@ describe("UserChainConsumer", () => {
                 balance: 120, // This should match discovery-75boards-01 with 75 boards
             });
 
-            expect(result).toBe(true); // Assignment to memory should still succeed
+            expect(result).toBe(false);
             expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to create chain assignment for errorTestPlayer"));
         });
     });
@@ -2509,12 +2509,10 @@ describe("UserChainConsumer", () => {
             const playerContext = { playerId: "player-123", betLevel: 1, coinValue: 0.1 };
             const playerName = "errorPlayer";
 
-            await userChainConsumer.storeAssignment(chainKey, selectedChain, playerContext, playerName);
+            await expect(userChainConsumer.storeAssignment(chainKey, selectedChain, playerContext, playerName)).rejects.toThrow("Database error");
 
-            // Memory storage should still work
-            expect(mockGameData.playerChains[chainKey]).toBeDefined();
+            expect(mockGameData.playerChains[chainKey]).toBeUndefined();
 
-            // Error should be logged
             expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to create chain assignment for"));
         });
     });
