@@ -486,13 +486,14 @@ export default class UserChainConsumer {
     async storeAssignment(key, chain, context, playerName) {
         const { playerChains } = this.gameData;
         const entry = this.createChainEntry(chain, context, playerName);
-        playerChains[key] = entry;
 
         try {
             const data = this.createAssignmentData(chain, context, playerName);
             await this.assignmentRepository.create(data);
+            playerChains[key] = entry;
         } catch (error) {
             this.logService.logError(`Failed to create chain assignment for ${playerName}: ${error.message}`);
+            throw error;
         }
     }
 
@@ -535,9 +536,12 @@ export default class UserChainConsumer {
             return false;
         }
 
-        await this.storeAssignment(chainKey, selectedChain, playerContext, playerName);
-
-        return true;
+        try {
+            await this.storeAssignment(chainKey, selectedChain, playerContext, playerName);
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
     async updateChainProgress({ playerId, playerName, betLevel, coinValue, roundBetAmount = 0, roundWinAmount = 0, balance }) {

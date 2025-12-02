@@ -21,7 +21,7 @@ export default class ChainInterceptor extends EventInterceptors.BaseEventInterce
                 currency: player.session?.currencyName || "",
                 betLevel: bet?.betLevel,
                 coinValue: bet?.coinValue,
-                balance: balance?.red || balance || 0,
+                balance: balance?.red ?? 0,
             };
 
             await this.userChainConsumer.assignChain(playerName, playerContext);
