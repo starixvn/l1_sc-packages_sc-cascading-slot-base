@@ -1,3 +1,18 @@
+# [2.9.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.8.0...v2.9.0) (2025-12-04)
+
+
+### Bug Fixes
+
+* not assign chain if insert database failed ([e493ec3](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/e493ec36bb5db0efb7693267f434aa8ae76a9eed))
+* update uts fail ([efe300e](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/efe300ec4d2abd15b472a623bb624ed1c24d0caf))
+
+
+### Features
+
+* add xMode ([7304d78](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/7304d78bf943bc2db7711640533820ddd40e060b))
+* add xMode into freeSpins in-game ([5c8ce91](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/5c8ce9102d8eaaf7f9a83306d8ae22d37dbed067))
+* round floating number to 6 ([515a4e5](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/commit/515a4e52e529dc62015e0f01f9d73030a4206eeb))
+
 # [2.8.0](https://git3.nexdev.net/l1/sc-packages/sc-cascading-slot-base/compare/v2.7.0...v2.8.0) (2025-11-24)
 
 
