@@ -120,25 +120,25 @@ describe("determineWinType", () => {
         expect(result).toEqual({ bigWin: true });
     });
 
-    it("should return megaWin when win ratio meets megaWin threshold", () => {
+    it("should return superWin when win ratio meets superWin threshold", () => {
         const consumer = initConsumer();
         const result = consumer.determineWinType(250, 10);
+
+        expect(result).toEqual({ superWin: true });
+    });
+
+    it("should return megaWin when win ratio meets megaWin threshold", () => {
+        const consumer = initConsumer();
+        const result = consumer.determineWinType(500, 10);
 
         expect(result).toEqual({ megaWin: true });
     });
 
-    it("should return superWin when win ratio meets superWin threshold", () => {
-        const consumer = initConsumer();
-        const result = consumer.determineWinType(500, 10);
-
-        expect(result).toEqual({ superWin: true });
-    });
-
-    it("should return superWin when win ratio exceeds superWin threshold", () => {
+    it("should return megaWin when win ratio exceeds megaWin threshold", () => {
         const consumer = initConsumer();
         const result = consumer.determineWinType(750, 10);
 
-        expect(result).toEqual({ superWin: true });
+        expect(result).toEqual({ megaWin: true });
     });
 
     it("should return no win when win ratio is below all thresholds", () => {

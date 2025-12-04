@@ -74,9 +74,8 @@ const gameConfigs = {
             reload: false,
         },
         bigWinRatio: 10,
-        megaWinRatio: 25,
-        superWinRatio: 50,
-
+        superWinRatio: 25,
+        megaWinRatio: 50,
     },
 };
 

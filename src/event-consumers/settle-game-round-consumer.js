@@ -222,15 +222,16 @@ export default class SettleGameRoundConsumer extends Core.BaseEventConsumers.Set
         const { bigWinRatio, megaWinRatio, superWinRatio } = this.gameData.gameConfigs.cascadingSlotsConfig;
         const winRatio = totalWin / totalBetAmount;
 
-        const winTypes = {
-            superWin: superWinRatio,
-            megaWin: megaWinRatio,
-            bigWin: bigWinRatio,
-        };
+        // SOLUTION 1: Dynamic sorting - always sorts by ratio descending (highest first)
+        const winTypes = [
+            { type: "megaWin", ratio: megaWinRatio },
+            { type: "superWin", ratio: superWinRatio },
+            { type: "bigWin", ratio: bigWinRatio },
+        ].sort((a, b) => b.ratio - a.ratio); // Sort by ratio descending
 
-        const achievedWin = Object.keys(winTypes).find((winType) => winRatio >= winTypes[winType]);
+        const achievedWin = winTypes.find((winType) => winRatio >= winType.ratio);
 
-        return achievedWin ? { [achievedWin]: true } : {};
+        return achievedWin ? { [achievedWin.type]: true } : {};
     }
 
     collectRoundResult(player, round, betResult) {
