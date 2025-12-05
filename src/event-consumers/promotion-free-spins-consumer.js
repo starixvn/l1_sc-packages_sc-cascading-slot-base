@@ -1,8 +1,8 @@
 import { EventConsumers } from "sc-slot-game-base";
 
 export default class PromotionFreeSpinsConsumer extends EventConsumers.PromotionFreeSpinsConsumer {
-    constructor({ gamePromotionApiClient, promotionFreeSpinsPublisher, logService, definition, gameData, totalMultiplierConsumer }) {
-        super({ gamePromotionApiClient, promotionFreeSpinsPublisher, logService, definition, gameData });
+    constructor({ gamePromotionApiClient, promotionFreeSpinsPublisher, logService, definition, gameData, totalMultiplierConsumer, freeSpinsConsumer }) {
+        super({ gamePromotionApiClient, promotionFreeSpinsPublisher, logService, definition, gameData, freeSpinsConsumer });
         this.totalMultiplierConsumer = totalMultiplierConsumer;
     }
 
