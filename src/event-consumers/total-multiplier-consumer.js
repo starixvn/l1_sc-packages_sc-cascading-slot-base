@@ -62,7 +62,7 @@ export default class TotalMultiplierConsumer {
 
     async stopExpiredPromotionChain(runningPromotionIds) {
         await this.totalMultiplierRepository.updateMany(
-            { promotionId: { $nin: runningPromotionIds, $exists: true }, ended: false },
+            { promotionId: { $in: runningPromotionIds }, ended: false },
             { ended: true, endTime: new Date() }
         );
     }

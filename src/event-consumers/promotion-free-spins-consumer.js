@@ -21,7 +21,7 @@ export default class PromotionFreeSpinsConsumer extends EventConsumers.Promotion
     }
 
     async handlePromotionFreeSpinsExpiry() {
-        const promotionIds = this.gameData.promotions.map((promotion) => promotion.promotionId);
+        const promotionIds = this.gameData.expiringPromotions.map((promotion) => promotion._id);
         await this.totalMultiplierConsumer.stopExpiredPromotionChain(promotionIds);
         await super.handlePromotionFreeSpinsExpiry();
     }
